@@ -2,12 +2,10 @@ from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
+from app.analyzers.embeddings import embed_text
 
 # Load a pre-trained sentiment analysis pipeline
 classifier = pipeline("sentiment-analysis")
-
-# Pre-trained model for computing embeddings
-model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def analyze_sentiment_transformers(text):
     result = classifier(text)[0]  # Returns a dictionary with label and score
@@ -39,8 +37,8 @@ def categorize_text_with_embeddings(text, categories, threshold=0.3):
     Categorize text based on semantic similarity to category names.
     """
     # Encode the text and category names
-    text_embedding = model.encode([text])[0]
-    category_embeddings = model.encode(categories)
+    text_embedding = embed_text([text])[0]
+    category_embeddings = embed_text(categories)
 
     # Compute similarity scores
     similarities = cosine_similarity([text_embedding], category_embeddings)[0]

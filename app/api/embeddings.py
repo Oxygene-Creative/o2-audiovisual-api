@@ -1,11 +1,19 @@
 from fastapi import APIRouter
+from app.analyzers.embeddings import embed_images, embed_text
+from app.core.gcp import download_file, delete_file
+import uuid
 
 router = APIRouter()
 
 @router.get("/text")
-def create_text_embeddings():
-    return [{"id": 1, "name": "Item 1"}, {"id": 2, "name": "Item 2"}]
+def create_text_embeddings(text: list[str]):
+    embeddings = embed_text(text)
+    return { "embeddings" : embeddings }
 
 @router.get("/image")
-def create_iimage_embeddings(item_id: int):
-    return {"id": item_id, "name": f"Item {item_id}"}
+def create_image_embeddings(bucket: str, image_url: str, extension: str):
+    destination_url = f"./o2-files/{uuid.uuid4()}.{extension}"
+    download_file(bucket, image_url, destination_url)
+    embeddings = embed_images(destination_url)
+    delete_file(destination_url)
+    return embeddings

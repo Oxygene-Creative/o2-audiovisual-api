@@ -17,6 +17,10 @@ uvicorn = "*"
 transformers = "*"
 fuzzywuzzy = "*"
 python-levenshtein = "*"
+faster-whisper = "*"
+huggingface-hub = "*"
+mediapipe = "*"
+inaspeechsegmenter = "*"
 
 [dev-packages]
 
