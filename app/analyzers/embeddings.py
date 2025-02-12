@@ -11,7 +11,7 @@ ImageEmbedderOptions = mp.tasks.vision.ImageEmbedderOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 options = ImageEmbedderOptions(
-    base_options=BaseOptions(model_asset_path='/path/to/model.tflite'),
+    base_options=BaseOptions(model_asset_path='./app/models/mobilenet_v3_small_075_224_embedder.tflite'),
     quantize=True,
     running_mode=VisionRunningMode.IMAGE)
 
