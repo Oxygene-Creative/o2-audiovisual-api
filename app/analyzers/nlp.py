@@ -3,9 +3,18 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
 from app.analyzers.embeddings import embed_text
+import torch
+from bertopic import BERTopic
+from app.analyzers.embeddings import embedding_model
+from app.core.llm import llm
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
 # Load a pre-trained sentiment analysis pipeline
 classifier = pipeline("sentiment-analysis")
+
+# Load BERTopic
+topic_model = BERTopic(embedding_model=embedding_model)
 
 def analyze_sentiment_transformers(text):
     result = classifier(text)[0]  # Returns a dictionary with label and score
@@ -47,3 +56,28 @@ def categorize_text_with_embeddings(text, categories, threshold=0.3):
     matched_categories = [categories[i] for i, score in enumerate(similarities) if score > threshold]
 
     return matched_categories if matched_categories else []
+
+def topic_modelling(text: list[str]):
+    # Fit and transform
+    topics, probs = topic_model.fit_transform(text)
+    prompt = ChatPromptTemplate.from_messages(
+        [("user", "I have a topic that is described by the following keywords: {keywords} Please give a single label to define the topic.")],
+    )
+    chain = prompt | llm | StrOutputParser()
+    
+    # Get all topics and their words
+    for topic_id in set(topics):  # Use 'set' to ensure unique topic IDs
+        if topic_id == -1:  # Skip outlier topic
+            continue
+
+        # Fetch the words for the given topic
+        words = topic_model.get_topic(topic_id)
+
+        # Convert words to a comma-separated string
+        keyword_string = ", ".join([word for word, score in words])
+        
+        # create human readable labe for the topic
+        chain.invoke({"keywords": keyword_string })
+        
+    return
+    

@@ -21,6 +21,7 @@ faster-whisper = "*"
 huggingface-hub = "*"
 mediapipe = "*"
 inaspeechsegmenter = "*"
+bertopic = "*"
 
 [dev-packages]
 
