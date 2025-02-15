@@ -1,12 +1,13 @@
 from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv
-from app.core.audio import delete_file
+from app.core.files import delete_file
 import os
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from typing import List
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+import pandas as pd
+from app.core.llm import llm
 
 def gender_music_segmentation(audio_file, gcs_path):
     seg = Segmenter('smn', True)
@@ -25,31 +26,7 @@ def gender_music_segmentation(audio_file, gcs_path):
     
     return df_aggregated.to_dict(orient='records')
 
-def ad_conversation_segmentation(text: string):
+def ad_conversation_segmentation(text: str):
     
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5",
-        temperature=0,
-        max_tokens=None,
-        timeout=None,
-        max_retries=2,
-    )
-    
-    # Prompt to decide if segments are part of the same conversation
-    prompt_template = """
-    You are an assistant that determines if two transcript segments are part of the same conversation.
-    Consider context, tone, and flow of the content.
-
-    Input:
-    Segment 1: "{segment1_text}"
-    Segment 2: "{segment2_text}"
-
-    Question: Are these two segments part of the same conversation? Answer with "yes" or "no".
-    Answer:
-    """
-
-    prompt = PromptTemplate(
-        template=prompt_template,
-        input_variables=["segment1_text", "segment2_text"]
-    )
+    return
     

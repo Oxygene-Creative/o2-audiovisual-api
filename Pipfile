@@ -22,6 +22,9 @@ huggingface-hub = "*"
 mediapipe = "*"
 inaspeechsegmenter = "*"
 bertopic = "*"
+langchain-text-splitters = "*"
+langchain-huggingface = "*"
+pandas = "*"
 
 [dev-packages]
 

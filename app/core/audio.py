@@ -1,6 +1,8 @@
 import os
 import time
 from pydub import AudioSegment
+from pathlib import Path
+from app.core.files import subfolder_check
 
 def delete_file(file_path):
     try:
@@ -29,16 +31,35 @@ def extract_audio_from_video(video_file_path, audio_file_path):
 
     print(f"Audio extracted and saved to {audio_file_path}")
 
-def slice_audio(start, stop, audio_path, id):
-    # Time to miliseconds
-    startTime = start*1000
-    endTime = stop*1000
+def slice_audio(speech_segments, audio_path):
+    # Get the audio file name from the path
+    audio_file_name = Path(audio_path).stem
+
     # Opening file and extracting segment
-    song = AudioSegment.from_mp3(audio_path)
-    extract = song[startTime:endTime]
-    # Saving
-    # Get the current timestamp
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    extract_file_name = f'recordings/{id}_extract_{timestamp}.mp3'
-    extract.export(extract_file_name, format="mp3")
-    return extract_file_name
+    audio = AudioSegment.from_mp3(audio_path)
+
+    # extracted_files
+    extracted_files = []
+
+    for segment in speech_segments:
+        # Time to miliseconds
+        startTime =  max(0, (segment['start'] - 10) * 1000)
+        endTime = (segment['stop'] + 10) * 1000
+
+        # Extract the audio data for time slice
+        extract = audio[startTime:endTime]
+
+        # Generate the output file name with start and stop values
+        extract_file_name= f"{audio_file_name}_{segment['start']:.2f}_{segment['stop']:.2f}.mp3"
+
+        # Export the sliced audio
+        subfolder_check(f"{os.getcwd()}/o2-files")
+        extract.export(f"{os.getcwd()}/o2-files/{extract_file_name}", format="mp3")
+
+        extracted_files.append({ 
+            "start": segment["start"], 
+            "stop": segment["stop"],
+            "duration": segment["duration"],
+            "audio_file": extract_file_name })
+        
+    return extracted_files

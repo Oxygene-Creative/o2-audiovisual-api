@@ -1,6 +1,7 @@
 from google.cloud import storage
 from google.oauth2 import service_account
 import os
+from app.core.files import subfolder_check
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -36,19 +37,8 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
     subfolder_path = os.path.dirname(destination_file_name)
 
     # Create the subfolder if it doesn't exist
-    if not os.path.exists(subfolder_path):
-        os.makedirs(subfolder_path)
+    subfolder_check(subfolder_path)
     
     blob.download_to_filename(destination_file_name)
     print(f"Blob {source_blob_name} downloaded to {destination_file_name}.")
     
-def delete_file(file_path):
-    try:
-        os.remove(file_path)
-        print(f"File {file_path} has been deleted successfully.")
-    except FileNotFoundError:
-        print(f"File {file_path} not found.")
-    except PermissionError:
-        print(f"Permission denied: Unable to delete {file_path}.")
-    except Exception as e:
-        print(f"Error occurred while deleting {file_path}: {e}")

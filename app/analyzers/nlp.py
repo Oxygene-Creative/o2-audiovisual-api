@@ -63,7 +63,10 @@ def topic_modelling(text: list[str]):
     prompt = ChatPromptTemplate.from_messages(
         [("user", "I have a topic that is described by the following keywords: {keywords} Please give a single label to define the topic.")],
     )
+    
     chain = prompt | llm | StrOutputParser()
+    
+    final_topics = []
     
     # Get all topics and their words
     for topic_id in set(topics):  # Use 'set' to ensure unique topic IDs
@@ -77,7 +80,9 @@ def topic_modelling(text: list[str]):
         keyword_string = ", ".join([word for word, score in words])
         
         # create human readable labe for the topic
-        chain.invoke({"keywords": keyword_string })
+        label = chain.invoke({"keywords": keyword_string })
         
-    return
+        final_topics.append({ "label": label, "words": words })
+        
+    return final_topics
     
