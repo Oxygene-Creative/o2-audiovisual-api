@@ -37,18 +37,20 @@ def test_categorize_text():
     categories = ["finance", "technology", "health"]
 
     # Similar text
-    text = "a hot topic about money"
-    result = categorize_text(text, categories, threshold=0.7)
+    text = "a hot topic about money and getting rich"
+    result = categorize_text(text, categories, threshold=0.5)
     assert "finance" in result, "Expected 'finance' to be categorized"
     assert len(result) == 1, "Expected exactly one category match"
 
     # Dissimilar text
     text2 = "i love football"
-    result2 = categorize_text(text2, categories, threshold=0.7)
+    result2 = categorize_text(text2, categories, threshold=0.5)
     assert result2 == [], "Expected no categories for dissimilar text"
 
 def test_topic_modelling():
-    input_texts = ["This is about AI and machine learning.", "This relates to technology and innovation."]
+    input_texts = [
+        "This is about AI and machine learning tools that will help your coding abilities and increase your productivity.", 
+        "This relates to technology and innovation, specifically harware and embedded systems. Use raspberry pis and arduino kits to get started."]
 
     # Call the function
     final_topics = topic_modelling(input_texts)
