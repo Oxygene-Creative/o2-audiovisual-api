@@ -19,14 +19,12 @@ def test_speech_segments():
 
     # Expected result based on logic fix
     expected_result = [
-        {"start": 0, "stop": 5, "duration": 5},  
-        {"start": 15, "stop": 25, "duration": 10},  
-        {"start": 40, "stop": 50, "duration": 10}, 
+        {"start": 0, "stop": 25, "duration": 25},  
+        {"start": 40, "stop": 50, "duration": 10},
     ]
 
     # Assert the returned segments match the expected result
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
-
 
 @patch("app.analyzers.segmentation.Segmenter")
 @patch("app.analyzers.segmentation.seg2csv")
@@ -40,8 +38,9 @@ def test_gender_music_segmentation(
     mock_seg2csv,
     mock_segmenter,
 ):
-    mock_segmenter.return_value = MagicMock()
-    mock_segmenter.return_value.__call__.return_value = [
+    mock_instance = MagicMock()  # Create a mock instance for the Segmenter
+    mock_segmenter.return_value = mock_instance 
+    mock_instance.return_value = [
         ("speech", 0, 5),  # label, start, stop
         ("music", 5, 15),
         ("speech", 15, 25),

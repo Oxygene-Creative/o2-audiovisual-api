@@ -6,8 +6,8 @@ import uuid
 from app.core.files import subfolder_check, delete_file
 
 def speech_segments(df):
-    # Drop rows where the label is 'music' and duration > 10
-    df_filtered = df[~((df['labels'] == 'music') & (df['duration'] > 10))]
+    # Drop rows where the label is 'music' and duration > 7
+    df_filtered = df[~((df['labels'] == 'music') & (df['duration'] > 7))]
 
     # Drop rows where the label is 'noEnergy'
     df_filtered = df_filtered[~((df_filtered['labels'] == 'noEnergy'))]
