@@ -6,6 +6,7 @@ from app.core.llm import llm
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 import torch
+import re
 
 # Load a pre-trained sentiment analysis pipeline
 classifier = pipeline("sentiment-analysis")
@@ -27,13 +28,15 @@ def match_keywords(text, keywords):
     """
     Match words in the text to categories using fuzzy matching.
     """
-    text_words = text.lower().split()  # Break text into words
+    # Extract only alphanumeric words and convert to lowercase
+    text_words = re.findall(r'\b\w+\b', text.lower())
     matched_keywords = set()
 
     for word in text_words:
         # Find closest category matches to the word
         match, score = process.extractOne(word, keywords)
-        if score > 80:  # Threshold to accept a match
+        print(f"Word: {word}, Match: {match}, Score: {score}")
+        if score > 95:  # Threshold to accept a match
             matched_keywords.add(match)
 
     return list(matched_keywords) if matched_keywords else []
