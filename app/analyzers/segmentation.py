@@ -16,7 +16,7 @@ def speech_segments(df):
     df_filtered = df_filtered.drop('duration', axis=1)
 
     # Create a new column to identify whether rows should be grouped
-    df_filtered['gap'] = (df_filtered['start'] - df_filtered['stop'].shift(1)) > 5  # True if gap exceeds 3 seconds
+    df_filtered['gap'] = (df_filtered['start'] - df_filtered['stop'].shift(1)) > 5
     df_filtered['group'] = df_filtered['gap'].cumsum()  # Create a group identifier by cumulative summing the `gap`
 
     # Create the new grouped DataFrame

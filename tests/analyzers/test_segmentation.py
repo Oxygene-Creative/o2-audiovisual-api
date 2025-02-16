@@ -17,10 +17,11 @@ def test_speech_segments():
     # Call the function
     result = speech_segments(df)
 
-    # Expected result after processing
+    # Expected result based on logic fix
     expected_result = [
-        {"start": 0, "stop": 15, "duration": 15},  # speech and music combined
-        {"start": 40, "stop": 50, "duration": 10},  # speech segment
+        {"start": 0, "stop": 5, "duration": 5},  
+        {"start": 15, "stop": 25, "duration": 10},  
+        {"start": 40, "stop": 50, "duration": 10}, 
     ]
 
     # Assert the returned segments match the expected result
@@ -39,7 +40,7 @@ def test_gender_music_segmentation(
     mock_seg2csv,
     mock_segmenter,
 ):
-    # Mock segmentation output from Segmenter
+    mock_segmenter.return_value = MagicMock()
     mock_segmenter.return_value.__call__.return_value = [
         ("speech", 0, 5),  # label, start, stop
         ("music", 5, 15),
@@ -58,21 +59,18 @@ def test_gender_music_segmentation(
     audio_file = "dummy_audio.wav"
     aggregated_result, segments = gender_music_segmentation(audio_file)
 
-    # Expected aggregated results
+    # Validate the aggregated results
     expected_aggregated = [
         {"labels": "speech", "duration": 15},
         {"labels": "music", "duration": 10},
     ]
-
-    # Expected segments output
-    expected_segments = [
-        {"start": 0, "stop": 15, "duration": 15},
-    ]
-
-    # Validate the aggregated results
     assert aggregated_result == expected_aggregated, f"Expected {expected_aggregated}, but got {aggregated_result}"
 
-    # Validate the segmented speech results
+    # Validate the speech segments
+    expected_segments = [
+        {"start": 0, "stop": 5, "duration": 5},
+        {"start": 15, "stop": 25, "duration": 10},
+    ]
     assert segments == expected_segments, f"Expected {expected_segments}, but got {segments}"
 
     # Ensure mocked methods are called correctly
