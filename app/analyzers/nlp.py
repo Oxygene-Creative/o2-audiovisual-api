@@ -75,11 +75,8 @@ def preprocess_text(texts):
     processed_texts = []
     
     for text in texts:
-        text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
-        text = re.sub(r'\S*@\S*\s?', '', text)  # Remove emails
-        text = re.sub(r'\'', '', text)  # Remove apostrophes
-        text = re.sub(r'[^a-zA-Z]', ' ', text)  # Remove non-alphabet characters
-        text = text.lower()  # Convert to lowercase
+        # Remove non-alphanumeric chars and lowercase
+        text = re.sub(r'[^\w\s]', '', text).lower()
     
         # Tokenize words
         words = nltk.word_tokenize(text)
@@ -89,7 +86,8 @@ def preprocess_text(texts):
                      for word in words 
                      if word not in stop_words and len(word) > 1]
         
-        processed_texts.append(processed)
+        if processed:
+            processed_texts.append(processed)
     
     return processed_texts
 
@@ -102,6 +100,10 @@ def lda_topic_modeling(texts, num_topics=5, passes=10):
 
     # Create a bag-of-words corpus
     corpus = [dictionary.doc2bow(text) for text in texts]
+    
+    # Check if the corpus is empty (no terms left)
+    if len(corpus) == 0:
+        raise ValueError("Cannot compute LDA over an empty collection (no terms).")
 
     # Train LDA model
     lda_model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=num_topics, passes=passes)
@@ -111,6 +113,10 @@ def lda_topic_modeling(texts, num_topics=5, passes=10):
 def topic_modelling(text: list[str]):
     # Fit and transform
     processed_texts = preprocess_text(text)
+    # Check if preprocessing resulted in empty texts
+    if not processed_texts:
+        raise ValueError("All input texts were filtered out during preprocessing.")
+    
     lda_model, corpus, dictionary = lda_topic_modeling(processed_texts, num_topics=3)
     topics = []
     for idx in range(lda_model.num_topics):
