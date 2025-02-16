@@ -78,10 +78,10 @@ def preprocess_text(texts):
     processed_texts = []
     
     for text in texts:
-        text = re.sub('\s+', ' ', text)  # Remove extra spaces
-        text = re.sub('\S*@\S*\s?', '', text)  # Remove emails
-        text = re.sub('\'', '', text)  # Remove apostrophes
-        text = re.sub('[^a-zA-Z]', ' ', text)  # Remove non-alphabet characters
+        text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
+        text = re.sub(r'\S*@\S*\s?', '', text)  # Remove emails
+        text = re.sub(r'\'', '', text)  # Remove apostrophes
+        text = re.sub(r'[^a-zA-Z]', ' ', text)  # Remove non-alphabet characters
         text = text.lower()  # Convert to lowercase
     
         # Tokenize words
