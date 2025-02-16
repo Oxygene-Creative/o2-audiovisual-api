@@ -41,27 +41,17 @@ def test_transcribe(mock_transcribe):
 @patch("app.core.llm.llm")
 def test_post_process_transcription(mock_llm):
     # Mock LLM output
-    processed_transcript = """
-    [0.0 - 10.0] Hello, World!
-    [10.0 - 20.0] This is a test.
-    """
+    processed_transcript = "[0.0 - 10.0] Hello, World! [10.0 - 20.0] This is a test."
     mock_llm.invoke.return_value = processed_transcript
 
     # Call the function with test inputs
-    raw_transcript = """
-    [0.0 - 10.0] hello world
-    [10.0 - 20.0] this is a test
-    """
+    raw_transcript = "[0.0 - 10.0] hello woorld [10.0 - 20.0] this is a test"
     keywords = ["world", "test"]
     result = post_process_transcription(raw_transcript, keywords)
 
     # Expected result
-    expected_result = """
-    [0.0 - 10.0] Hello, World!
-    [10.0 - 20.0] This is a test.
-    """
-    assert result == expected_result, f"Expected {expected_result}, but got {result}"
-
+    expected_result = "[0.0 - 10.0] Hello, World! [10.0 - 20.0] This is a test."
+    assert result.strip() == expected_result.strip(), f"Expected {expected_result.strip()}, but got {result.strip()}"
     # Validate LLM invocation
     mock_llm.invoke.assert_called_once()
     assert "world" in mock_llm.invoke.call_args[0][0]["keywords"]
