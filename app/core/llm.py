@@ -2,6 +2,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain.chains import LLMChain
+from dotenv import load_dotenv
+
+# Load environment variables from '.env'
+load_dotenv()
 
 # Initialize language model
 llm = ChatGoogleGenerativeAI(
