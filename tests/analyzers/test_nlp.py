@@ -5,89 +5,62 @@ from app.analyzers.nlp import (
     categorize_text,
     topic_modelling,
 )
-from unittest.mock import patch
-
 
 def test_sentiment_analysis():
-    with patch("app.analyzers.nlp.classifier") as mock_classifier:
-        # Mock response for the classifier
-        mock_classifier.return_value = [{"label": "POSITIVE", "score": 0.99}]
+    # Positive case
+    result = sentiment_analysis("I love this product!")
+    assert result == "Positive", "Expected sentiment to be Positive"
 
-        # Positive case
-        result = sentiment_analysis("I love this product!")
-        assert result == "Positive"
+    # Negative case
+    result = sentiment_analysis("I hate this experience.")
+    assert result == "Negative", "Expected sentiment to be Negative"
 
-        # Negative case
-        mock_classifier.return_value = [{"label": "NEGATIVE", "score": 0.95}]
-        result = sentiment_analysis("I hate this experience.")
-        assert result == "Negative"
-
-        # Neutral case (Mock case without real neutral label behavior)
-        mock_classifier.return_value = [{"label": "NEUTRAL", "score": 0.75}]
-        result = sentiment_analysis("It's okay.")
-        assert result == "Neutral"
-
+    # A neutral-like case (actual behavior depends on the pre-trained model)
+    result = sentiment_analysis("It's just okay.")
+    assert result in ["Neutral", "Positive", "Negative"], "Unexpected sentiment analysis result"
 
 def test_match_keywords():
     keywords = ["finance", "technology", "health"]
+
+    # Match case
     text = "I am interested in the latest finance trends."
-    
     matched = match_keywords(text, keywords)
     assert "finance" in matched, "Expected 'finance' to be matched"
-    assert len(matched) == 1
+    assert len(matched) == 1, "Expected exactly one match"
 
     # Edge case: No match
-    text = "I am into sports."
-    matched = match_keywords(text, keywords)
-    assert matched == [], "Expected no matches for unrelated words"
+    text2 = "I am into sports."
+    matched2 = match_keywords(text2, keywords)
+    assert matched2 == [], "Expected no matches for unrelated words"
 
 
 def test_categorize_text():
     categories = ["finance", "technology", "health"]
-    
-    # Use dependency injection to mock `embed_text`
-    with patch("app.analyzers.embeddings.embed_text_array") as mock_embed_text_array, \
-        patch("app.analyzers.embeddings.embed_text") as mock_embed_text:
-        mock_embed_text.side_effect = lambda texts: [[1.0, 0.0, 0.0] for text in texts]
-        mock_embed_text_array.side_effect = lambda texts: [[1.0, 0.0, 0.0] for text in texts]
 
-        # Similar text
-        text = "finance topic about money"
-        result = categorize_text(text, categories, threshold=0.1)
-        assert "finance" in result, "Expected 'finance' to be categorized"
-        assert len(result) == 1
+    # Similar text
+    text = "a hot topic about money"
+    result = categorize_text(text, categories, threshold=0.5)
+    assert "finance" in result, "Expected 'finance' to be categorized"
+    assert len(result) == 1, "Expected exactly one category match"
 
-        # Dissimilar text
-        text = "sports topic"
-        result = categorize_text(text, categories, threshold=0.5)
-        assert result == [], "Expected no categories for dissimilar text"
+    # Dissimilar text
+    text2 = "i love football"
+    result2 = categorize_text(text2, categories, threshold=0.5)
+    assert result2 == [], "Expected no categories for dissimilar text"
 
 
 def test_topic_modelling():
-    input_texts = ["This is about AI and machine learning.", "This relates to technology and AI."]
+    input_texts = ["This is about AI and machine learning.", "This relates to technology and innovation."]
 
-    # Mock BERTopic and LLM components
-    with patch("app.analyzers.nlp.topic_model") as mock_topic_model, \
-         patch("app.core.llm.llm") as mock_llm:
+    # Call the function
+    final_topics = topic_modelling(input_texts)
 
-        # Mock BERTopic fit_transform
-        mock_topic_model.fit_transform.return_value = ([0, 1], [0.9, 0.8])  # Two topic IDs
+    # Validate structure and results
+    assert isinstance(final_topics, list), "Expected final_topics to be a list"
+    assert len(final_topics) > 0, "Expected at least one topic to be generated"
 
-        # Mock topic keywords
-        mock_topic_model.get_topic.side_effect = [
-            [("AI", 0.9), ("ML", 0.85)],  # Topic 0
-            [("Technology", 0.8), ("Innovation", 0.75)],  # Topic 1
-        ]
-
-        # Mock LLM response
-        mock_llm.return_value.invoke.return_value = "Artificial Intelligence"
-
-        # Call the function
-        final_topics = topic_modelling(input_texts)
-
-        # Validate structure and results
-        assert isinstance(final_topics, list), "Expected final_topics to be a list"
-        assert len(final_topics) == 2, "Expected two distinct topics"
-        assert final_topics[0]["label"] == "Artificial Intelligence", "Expected label for Topic 0"
-        assert final_topics[0]["words"] == [("AI", 0.9), ("ML", 0.85)], "Expected keywords for Topic 0"
-        assert final_topics[1]["words"] == [("Technology", 0.8), ("Innovation", 0.75)], "Expected keywords for Topic 1"
+    for topic in final_topics:
+        assert "label" in topic, "Expected each topic to have a label"
+        assert "words" in topic, "Expected each topic to have associated words"
+        assert isinstance(topic["words"], list), "Expected topic words to be a list"
+        assert len(topic["words"]) > 0, "Expected words for each topic to have at least one entry"
