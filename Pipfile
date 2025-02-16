@@ -26,6 +26,7 @@ langchain-text-splitters = "*"
 pandas = "*"
 moviepy = "*"
 scikit-learn = "*"
+pytest-mock = "*"
 
 [dev-packages]
 pytest = "*"

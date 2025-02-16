@@ -1,0 +1,66 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# pytest cache files
+.cache/
+.pytest_cache/
+*.log
+
+# Results of pytest runs
+htmlcov/
+coverage.xml
+*.coverage
+*.cover
+.coverage.*
+
+# pytest plugin outputs
+.junit/
+*.xml  # If pytest is configured to export test results to XML
+
+# Virtual environment folders
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Miscellaneous Python files
+pip-log.txt
+pip-delete-this-directory.txt
+
+# MyPy cache (can be used with pytest-mypy)
+.mypy_cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.DS_Store
+
+# Jupyter Notebook checkpoints (if you use notebooks for testing)
+.ipynb_checkpoints/
+
+# Output of profiling or debugging
+*.prof
+*.profraw
+
+# IDE configurations (customize as per IDE usage)
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+nbproject/
+*.iml
+
+# Logs
+*.log
+logs/
+
+# If pytest records screenshots or other temporary output
+screenshots/
+output/

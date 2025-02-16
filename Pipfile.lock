@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e657ae154411489d84c2b9f0e25e69ef687f4965d93d86a2b6200d90191fb3f7"
+            "sha256": "192e500024f2dae0e65a0ae70283704bcf8d3f86da7c1f660cbd2fa6bbf994ad"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1149,6 +1149,14 @@
             "markers": "python_version >= '3.6'",
             "version": "==0.7.12"
         },
+        "iniconfig": {
+            "hashes": [
+                "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3",
+                "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==2.0.0"
+        },
         "jax": {
             "hashes": [
                 "sha256:49df70bf293a345a7fb519f71193506d37a024c4f850b358042eb32d502c81c8",
@@ -2153,6 +2161,14 @@
             "markers": "python_version >= '3.8'",
             "version": "==6.0.0"
         },
+        "pluggy": {
+            "hashes": [
+                "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1",
+                "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==1.5.0"
+        },
         "proglog": {
             "hashes": [
                 "sha256:19d5da037e8c813da480b741e3fa71fb1ac0a5b02bf21c41577c7f327485ec50",
@@ -2349,6 +2365,23 @@
                 "sha256:bbf5d7413e616d3e1978a05d7caca62eec59692d2dab75dd22a4426ef9b8a691"
             ],
             "version": "==4.82"
+        },
+        "pytest": {
+            "hashes": [
+                "sha256:50e16d954148559c9a74109af1eaf0c945ba2d8f30f0a3d3335edde19788b6f6",
+                "sha256:965370d062bce11e73868e0335abac31b4d3de0e82f4007408d242b4f8610761"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==8.3.4"
+        },
+        "pytest-mock": {
+            "hashes": [
+                "sha256:0b72c38033392a5f4621342fe11e9219ac11ec9d375f8e2a0c164539e0d70f6f",
+                "sha256:2719255a1efeceadbc056d6bf3df3d1c5015530fb40cf347c0f9afac88410bd0"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.8'",
+            "version": "==3.14.0"
         },
         "pytextgrid": {
             "hashes": [
