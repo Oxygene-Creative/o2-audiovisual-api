@@ -40,7 +40,9 @@ def test_transcribe(mock_transcribe):
 @patch("app.analyzers.transcription.llm")
 @patch("app.analyzers.transcription.ChatPromptTemplate")
 @patch("app.analyzers.transcription.StrOutputParser")
-def test_post_process_transcription(mock_llm):
+def test_post_process_transcription(mock_str_output_parser, mock_prompt, mock_llm):
+    processed_transcript = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
+
     # Mock StrOutputParser behavior
     mock_parser_instance = MagicMock()
     mock_parser_instance.invoke.return_value = processed_transcript
