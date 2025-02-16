@@ -1,13 +1,11 @@
 from transformers import pipeline
 from fuzzywuzzy import process
 from app.analyzers.embeddings import embed_text, embedding_model
-from bertopic import BERTopic
 from app.core.llm import llm
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 import torch
 import re
-import gensim
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
