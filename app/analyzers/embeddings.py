@@ -35,7 +35,7 @@ def embed_text(text: str):
         is_separator_regex=False,
     )
     docs = text_splitter.create_documents([text])
-    embeddings = embedding_model.embed_documents(docs)
+    embeddings = embedding_model.encode(docs)
     return embeddings
 
 def embed_images(image_url: str):
