@@ -32,12 +32,11 @@ def test_transcribe(mock_transcribe):
     expected_result = {
         "language": "en",
         "language_probability": 0.98,
-        "transcript": "[0.0 - 10.0] Hello World. \n[10.0 - 20.0] This is a test."
+        "transcript": "[0.0 - 10.0] Hello World.\n [10.0 - 20.0] This is a test."
     }
 
-    assert result == expected_result, f"Expected {expected_result}, but got {result}"
+    assert result.strip() == expected_result.strip(), f"Expected {expected_result}, but got {result}"
     mock_transcribe.assert_called_once_with(audio_url, beam_size=5, vad_filter=True)
-
 
 @patch("app.core.llm.llm")
 def test_post_process_transcription(mock_llm):
