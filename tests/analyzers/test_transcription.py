@@ -38,29 +38,45 @@ def test_transcribe(mock_transcribe):
     mock_transcribe.assert_called_once_with(audio_url, beam_size=5, vad_filter=True)
 
 @patch("app.analyzers.transcription.llm")
+@patch("app.analyzers.transcription.ChatPromptTemplate")
+@patch("app.analyzers.transcription.StrOutputParser")
 def test_post_process_transcription(mock_llm):
-    # Mock LLM output
-    processed_transcript = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
-    mock_llm.invoke.return_value = processed_transcript
+    # Mock StrOutputParser behavior
+    mock_parser_instance = MagicMock()
+    mock_parser_instance.invoke.return_value = processed_transcript
+    mock_str_output_parser.return_value = mock_parser_instance
 
-    # Call the function with test inputs
+    # Mock LLM output (ensure invoke returns a valid string)
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.invoke.return_value = processed_transcript
+    mock_llm.return_value = mock_llm_instance
+
+    # Mock ChatPromptTemplate behavior
+    mock_prompt_instance = MagicMock()
+    mock_prompt.return_value = mock_prompt_instance
+
+    # Simulate pipeline behavior: ChatPromptTemplate | llm | StrOutputParser
+    mock_prompt_instance.__or__.return_value = mock_llm_instance
+    mock_llm_instance.__or__.return_value = mock_parser_instance
+
+    # Inputs for the function
     raw_transcript = "[0.0 - 10.0] hello woorld [10.0 - 20.0] this is a test"
     keywords = ["world", "test"]
+
+    # Call the function
     result = post_process_transcription(raw_transcript, keywords)
 
-    # Expected result
+    # Assertions
     expected_result = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
-    assert result.strip() == expected_result.strip(), f"Expected {expected_result}, but got {result}"
-    
-    # Validate `llm.invoke` is called once
-    mock_llm.invoke.assert_called_once()
+    assert result.strip() == expected_result.strip()
 
-    # Ensure the correct arguments are passed to `invoke`
-    first_call_args = mock_llm.invoke.call_args[0][0]
-    assert "keywords" in first_call_args
-    assert "world" in first_call_args["keywords"]
-    assert "test" in first_call_args["keywords"]
-    assert raw_transcript in first_call_args["transcript"]
+    # Verify the LLM was invoked with correct arguments
+    mock_llm_instance.invoke.assert_called_once()
+    passed_keywords = mock_llm_instance.invoke.call_args[0][0]["keywords"]
+    passed_transcript = mock_llm_instance.invoke.call_args[0][0]["transcript"]
+    assert passed_keywords == "world, test"
+    assert passed_transcript == raw_transcript
+
 
 def test_remove_timestamps_and_format():
     transcript = """
