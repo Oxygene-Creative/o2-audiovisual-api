@@ -34,7 +34,7 @@ def embed_text(text: str):
         length_function=len,
         is_separator_regex=False,
     )
-    docs = text_splitter.split_text([text])
+    docs = text_splitter.split_text(text)
     embeddings = embedding_model.encode(docs)
     return embeddings
 

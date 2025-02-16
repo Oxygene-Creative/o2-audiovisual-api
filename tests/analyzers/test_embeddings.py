@@ -12,7 +12,7 @@ def test_embed_text():
 
 def test_embed_images():
     # Ensure you have an image file for testing
-    test_image_path = "./test_image.jpg"
+    test_image_path = "./tests/analyzers/test_image.jpg"
     assert os.path.exists(test_image_path), "Test image file does not exist."
 
     embeddings = embed_images(test_image_path)
