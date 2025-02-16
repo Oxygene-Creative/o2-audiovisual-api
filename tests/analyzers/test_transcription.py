@@ -7,11 +7,10 @@ from app.analyzers.transcription import (
     remove_timestamps_and_format
 )
 
-
 def test_remove_non_ascii():
     text = "Hello World! 你好世界 🌍"
     cleaned_text = remove_non_ascii(text)
-    expected_output = "Hello World! "
+    expected_output = "Hello World!"
     assert cleaned_text == expected_output, f"Expected {expected_output}, but got {cleaned_text}"
 
 
@@ -33,7 +32,7 @@ def test_transcribe(mock_transcribe):
     expected_result = {
         "language": "en",
         "language_probability": 0.98,
-        "transcript": "[0.0 -> 10.0] Hello World. \n[10.0 -> 20.0] This is a test."
+        "transcript": "[0.0 - 10.0] Hello World. \n[10.0 - 20.0] This is a test."
     }
 
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
@@ -44,23 +43,23 @@ def test_transcribe(mock_transcribe):
 def test_post_process_transcription(mock_llm):
     # Mock LLM output
     processed_transcript = """
-    [0.0 -> 10.0] Hello, World!
-    [10.0 -> 20.0] This is a test.
+    [0.0 - 10.0] Hello, World!
+    [10.0 - 20.0] This is a test.
     """
     mock_llm.invoke.return_value = processed_transcript
 
     # Call the function with test inputs
     raw_transcript = """
-    [0.0 -> 10.0] hello world
-    [10.0 -> 20.0] this is a test
+    [0.0 - 10.0] hello world
+    [10.0 - 20.0] this is a test
     """
     keywords = ["world", "test"]
     result = post_process_transcription(raw_transcript, keywords)
 
     # Expected result
     expected_result = """
-    [0.0 -> 10.0] Hello, World!
-    [10.0 -> 20.0] This is a test.
+    [0.0 - 10.0] Hello, World!
+    [10.0 - 20.0] This is a test.
     """
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
 

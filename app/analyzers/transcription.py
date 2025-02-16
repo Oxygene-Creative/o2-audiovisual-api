@@ -18,7 +18,7 @@ transcription_model = WhisperModel(
 
 # Define function to remove non-ascii characters
 def remove_non_ascii(text):
-    return ''.join(i for i in text if ord(i)<128)
+    return ''.join(i for i in text if ord(i) < 128).strip()
 
 def transcribe(audio_url: str):
     segments, info = transcription_model.transcribe(audio_url, beam_size=5, vad_filter=True)
@@ -34,7 +34,7 @@ def transcribe(audio_url: str):
 
     for segment in segments:
         text = remove_non_ascii(segment.text)
-        formatted_line = f"[{segment.start:.1f} -> {segment.end:.1f}] {text} "
+        formatted_line = f"[{segment.start:.1f} - {segment.end:.1f}] {text}"
         formatted_lines.append(formatted_line)
 
     transcription_info["transcript"] = "\n".join(formatted_lines)
