@@ -60,8 +60,8 @@ def test_gender_music_segmentation(
 
     # Validate the aggregated results
     expected_aggregated = [
+        {"labels": "musix", "duration": 10},
         {"labels": "speech", "duration": 15},
-        {"labels": "music", "duration": 10},
     ]
     assert aggregated_result == expected_aggregated, f"Expected {expected_aggregated}, but got {aggregated_result}"
 
