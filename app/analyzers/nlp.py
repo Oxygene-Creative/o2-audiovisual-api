@@ -1,9 +1,8 @@
 from transformers import pipeline
 from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
-from app.analyzers.embeddings import embed_text
+from app.analyzers.embeddings import embed_text, embed_text_array, embedding_model
 from bertopic import BERTopic
-from app.analyzers.embeddings import embedding_model
 from app.core.llm import llm
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -44,8 +43,8 @@ def categorize_text(text, categories, threshold=0.3):
     Categorize text based on semantic similarity to category names.
     """
     # Encode the text and category names
-    text_embedding = embed_text([text])[0]
-    category_embeddings = embed_text(categories)
+    text_embedding = embed_text(text)
+    category_embeddings = embed_text_array(categories)
 
     # Compute similarity scores
     similarities = cosine_similarity([text_embedding], category_embeddings)[0]

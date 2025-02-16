@@ -38,6 +38,10 @@ def embed_text(text: str):
     embeddings = embedding_model.encode(docs)
     return embeddings
 
+def embed_text_array(text: list[str]):
+    embeddings = embedding_model.encode(text)
+    return embeddings
+
 def embed_images(image_url: str):
     mp_image = mp.Image.create_from_file(image_url)
     options = image_embedding_model_options()

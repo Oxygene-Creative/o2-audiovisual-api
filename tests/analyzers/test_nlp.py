@@ -46,8 +46,10 @@ def test_categorize_text():
     categories = ["finance", "technology", "health"]
     
     # Use dependency injection to mock `embed_text`
-    with patch("app.analyzers.embeddings.embed_text") as mock_embed_text:
+    with patch("app.analyzers.embeddings.embed_text_array") as mock_embed_text_array, \
+        patch("app.analyzers.embeddings.embed_text") as mock_embed_text:
         mock_embed_text.side_effect = lambda texts: [[1.0, 0.0, 0.0] for text in texts]
+        mock_embed_text_array.side_effect = lambda texts: [[1.0, 0.0, 0.0] for text in texts]
 
         # Similar text
         text = "finance topic about money"
