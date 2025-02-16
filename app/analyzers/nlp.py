@@ -21,9 +21,6 @@ stop_words = stopwords.words('english')
 # Load a pre-trained sentiment analysis pipeline
 classifier = pipeline("sentiment-analysis")
 
-# Load BERTopic
-topic_model = BERTopic(embedding_model=embedding_model)
-
 def sentiment_analysis(text):
     result = classifier(text)[0]  # Returns a dictionary with label and score
     label = result['label']
