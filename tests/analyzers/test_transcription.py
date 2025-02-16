@@ -37,8 +37,7 @@ def test_transcribe(mock_transcribe):
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
     mock_transcribe.assert_called_once_with(audio_url, beam_size=5, vad_filter=True)
 
-@patch("app.analyzers.transcription.llm")
-def test_post_process_transcription(mock_llm):
+def test_post_process_transcription():
     # Input transcript (raw and containing errors)
     raw_transcript = "[0.0 - 10.0] hello woorld [10.0 - 20.0] this is a test"
     keywords = ["world", "test"]
