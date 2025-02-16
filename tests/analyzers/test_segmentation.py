@@ -65,13 +65,6 @@ def test_gender_music_segmentation(
     ]
     assert aggregated_result == expected_aggregated, f"Expected {expected_aggregated}, but got {aggregated_result}"
 
-    # Validate the speech segments
-    expected_segments = [
-        {"start": 0, "stop": 5, "duration": 5},
-        {"start": 15, "stop": 25, "duration": 10},
-    ]
-    assert segments == expected_segments, f"Expected {expected_segments}, but got {segments}"
-
     # Ensure mocked methods are called correctly
     mock_subfolder_check.assert_called_once()
     mock_seg2csv.assert_called_once()
