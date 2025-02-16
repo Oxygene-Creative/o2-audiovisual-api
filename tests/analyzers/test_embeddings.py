@@ -18,5 +18,5 @@ def test_embed_images():
     embeddings = embed_images(test_image_path)
     
     assert embeddings is not None, "Embeddings should not be None."
-    assert len(embeddings) > 0, "Embeddings should not be empty."
+    assert len(embeddings.embedding) > 0, "Embeddings should not be empty."
     print("Image embeddings generated successfully!")
