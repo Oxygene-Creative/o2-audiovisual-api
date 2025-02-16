@@ -33,7 +33,6 @@ def speech_segments(df):
 
     return grouped_df.to_dict(orient='records')
 
-
 def gender_music_segmentation(audio_file):
     # load segmentation model and segment audio file
     seg = Segmenter('smn', True)

@@ -27,11 +27,11 @@ def test_speech_segments():
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
 
 
-@patch("app.analyzers.audio_processor.Segmenter")
-@patch("app.analyzers.audio_processor.seg2csv")
-@patch("app.analyzers.audio_processor.pd.read_table")
-@patch("app.analyzers.audio_processor.delete_file")
-@patch("app.analyzers.audio_processor.subfolder_check")
+@patch("app.analyzers.segmentation.Segmenter")
+@patch("app.analyzers.segmentation.seg2csv")
+@patch("app.analyzers.segmentation.pd.read_table")
+@patch("app.analyzers.segmentation.delete_file")
+@patch("app.analyzers.segmentation.subfolder_check")
 def test_gender_music_segmentation(
     mock_subfolder_check,
     mock_delete_file,
