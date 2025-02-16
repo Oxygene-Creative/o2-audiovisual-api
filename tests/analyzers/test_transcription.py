@@ -37,7 +37,7 @@ def test_transcribe(mock_transcribe):
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
     mock_transcribe.assert_called_once_with(audio_url, beam_size=5, vad_filter=True)
 
-@patch("app.core.llm.llm")
+@patch("app.analyzers.transcription.llm")
 def test_post_process_transcription(mock_llm):
     # Mock LLM output
     processed_transcript = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
