@@ -96,7 +96,7 @@ def lda_topic_modeling(texts, num_topics=5, passes=10):
     dictionary = corpora.Dictionary(texts)
 
     # Filter extremes to remove very rare and overly common words
-    dictionary.filter_extremes(no_below=5, no_above=0.5)
+    dictionary.filter_extremes(no_below=1, no_above=0.8)
 
     # Create a bag-of-words corpus
     corpus = [dictionary.doc2bow(text) for text in texts]
@@ -123,7 +123,7 @@ def topic_modelling(text: list[str]):
         # Get the top words for the topic
         topic = lda_model.show_topic(idx, topn=5)
         words = [word for word, _ in topic]
-        topics.append(words)  # Append the list of words for this topic
+        topics.append(words)
     
     prompt = ChatPromptTemplate.from_messages(
         [("user", "I have a topic that is described by the following keywords: {keywords} Please give a single label to define the topic.")],
@@ -134,7 +134,7 @@ def topic_modelling(text: list[str]):
     final_topics = []
     
     # Get all topics and their words
-    for words in enumerate(topics):
+    for words in topics:
         keyword_string = ", ".join(words)
         # create human readable labe for the topic
         label = chain.invoke({"keywords": keyword_string })
