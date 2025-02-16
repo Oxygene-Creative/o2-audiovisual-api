@@ -65,8 +65,8 @@ def test_topic_modelling():
     input_texts = ["This is about AI and machine learning.", "This relates to technology and AI."]
 
     # Mock BERTopic and LLM components
-    with patch("app.analyzers.text_processing.topic_model") as mock_topic_model, \
-         patch("app.analyzers.text_processing.llm") as mock_llm:
+    with patch("app.analyzers.nlp.topic_model") as mock_topic_model, \
+         patch("app.core.llm.llm") as mock_llm:
 
         # Mock BERTopic fit_transform
         mock_topic_model.fit_transform.return_value = ([0, 1], [0.9, 0.8])  # Two topic IDs
