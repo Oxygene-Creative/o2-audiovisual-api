@@ -51,10 +51,16 @@ def test_post_process_transcription(mock_llm):
     # Expected result
     expected_result = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
     assert result.strip() == expected_result.strip(), f"Expected {expected_result}, but got {result}"
-    # Validate LLM invocation
+    
+    # Validate `llm.invoke` is called once
     mock_llm.invoke.assert_called_once()
-    assert "world" in mock_llm.invoke.call_args[0][0]["keywords"]
-    assert "test" in mock_llm.invoke.call_args[0][0]["keywords"]
+
+    # Ensure the correct arguments are passed to `invoke`
+    first_call_args = mock_llm.invoke.call_args[0][0]
+    assert "keywords" in first_call_args
+    assert "world" in first_call_args["keywords"]
+    assert "test" in first_call_args["keywords"]
+    assert raw_transcript in first_call_args["transcript"]
 
 def test_remove_timestamps_and_format():
     transcript = """
