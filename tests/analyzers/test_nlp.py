@@ -49,9 +49,27 @@ def test_categorize_text():
 
 def test_topic_modelling():
     input_texts = [
-        "This is about AI and machine learning tools that will help your coding abilities and increase your productivity.", 
-        "This relates to technology and innovation, specifically harware and embedded systems. Use raspberry pis and arduino kits to get started."]
-
+    (
+        "Artificial Intelligence (AI) is rapidly advancing, with new innovations in machine learning and natural language "
+        "processing shaping industries worldwide. Companies are adopting AI models to improve customer service and automate processes. "
+        "For example, chatbots and AI-driven tools like OpenAI's ChatGPT are helping businesses reduce costs and enhance customer engagement."
+    ),
+    (
+        "The field of sustainability and renewable energy continues to expand. Developments in solar power, wind energy, and electric vehicles "
+        "are becoming more widespread across the globe. Tesla has revolutionized the adoption of electric vehicles, while companies experiment "
+        "with technologies like hydrogen fuel cells to create sustainable transport solutions."
+    ),
+    (
+        "Space exploration is reaching new heights with missions to the Moon and Mars by companies like SpaceX and NASA. The Artemis program "
+        "aims to establish a human base on the Moon, while private companies explore satellite internet through technologies such as Starlink. "
+        "The commercialization of space travel is shaping the future, from tourism to deep space exploration."
+    ),
+    (
+        "The latest advancements in technology include breakthroughs in quantum computing and semiconductor manufacturing. Innovations in "
+        "hardware, such as GPUs, ensure faster processing speeds for AI applications and gaming. The semiconductor shortages due to supply chain "
+        "issues and geopolitical tensions highlight the importance of local manufacturing strategies in this field."
+    )
+]
     # Call the function
     final_topics = topic_modelling(input_texts)
 
