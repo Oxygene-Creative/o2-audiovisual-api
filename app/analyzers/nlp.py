@@ -133,7 +133,7 @@ def topic_modelling(text: list[str]):
     final_topics = []
     
     # Get all topics and their words
-    for words in enumerate(topics):  # Use 'set' to ensure unique topic IDs
+    for words in enumerate(topics):
         keyword_string = ", ".join(words)
         # create human readable labe for the topic
         label = chain.invoke({"keywords": keyword_string })
