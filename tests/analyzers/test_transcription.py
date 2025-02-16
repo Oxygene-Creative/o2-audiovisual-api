@@ -13,7 +13,6 @@ def test_remove_non_ascii():
     expected_output = "Hello World!"
     assert cleaned_text == expected_output, f"Expected {expected_output}, but got {cleaned_text}"
 
-
 @patch("app.analyzers.transcription.transcription_model.transcribe")
 def test_transcribe(mock_transcribe):
     # Mock transcription model output
@@ -41,7 +40,7 @@ def test_transcribe(mock_transcribe):
 @patch("app.core.llm.llm")
 def test_post_process_transcription(mock_llm):
     # Mock LLM output
-    processed_transcript = "[0.0 - 10.0] Hello, World! [10.0 - 20.0] This is a test."
+    processed_transcript = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
     mock_llm.invoke.return_value = processed_transcript
 
     # Call the function with test inputs
@@ -50,13 +49,12 @@ def test_post_process_transcription(mock_llm):
     result = post_process_transcription(raw_transcript, keywords)
 
     # Expected result
-    expected_result = "[0.0 - 10.0] Hello, World! [10.0 - 20.0] This is a test."
+    expected_result = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
     assert result == expected_result, f"Expected {expected_result}, but got {result}"
     # Validate LLM invocation
     mock_llm.invoke.assert_called_once()
     assert "world" in mock_llm.invoke.call_args[0][0]["keywords"]
     assert "test" in mock_llm.invoke.call_args[0][0]["keywords"]
-
 
 def test_remove_timestamps_and_format():
     transcript = """
