@@ -13,7 +13,6 @@ from gensim import corpora
 from gensim.models import LdaModel
 
 # Download NLTK resources
-nltk.download('punkt')
 nltk.download('wordnet')
 nltk.download('stopwords')
 stop_words = stopwords.words('english')
