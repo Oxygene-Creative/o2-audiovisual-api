@@ -51,7 +51,7 @@ def test_post_process_transcription(mock_llm):
 
     # Expected result
     expected_result = "[0.0 - 10.0] Hello, World! [10.0 - 20.0] This is a test."
-    assert result.strip() == expected_result.strip(), f"Expected {expected_result.strip()}, but got {result.strip()}"
+    assert result == expected_result, f"Expected {expected_result.strip()}, but got {result.strip()}"
     # Validate LLM invocation
     mock_llm.invoke.assert_called_once()
     assert "world" in mock_llm.invoke.call_args[0][0]["keywords"]
