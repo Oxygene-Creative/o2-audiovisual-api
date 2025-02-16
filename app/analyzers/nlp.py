@@ -1,9 +1,7 @@
 from transformers import pipeline
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
 from app.analyzers.embeddings import embed_text
-import torch
 from bertopic import BERTopic
 from app.analyzers.embeddings import embedding_model
 from app.core.llm import llm
@@ -16,7 +14,7 @@ classifier = pipeline("sentiment-analysis")
 # Load BERTopic
 topic_model = BERTopic(embedding_model=embedding_model)
 
-def analyze_sentiment_transformers(text):
+def sentiment_analysis(text):
     result = classifier(text)[0]  # Returns a dictionary with label and score
     label = result['label']
     if label == "POSITIVE":
@@ -26,7 +24,7 @@ def analyze_sentiment_transformers(text):
     else:
         return "Neutral"
 
-def match_keywords_with_fuzzy_matching(text, keywords):
+def match_keywords(text, keywords):
     """
     Match words in the text to categories using fuzzy matching.
     """
@@ -41,7 +39,7 @@ def match_keywords_with_fuzzy_matching(text, keywords):
 
     return list(matched_keywords) if matched_keywords else []
 
-def categorize_text_with_embeddings(text, categories, threshold=0.3):
+def categorize_text(text, categories, threshold=0.3):
     """
     Categorize text based on semantic similarity to category names.
     """

@@ -2,14 +2,14 @@ import mediapipe as mp
 import os
 import torch
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 # Check if a GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", 
-    model_kwargs = { 'device': device }) 
+embedding_model = SentenceTransformer(
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    device = device.type)
 
 ImageEmbedder = mp.tasks.vision.ImageEmbedder
     

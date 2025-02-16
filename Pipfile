@@ -23,10 +23,12 @@ mediapipe = "*"
 inaspeechsegmenter = "*"
 bertopic = "*"
 langchain-text-splitters = "*"
-langchain-huggingface = "*"
 pandas = "*"
+moviepy = "*"
+scikit-learn = "*"
 
 [dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.10"

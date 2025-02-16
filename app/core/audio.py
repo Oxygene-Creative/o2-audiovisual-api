@@ -1,35 +1,28 @@
 import os
-import time
+from moviepy import VideoFileClip
 from pydub import AudioSegment
 from pathlib import Path
 from app.core.files import subfolder_check
 
-def delete_file(file_path):
-    try:
-        os.remove(file_path)
-        print(f"File {file_path} deleted successfully.")
-    except FileNotFoundError:
-        print(f"File {file_path} not found. Cannot delete.")
-    except PermissionError:
-        print(f"Permission denied: unable to delete {file_path}.")
-    except Exception as e:
-        print(f"An error occurred while deleting the file {file_path}: {str(e)}")
-
-def extract_audio_from_video(video_file_path, audio_file_path):
+def extract_audio_from_video(video_path):
+    # extract the file name
+    audio_file_name = Path(video_path).stem
+    
     # Load the video file
-    video_clip = VideoFileClip(video_file_path)
+    video_clip = VideoFileClip(video_path)
 
     # Extract the audio
-    audio_clip = video_clip.audio
+    audio = video_clip.audio
 
-    # Write the audio to a file
-    audio_clip.write_audiofile(audio_file_path)
+    # Write the audio to the output path
+    subfolder_check(f"{os.getcwd()}/o2-files")
+    audio.write_audiofile(f"{os.getcwd()}/o2-files/{audio_file_name}.mp3")
 
     # Close the clips
-    audio_clip.close()
+    audio.close()
     video_clip.close()
 
-    print(f"Audio extracted and saved to {audio_file_path}")
+    return f"{ audio_file_name }.mp3"
 
 def slice_audio(speech_segments, audio_path):
     # Get the audio file name from the path
