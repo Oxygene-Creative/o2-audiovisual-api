@@ -27,7 +27,7 @@ def image_embedding_model_options():
 
     return options
 
-def embed_text(text: str):
+def split_and_embed_text(text: str):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=300,
         chunk_overlap=20,
@@ -38,7 +38,7 @@ def embed_text(text: str):
     embeddings = embedding_model.encode(docs)
     return embeddings
 
-def embed_text_array(text: list[str]):
+def embed_text(text: str | list[str]):
     embeddings = embedding_model.encode(text)
     return embeddings
 

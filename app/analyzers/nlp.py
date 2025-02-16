@@ -1,11 +1,11 @@
 from transformers import pipeline
-from sklearn.metrics.pairwise import cosine_similarity
 from fuzzywuzzy import process
-from app.analyzers.embeddings import embed_text, embed_text_array, embedding_model
+from app.analyzers.embeddings import embed_text, embedding_model
 from bertopic import BERTopic
 from app.core.llm import llm
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+import torch
 
 # Load a pre-trained sentiment analysis pipeline
 classifier = pipeline("sentiment-analysis")
@@ -44,15 +44,19 @@ def categorize_text(text, categories, threshold=0.3):
     """
     # Encode the text and category names
     text_embedding = embed_text(text)
-    category_embeddings = embed_text_array(categories)
+    category_embeddings = embed_text(categories)
 
     # Compute similarity scores
-    similarities = cosine_similarity([text_embedding], category_embeddings)[0]
-
-    # Map similarities to categories and filter by threshold
-    matched_categories = [categories[i] for i, score in enumerate(similarities) if score > threshold]
-
-    return matched_categories if matched_categories else []
+    similarities = embedding_model.similarity(text_embedding, category_embeddings)[0]
+    scores, indices = torch.topk(similarities, k=len(categories))
+    
+    matched_categories = []
+    
+    for score, idx in zip(scores, indices):
+        if score > threshold:
+            matched_categories.append(categories[idx])
+    
+    return matched_categories 
 
 def topic_modelling(text: list[str]):
     # Fit and transform
