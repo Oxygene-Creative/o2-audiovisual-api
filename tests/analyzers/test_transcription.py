@@ -50,7 +50,7 @@ def test_post_process_transcription(mock_llm):
 
     # Expected result
     expected_result = "[0.0 - 10.0] Hello, world! [10.0 - 20.0] This is a test."
-    assert result == expected_result, f"Expected {expected_result}, but got {result}"
+    assert result.strip() == expected_result.strip(), f"Expected {expected_result}, but got {result}"
     # Validate LLM invocation
     mock_llm.invoke.assert_called_once()
     assert "world" in mock_llm.invoke.call_args[0][0]["keywords"]

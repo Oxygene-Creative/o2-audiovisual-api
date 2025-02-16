@@ -60,7 +60,7 @@ def post_process_transcription(transcript: str, keywords: list[str]):
     chain = prompt | llm | StrOutputParser()
     processed_transcript = chain.invoke({ "keywords": ", ".join(keywords), "transcript": transcript })
 
-    return processed_transcript
+    return processed_transcript.strip()
 
 def remove_timestamps_and_format(transcript):
     # Use regex to remove timestamps in the format [start - end]
