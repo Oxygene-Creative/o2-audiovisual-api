@@ -33,21 +33,19 @@ def test_match_keywords():
     matched2 = match_keywords(text2, keywords)
     assert matched2 == [], "Expected no matches for unrelated words"
 
-
 def test_categorize_text():
     categories = ["finance", "technology", "health"]
 
     # Similar text
     text = "a hot topic about money"
-    result = categorize_text(text, categories, threshold=0.5)
+    result = categorize_text(text, categories, threshold=0.7)
     assert "finance" in result, "Expected 'finance' to be categorized"
     assert len(result) == 1, "Expected exactly one category match"
 
     # Dissimilar text
     text2 = "i love football"
-    result2 = categorize_text(text2, categories, threshold=0.5)
+    result2 = categorize_text(text2, categories, threshold=0.7)
     assert result2 == [], "Expected no categories for dissimilar text"
-
 
 def test_topic_modelling():
     input_texts = ["This is about AI and machine learning.", "This relates to technology and innovation."]

@@ -7,6 +7,18 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 import torch
 import re
+import gensim
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from gensim import corpora
+from gensim.models import LdaModel
+
+# Download NLTK resources
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('stopwords')
+stop_words = stopwords.words('english')
 
 # Load a pre-trained sentiment analysis pipeline
 classifier = pipeline("sentiment-analysis")
@@ -61,9 +73,57 @@ def categorize_text(text, categories, threshold=0.3):
     
     return matched_categories 
 
+def preprocess_text(texts):
+    stop_words = set(stopwords.words('english'))
+    lemmatizer = WordNetLemmatizer()
+    
+    processed_texts = []
+    
+    for text in texts:
+        text = re.sub('\s+', ' ', text)  # Remove extra spaces
+        text = re.sub('\S*@\S*\s?', '', text)  # Remove emails
+        text = re.sub('\'', '', text)  # Remove apostrophes
+        text = re.sub('[^a-zA-Z]', ' ', text)  # Remove non-alphabet characters
+        text = text.lower()  # Convert to lowercase
+    
+        # Tokenize words
+        words = nltk.word_tokenize(text)
+        
+        # Remove stopwords and lemmatize words
+        processed = [lemmatizer.lemmatize(word) 
+                     for word in words 
+                     if word not in stop_words and len(word) > 1]
+        
+        processed_texts.append(processed)
+    
+    return processed_texts
+
+def lda_topic_modeling(texts, num_topics=5, passes=10):
+    # Create a dictionary representation of the documents
+    dictionary = corpora.Dictionary(texts)
+
+    # Filter extremes to remove very rare and overly common words
+    dictionary.filter_extremes(no_below=5, no_above=0.5)
+
+    # Create a bag-of-words corpus
+    corpus = [dictionary.doc2bow(text) for text in texts]
+
+    # Train LDA model
+    lda_model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=num_topics, passes=passes)
+
+    return lda_model, corpus, dictionary
+
 def topic_modelling(text: list[str]):
     # Fit and transform
-    topics, probs = topic_model.fit_transform(text)
+    processed_texts = preprocess_text(text)
+    lda_model, corpus, dictionary = lda_topic_modeling(processed_texts, num_topics=3)
+    topics = []
+    for idx in range(lda_model.num_topics):
+        # Get the top words for the topic
+        topic = lda_model.show_topic(idx, topn=5)
+        words = [word for word, _ in topic]
+        topics.append(words)  # Append the list of words for this topic
+    
     prompt = ChatPromptTemplate.from_messages(
         [("user", "I have a topic that is described by the following keywords: {keywords} Please give a single label to define the topic.")],
     )
@@ -73,20 +133,14 @@ def topic_modelling(text: list[str]):
     final_topics = []
     
     # Get all topics and their words
-    for topic_id in set(topics):  # Use 'set' to ensure unique topic IDs
-        if topic_id == -1:  # Skip outlier topic
-            continue
-
-        # Fetch the words for the given topic
-        words = topic_model.get_topic(topic_id)
-
-        # Convert words to a comma-separated string
-        keyword_string = ", ".join([word for word, score in words])
-        
+    for words in enumerate(topics):  # Use 'set' to ensure unique topic IDs
+        keyword_string = ", ".join(words)
         # create human readable labe for the topic
         label = chain.invoke({"keywords": keyword_string })
-        
         final_topics.append({ "label": label, "words": words })
         
     return final_topics
+
+
+
     
