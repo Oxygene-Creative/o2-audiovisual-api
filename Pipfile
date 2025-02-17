@@ -37,6 +37,7 @@ scikit-learn = "*"
 zstandard = "*"
 nltk = "*"
 gensim = "*"
+faststream = {extras = ["redis"], version = "*"}
 
 [dev-packages]
 pytest = "*"
