@@ -52,8 +52,7 @@ def test_post_process_transcription():
     # Ensure the known keywords are correctly formatted in the result
     assert "world" in result.lower(), "Expected the keyword 'world' to be properly formatted in the output"
     assert "test" in result.lower(), "Expected the keyword 'test' to be properly formatted in the output"
-
-    
+  
 def test_remove_timestamps_and_format():
     transcript = """
     [0.0 - 10.0] Hello World. 
