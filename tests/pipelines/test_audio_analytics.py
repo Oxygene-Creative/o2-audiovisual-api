@@ -53,7 +53,7 @@ async def test_audio_seg_message_publishing():
         # Use TestRedisBroker to simulate message broker and topic subscriptions
         async with TestRedisBroker(audio_router.broker) as br:
             # Subscribe to the topic where the handler publishes
-            async with br.subscribe("av:audio_transcribe") as subscriber:
+            async with br.subscriber("av:audio_transcribe") as subscriber:
                 # Publish the input message to the "av:audio_seg" topic
                 await br.publish(mock_segment_data, "av:audio_seg")
 
