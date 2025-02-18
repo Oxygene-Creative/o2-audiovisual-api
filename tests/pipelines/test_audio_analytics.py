@@ -45,24 +45,32 @@ async def test_audio_seg_message_publishing():
     )
 
     with patch("app.pipelines.audio_analytics.gender_music_segmentation", 
-               return_value=([{"labels": "speech", "duration": 30}], [{"start": 0, "stop": 30, "duration": 30}])) as mock_segment, \
+               return_value=([{"labels": "male", "duration": 30}, {"labels": "female", "duration": 10}], [{"start": 0, "stop": 30, "duration": 30}])) as mock_segment, \
          patch("app.pipelines.audio_analytics.slice_audio", 
                return_value=[{"start": 0, "stop": 30, "duration": 30, "audio_file": "segment.mp3"}]) as mock_slicing:
 
         async with TestRedisBroker(audio_router.broker) as br:
-            published_message = await br.publish_and_wait(
+            response = await br.publish(
                 mock_segment_data,
-                publish_topic="av:audio_seg",
-                subscribe_topic="av:audio_transcribe",
+                "av:audio_seg"
             )
-
-            # Assert segmentation and slicing logic
+            
+            # assertions
+            assert response.activity.female == 10
+            assert response.activity.male == 30
+            assert len(response.segments) == 1
+            assert response.segments[0].start == 0
+            assert response.segments[0].stop == 30
+            assert response.segments[0].duration == 30
+            assert response.segments[0].audio_file == "segment.mp3"
+            
+            # verify mock calls
             mock_segment.assert_called_once_with("mock-audio.mp3")
             mock_slicing.assert_called_once()
-
-            # Assert the transformation and message passing
-            assert len(published_message.segments) == 1
-            assert published_message.segments[0].audio_file == "segment.mp3"
+            
+            # Verify message was published to the correct topic
+            published_messages = br.published_messages["av:audio_transcribe"]
+            assert len(published_messages) == 1
 
 
 @pytest.mark.asyncio
