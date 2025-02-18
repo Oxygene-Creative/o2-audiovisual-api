@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.analyzers.embeddings import embed_text
+from app.analyzers.llm import llm_transcript_analysis
 from app.analyzers.nlp import categorize_text, match_keywords, sentiment_analysis, topic_modelling
 from faststream.redis import RedisRouter
 from app.models.analytics import AnalysisModel
@@ -116,6 +117,19 @@ async def transcript_topics(data: AnalysisModel):
 @transcript_router.subscriber("transcript_llm")
 @transcript_router.publish("upload_segments_gcp")
 async def transcript_llm(data: AnalysisModel):
+    # Start timing
+    start_time = time.time()
+    for index, segment in enumerate(data.segments):
+        llm_analysis = llm_transcript_analysis(segment.transcript)
+        data.segments[index].ads = llm_analysis.ads
+        data.segments[index].show_metadata = llm_analysis.show_metadata
+        data.segments[index].engagement = llm_analysis.engagement
+    
+    # End timing
+    end_time = time.time()
+    time_taken = end_time - start_time
+    print(f"Time taken to analyze show metadata, ads and engagement using llm: {time_taken:.2f} seconds.")
+    
     return data
 
 

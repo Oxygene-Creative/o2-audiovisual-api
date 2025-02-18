@@ -1,7 +1,26 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime
+
+class Advertisement(BaseModel):
+    brand: Optional[str] = Field(description="Brand name being advertised")
+    product: Optional[str] = Field(description="Product being advertised")
+    start: Optional[float] = Field(description="Timestamp in transcript where ad starts")
+    stop: Optional[float] = Field(description="Timestamp in transcript where ad stops")
+
+class AudienceEngagement(BaseModel):
+    platform: Optional[str] = Field(description="Social media platform or communication method")
+    identifier: Optional[str] = Field(description="Handle, hashtag, phone number, etc.")
+    context: Optional[str] = Field(description="Context of the call to action")
+    start: Optional[float] = Field(description="Timestamp in transcript the engagement starts")
+    start: Optional[float] = Field(description="Timestamp in transcript the engagement stops")
+
+class ShowMetadata(BaseModel):
+    host: str = Field(description="Name of the radio host(s)")
+    program_name: str = Field(description="Name of the radio program")
+    start: Optional[float] = Field(description="Start timestamp in transcript the host identifies themselves")
+    start: Optional[float] = Field(description="Stop timestamp in transcript the host identifies themselves")
 
 class File(BaseModel):
     url: Optional[str] = ""
@@ -52,7 +71,6 @@ class Activity(BaseModel):
     music: Optional[float] = 0.0
     noEnergy: Optional[float] = 0.0
 
-
 class AnalysisModel(BaseModel):
     id: Optional[str] = ""
     stream_id: Optional[str] = ""
@@ -62,3 +80,11 @@ class AnalysisModel(BaseModel):
     timestamp: Optional[datetime] = None
     activity: Optional[Activity] = Activity()
     segments: List[Segment] = []
+    ads: List[Advertisement] = []
+    show_metadata: ShowMetadata = ShowMetadata()
+    engagement: List[AudienceEngagement] = AudienceEngagement()
+    
+class LLMAnalysisModel(BaseModel):
+    ads: List[Advertisement] = []
+    show_metadata: ShowMetadata = ShowMetadata()
+    engagement: List[AudienceEngagement] = AudienceEngagement()
