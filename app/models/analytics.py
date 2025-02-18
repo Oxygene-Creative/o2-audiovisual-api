@@ -48,8 +48,8 @@ class Segment(BaseModel):
     file_size: Optional[float] = 0.0
     embeddings: List[float] = []
     ads: List[Advertisement] = []
-    show_metadata: ShowMetadata = ShowMetadata()
-    engagement: List[AudienceEngagement] = AudienceEngagement()
+    show_metadata: ShowMetadata = None
+    engagement: List[AudienceEngagement] = []
 
 
 class Activity(BaseModel):
@@ -74,5 +74,5 @@ class AnalysisModel(BaseModel):
 
 class LLMAnalysisModel(BaseModel):
     ads: List[Advertisement] = []
-    show_metadata: ShowMetadata = ShowMetadata()
+    show_metadata: Optional[ShowMetadata] = None
     engagement: List[AudienceEngagement] = AudienceEngagement()
