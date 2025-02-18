@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
-from faststream.redis import RedisRouter
+from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel
 from datetime import datetime
 from app.core.gcp import delete_blob, download_file, upload
@@ -11,7 +11,7 @@ from app.core.media_processing import extract_audio_from_video, slice_video
 import time 
 import uuid
 
-video_router = RedisRouter()
+video_router = fastapi.RedisRouter("redis://localhost:6379")
 
 class Upload(BaseModel):
     stream_id: str
@@ -36,8 +36,9 @@ async def start_video_analysis(upload: Upload):
     # extract audio from video
     audio_file_path = extract_audio_from_video(video_file_path)
     
+    analysis_id = uuid.uuid4()
     analysis = AnalysisModel(
-        id=uuid.uuid4(),
+        id=str(analysis_id),
         stream_id=upload.stream_id,
         stream_name=upload.stream_name,
         gcp_bucket=upload.bucket,

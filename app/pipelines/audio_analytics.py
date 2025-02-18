@@ -34,8 +34,9 @@ async def start_audio_analysis(upload: Upload):
     audio_file_path = f"{os.getcwd()}/o2-files/{file_name}"
     download_file(upload.bucket, upload.blob, audio_file_path)
     
+    analysis_id = uuid.uuid4()
     analysis = AnalysisModel(
-        id=uuid.uuid4(),
+        id=str(analysis_id),
         stream_id=upload.stream_id,
         stream_name=upload.stream_name,
         audio_path=audio_file_path,
@@ -50,7 +51,7 @@ async def start_audio_analysis(upload: Upload):
 async def audio_seg(data: AnalysisModel):
     # Start timing
     start_time = time.time()
-    activity_segments, speech_segments = gender_music_segmentation(data.audio_file)
+    activity_segments, speech_segments = gender_music_segmentation(data.audio_path)
 
     # End timing
     end_time = time.time()
