@@ -49,15 +49,51 @@ async def test_audio_seg_message_publishing():
          patch("app.pipelines.audio_analytics.slice_audio", 
                return_value=[{"start": 0, "stop": 30, "duration": 30, "audio_file": "segment.mp3"}]) as mock_slicing:
 
+        
+        # Use TestRedisBroker to simulate message broker and topic subscriptions
         async with TestRedisBroker(audio_router.broker) as br:
-            await br.publish( mock_segment_data, "av:audio_seg" )
+            # Subscribe to the topic where the handler publishes
+            async with br.subscribe("av:audio_transcribe") as subscriber:
+                # Publish the input message to the "av:audio_seg" topic
+                await br.publish(mock_segment_data, "av:audio_seg")
+
+                # Capture the message published by the handler to "av:audio_transcribe"
+                published_message = await subscriber.get(timeout=2)
+
+                # Assertions on the returned AnalysisModel (via published message)
+                assert published_message.activity["male"] == 30
+                assert published_message.activity["female"] == 10
+
+                assert len(published_message.segments) == 1
+                assert published_message.segments[0].start == 0
+                assert published_message.segments[0].stop == 30
+                assert published_message.segments[0].duration == 30
+                assert published_message.segments[0].audio_file == "segment.mp3"
+
+                # Verify mock calls
+                mock_segment.assert_called_once_with("mock-audio.mp3")
+                mock_slicing.assert_called_once()
+        # async with TestRedisBroker(audio_router.broker) as br:
+        #     response = await br.publish(
+        #         mock_segment_data,
+        #         "av:audio_seg"
+        #     )
             
-            # verify mock calls
-            mock_segment.assert_called_once_with("mock-audio.mp3")
-            mock_slicing.assert_called_once()
+        #     # assertions
+        #     assert response.activity.female == 10
+        #     assert response.activity.male == 30
+        #     assert len(response.segments) == 1
+        #     assert response.segments[0].start == 0
+        #     assert response.segments[0].stop == 30
+        #     assert response.segments[0].duration == 30
+        #     assert response.segments[0].audio_file == "segment.mp3"
             
-            # Verify message was published to the correct topic
-            audio_transcribe.mock.assert_called_once_with({"name": "John", "user_id": 1})
+        #     # verify mock calls
+        #     mock_segment.assert_called_once_with("mock-audio.mp3")
+        #     mock_slicing.assert_called_once()
+            
+        #     # Verify message was published to the correct topic
+        #     audio_transcribe.mock
 
 
 # @pytest.mark.asyncio
