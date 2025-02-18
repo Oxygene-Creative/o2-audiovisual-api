@@ -75,4 +75,4 @@ class AnalysisModel(BaseModel):
 class LLMAnalysisModel(BaseModel):
     ads: List[Advertisement] = []
     show_metadata: Optional[ShowMetadata] = None
-    engagement: List[AudienceEngagement] = AudienceEngagement()
+    engagement: List[AudienceEngagement] = []
