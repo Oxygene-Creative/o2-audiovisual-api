@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import FastAPI
-from faststream.redis import RedisRouter
+from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel, Segment
 from datetime import datetime
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
@@ -19,9 +19,9 @@ class Upload(BaseModel):
     blob: str
     timestamp_str: Optional[str]
     
-audio_router = RedisRouter("redis://localhost:6379")
+audio_router = fastapi.RedisRouter("redis://localhost:6379")
 
-@audio_router.get("/analysis/audio")
+@audio_router.post("/analysis/audio")
 async def start_audio_analysis(upload: Upload):
     try:
         timestamp = datetime.strptime(upload.timestamp_str, "%Y-%m-%dT%H:%M:%S")
