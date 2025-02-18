@@ -51,7 +51,7 @@ async def start_video_analysis(upload: Upload):
 
 
 @video_router.subscriber("av:upload_video_gcp")
-@video_router.publish("av:save_analysis_es")
+@video_router.publisher("av:save_analysis_es")
 async def upload_video_gcp(data: AnalysisModel):
     # Start timing
     start_time = time.time()

@@ -15,7 +15,7 @@ from app.core.es import save, save_bulk
 transcript_router = RedisRouter()
 
 @transcript_router.subscriber("av:audio_transcribe")
-@transcript_router.publish("av:transcript_embeddings")
+@transcript_router.publisher("av:transcript_embeddings")
 async def audio_transcribe(data: AnalysisModel):
     keywords = get_all_keywords()
     # Start timing
@@ -32,7 +32,7 @@ async def audio_transcribe(data: AnalysisModel):
     return data
 
 @transcript_router.subscriber("av:transcript_embeddings")
-@transcript_router.publish("av:transcript_sentiment")
+@transcript_router.publisher("av:transcript_sentiment")
 async def transcript_embeddings(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -49,7 +49,7 @@ async def transcript_embeddings(data: AnalysisModel):
     return data
 
 @transcript_router.subscriber("av:transcript_sentiment")
-@transcript_router.publish("av:transcript_categories")
+@transcript_router.publisher("av:transcript_categories")
 async def transcript_sentiment(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -66,7 +66,7 @@ async def transcript_sentiment(data: AnalysisModel):
     return data
 
 @transcript_router.subscriber("av:transcript_categories")
-@transcript_router.publish("av:transcript_keywords")
+@transcript_router.publisher("av:transcript_keywords")
 async def transcript_categories(data: AnalysisModel):
     categories = get_tags(data.type)
     # Start timing
@@ -84,7 +84,7 @@ async def transcript_categories(data: AnalysisModel):
     return data
 
 @transcript_router.subscriber("av:transcript_keywords")
-@transcript_router.publish("av:transcript_topics")
+@transcript_router.publisher("av:transcript_topics")
 async def transcript_keywords(data: AnalysisModel):
     keywords = get_all_keywords()
     # Start timing
@@ -102,7 +102,7 @@ async def transcript_keywords(data: AnalysisModel):
     return data
 
 @transcript_router.subscriber("av:transcript_topics")
-@transcript_router.publish("av:transcript_llm")
+@transcript_router.publisher("av:transcript_llm")
 async def transcript_topics(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -134,9 +134,9 @@ async def transcript_llm(data: AnalysisModel):
     print(f"Time taken to analyze show metadata, ads and engagement using llm: {time_taken:.2f} seconds.")
     
     if data.type == "audio":
-        await transcript_router.broker.publish(data, "av:upload_audio_gcp")
+        await transcript_router.broker.publisher(data, "av:upload_audio_gcp")
     elif data.type == "video":
-        await transcript_router.broker.publish(data, "av:upload_video_gcp")
+        await transcript_router.broker.publisher(data, "av:upload_video_gcp")
 
 
 @transcript_router.subscriber("av:save_analysis_es")
