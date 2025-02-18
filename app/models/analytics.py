@@ -31,15 +31,16 @@ class MediaTypeEnum(str, Enum):
 class Segment(BaseModel):
     start: Optional[float] = 0.0
     stop: Optional[float] = 0.0
+    duration: Optional[float] = 0.0
     transcript: Optional[str] = ""
-    type: Optional[MediaTypeEnum] = None
     sentiment: Optional[str] = ""
     emotions: List[str] = []
     keywords: List[str] = []
     categories: List[str] = []
     topics: List[str] = []
     start_time: Optional[datetime] = None
-    file: Optional[File] = File()
+    audio_file: Optional[str] = ""
+    video_file: Optional[str] = ""
     embeddings: List[float] = []
     ads: List[Ad] = []
     audience: List[Audience] = []
@@ -49,11 +50,15 @@ class Activity(BaseModel):
     male: Optional[float] = 0.0
     female: Optional[float] = 0.0
     music: Optional[float] = 0.0
+    noEnergy: Optional[float] = 0.0
 
 
 class AnalysisModel(BaseModel):
     id: Optional[str] = ""
     stream_id: Optional[str] = ""
+    video_path: Optional[str] = ""
+    audio_path: Optional[str] = ""
+    type: Optional[MediaTypeEnum] = None
     timestamp: Optional[datetime] = None
     activity: Optional[Activity] = Activity()
     segments: List[Segment] = []

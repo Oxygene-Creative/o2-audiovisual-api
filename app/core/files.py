@@ -14,3 +14,8 @@ def delete_file(file_path):
         print(f"Permission denied: Unable to delete {file_path}.")
     except Exception as e:
         print(f"Error occurred while deleting {file_path}: {e}")
+        
+def extract_file_name(file_path):
+    file_name = os.path.basename(file_path)
+    return file_name
+    

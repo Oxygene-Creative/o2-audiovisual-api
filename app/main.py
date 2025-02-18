@@ -4,6 +4,7 @@ from faststream.redis.fastapi import RedisRouter as StreamRouter
 from app.pipelines.reporting import reporting_router
 from app.pipelines.video_analytics import video_router
 from app.pipelines.audio_analytics import audio_router
+from app.pipelines.transcript_analysis import transcript_router
 
 core_router = StreamRouter()
 
@@ -11,6 +12,7 @@ core_router = StreamRouter()
 core_router.include_router(reporting_router)
 core_router.include_router(video_router)
 core_router.include_router(audio_router)
+core_router.include_router(transcript_router)
 
 app = FastAPI()
 

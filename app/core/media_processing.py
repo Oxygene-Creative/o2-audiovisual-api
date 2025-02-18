@@ -16,13 +16,14 @@ def extract_audio_from_video(video_path):
 
     # Write the audio to the output path
     subfolder_check(f"{os.getcwd()}/o2-files")
-    audio.write_audiofile(f"{os.getcwd()}/o2-files/{audio_file_name}.mp3")
+    audio_path = f"{os.getcwd()}/o2-files/{audio_file_name}.mp3"
+    audio.write_audiofile(audio_path)
 
     # Close the clips
     audio.close()
     video_clip.close()
 
-    return f"{ audio_file_name }.mp3"
+    return audio_path
 
 def slice_audio(speech_segments, audio_path):
     # Get the audio file name from the path
