@@ -48,7 +48,7 @@ class Segment(BaseModel):
     file_size: Optional[float] = 0.0
     embeddings: List[float] = []
     ads: List[Advertisement] = []
-    show_metadata: ShowMetadata = None
+    show_metadata: Optional[ShowMetadata] = None
     engagement: List[AudienceEngagement] = []
 
 
