@@ -18,4 +18,16 @@ def delete_file(file_path):
 def extract_file_name(file_path):
     file_name = os.path.basename(file_path)
     return file_name
+
+def calc_file_size(file_path) -> float:
+    try:
+        # Get file size in bytes
+        file_size_bytes = os.path.getsize(file_path)
+
+        # Convert bytes to megabytes
+        file_size_mb = file_size_bytes / (1024 * 1024)
+
+        return file_size_mb
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
     

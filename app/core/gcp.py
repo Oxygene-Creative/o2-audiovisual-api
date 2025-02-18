@@ -42,3 +42,20 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
     blob.download_to_filename(destination_file_name)
     print(f"Blob {source_blob_name} downloaded to {destination_file_name}.")
     
+def delete_blob(bucket_name, blob_name):
+    """Deletes a blob from the bucket."""
+    storage_client = storage.Client()
+
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    generation_match_precondition = None
+
+    # Optional: set a generation-match precondition to avoid potential race conditions
+    # and data corruptions. The request to delete is aborted if the object's
+    # generation number does not match your precondition.
+    blob.reload()  # Fetch blob metadata to use in generation_match_precondition.
+    generation_match_precondition = blob.generation
+
+    blob.delete(if_generation_match=generation_match_precondition)
+
+    print(f"Blob {blob_name} deleted.")

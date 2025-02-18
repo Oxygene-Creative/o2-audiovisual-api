@@ -37,8 +37,8 @@ def slice_audio(speech_segments, audio_path):
 
     for segment in speech_segments:
         # Time to miliseconds
-        startTime =  max(0, (segment['start'] - 10) * 1000)
-        endTime = (segment['stop'] + 10) * 1000
+        startTime =  max(0, (segment['start']) * 1000)
+        endTime = (segment['stop']) * 1000
 
         # Extract the audio data for time slice
         extract = audio[startTime:endTime]
@@ -57,3 +57,23 @@ def slice_audio(speech_segments, audio_path):
             "audio_file": extract_file_name })
         
     return extracted_files
+
+
+def slice_video(video_path, start, stop):
+    output_file_name = f"{Path(video_path).stem}_{start}_{stop}.mp4"
+    # Load the video file
+    video_clip = VideoFileClip(video_path)
+
+    # Trim the video between start and stop times
+    sliced_clip = video_clip.subclip(start, stop)
+
+    # Write the sliced video to the output file
+    subfolder_check(f"{os.getcwd()}/o2-files")
+    output_file_path = f"{os.getcwd()}/o2-files/{output_file_name}"
+    sliced_clip.write_videofile(output_file_path, codec="libx264")
+
+    # Close the video resources
+    video_clip.close()
+    sliced_clip.close()
+
+    return output_file_path

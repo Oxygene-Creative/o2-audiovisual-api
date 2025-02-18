@@ -2,17 +2,21 @@ from fastapi import FastAPI
 from app.analyzers.embeddings import embed_text
 from app.analyzers.llm import llm_transcript_analysis
 from app.analyzers.nlp import categorize_text, match_keywords, sentiment_analysis, topic_modelling
+from app.models.recording import Recording, SegmentRecording
 from faststream.redis import RedisRouter
 from app.models.analytics import AnalysisModel
 from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
 from app.core.graphql import get_all_keywords, get_tags
+from app.core.es import save, save_bulk
+
+
 transcript_router = RedisRouter()
 
-@transcript_router.subscriber("audio_transcribe")
-@transcript_router.publish("transcript_embeddings")
-async def audio_seg(data: AnalysisModel):
+@transcript_router.subscriber("av:audio_transcribe")
+@transcript_router.publish("av:transcript_embeddings")
+async def audio_transcribe(data: AnalysisModel):
     keywords = get_all_keywords()
     # Start timing
     start_time = time.time()
@@ -27,8 +31,8 @@ async def audio_seg(data: AnalysisModel):
     print(f"Time taken to transcribe audio: {time_taken:.2f} seconds.")
     return data
 
-@transcript_router.subscriber("transcript_embeddings")
-@transcript_router.publish("transcript_sentiment")
+@transcript_router.subscriber("av:transcript_embeddings")
+@transcript_router.publish("av:transcript_sentiment")
 async def transcript_embeddings(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -44,8 +48,8 @@ async def transcript_embeddings(data: AnalysisModel):
     
     return data
 
-@transcript_router.subscriber("transcript_sentiment")
-@transcript_router.publish("transcript_categories")
+@transcript_router.subscriber("av:transcript_sentiment")
+@transcript_router.publish("av:transcript_categories")
 async def transcript_sentiment(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -61,8 +65,8 @@ async def transcript_sentiment(data: AnalysisModel):
     
     return data
 
-@transcript_router.subscriber("transcript_categories")
-@transcript_router.publish("transcript_keywords")
+@transcript_router.subscriber("av:transcript_categories")
+@transcript_router.publish("av:transcript_keywords")
 async def transcript_categories(data: AnalysisModel):
     categories = get_tags(data.type)
     # Start timing
@@ -79,8 +83,8 @@ async def transcript_categories(data: AnalysisModel):
     
     return data
 
-@transcript_router.subscriber("transcript_keywords")
-@transcript_router.publish("transcript_topics")
+@transcript_router.subscriber("av:transcript_keywords")
+@transcript_router.publish("av:transcript_topics")
 async def transcript_keywords(data: AnalysisModel):
     keywords = get_all_keywords()
     # Start timing
@@ -97,8 +101,8 @@ async def transcript_keywords(data: AnalysisModel):
     
     return data
 
-@transcript_router.subscriber("transcript_topics")
-@transcript_router.publish("transcript_llm")
+@transcript_router.subscriber("av:transcript_topics")
+@transcript_router.publish("av:transcript_llm")
 async def transcript_topics(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -114,8 +118,7 @@ async def transcript_topics(data: AnalysisModel):
     
     return data
 
-@transcript_router.subscriber("transcript_llm")
-@transcript_router.publish("upload_segments_gcp")
+@transcript_router.subscriber("av:transcript_llm")
 async def transcript_llm(data: AnalysisModel):
     # Start timing
     start_time = time.time()
@@ -130,6 +133,40 @@ async def transcript_llm(data: AnalysisModel):
     time_taken = end_time - start_time
     print(f"Time taken to analyze show metadata, ads and engagement using llm: {time_taken:.2f} seconds.")
     
-    return data
+    if data.type == "audio":
+        await transcript_router.broker.publish(data, "av:upload_audio_gcp")
+    elif data.type == "video":
+        await transcript_router.broker.publish(data, "av:upload_video_gcp")
 
 
+@transcript_router.subscriber("av:save_analysis_es")
+async def save_analysis_es(data: AnalysisModel):
+    # Start timing
+    start_time = time.time()
+    
+    index_id = f"{data.type}_{data.stream_id}"
+    
+    segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
+    recording = Recording.create_from_analysis_model(data)
+    # Convert the Recording object to a dictionary
+    recording_dict = recording.dict()
+
+    save("recording", recording_dict)
+    
+    actions = [
+        {
+            "_index": index_id,  
+            "_source": segment.dict(),
+        }
+        for segment in segment_recordings
+    ]
+    
+    save_bulk(actions)
+    
+
+    # End timing
+    end_time = time.time()
+    time_taken = end_time - start_time
+    print(f"Time taken to save recording and segments to elastic search: {time_taken:.2f} seconds.")
+    
+    return

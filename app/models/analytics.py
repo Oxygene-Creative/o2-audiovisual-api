@@ -30,16 +30,16 @@ class File(BaseModel):
 class Ad(BaseModel):
     brand: Optional[str] = ""
     product: Optional[str] = ""
-    start: Optional[float] = 0
-    stop: Optional[float] = 0
+    start: Optional[float] = 0.0
+    stop: Optional[float] = 0.0
 
 
 class Audience(BaseModel):
     platform: Optional[str] = ""
     identifier: Optional[str] = ""
     context: Optional[str] = ""
-    start: Optional[float] = 0
-    stop: Optional[float] = 0
+    start: Optional[float] = 0.0
+    stop: Optional[float] = 0.0
 
 
 class MediaTypeEnum(str, Enum):
@@ -59,10 +59,12 @@ class Segment(BaseModel):
     topics: List[str] = []
     start_time: Optional[datetime] = None
     audio_file: Optional[str] = ""
-    video_file: Optional[str] = ""
+    gcp_path: Optional[str] = ""
+    file_size: Optional[float] = 0.0
     embeddings: List[float] = []
-    ads: List[Ad] = []
-    audience: List[Audience] = []
+    ads: List[Advertisement] = []
+    show_metadata: ShowMetadata = ShowMetadata()
+    engagement: List[AudienceEngagement] = AudienceEngagement()
 
 
 class Activity(BaseModel):
@@ -74,16 +76,17 @@ class Activity(BaseModel):
 class AnalysisModel(BaseModel):
     id: Optional[str] = ""
     stream_id: Optional[str] = ""
+    stream_name: Optional[str] = ""
+    gcp_bucket: Optional[str] = ""
+    gcp_blob: Optional[str] = ""
     video_path: Optional[str] = ""
     audio_path: Optional[str] = ""
     type: Optional[MediaTypeEnum] = None
     timestamp: Optional[datetime] = None
     activity: Optional[Activity] = Activity()
     segments: List[Segment] = []
-    ads: List[Advertisement] = []
-    show_metadata: ShowMetadata = ShowMetadata()
-    engagement: List[AudienceEngagement] = AudienceEngagement()
     
+
 class LLMAnalysisModel(BaseModel):
     ads: List[Advertisement] = []
     show_metadata: ShowMetadata = ShowMetadata()
