@@ -21,7 +21,7 @@ class Upload(BaseModel):
     
 audio_router = RedisRouter()
 
-@audio_router.post("/analysis/audio")
+@audio_router.get("/analysis/audio")
 async def start_audio_analysis(upload: Upload):
     try:
         timestamp = datetime.strptime(upload.timestamp_str, "%Y-%m-%dT%H:%M:%S")
