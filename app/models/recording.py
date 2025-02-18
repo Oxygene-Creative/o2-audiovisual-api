@@ -2,7 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime, timedelta
-from app.models.analytics import Activity, AnalysisModel, Ad, Audience
+from app.models.analytics import Activity, AnalysisModel, Advertisement, AudienceEngagement
 import uuid
 
 class SegmentRecording(BaseModel):
@@ -18,9 +18,9 @@ class SegmentRecording(BaseModel):
     topics: List[str] = []
     categories: List[str] = []
     # Advertisement details
-    ads: List[Ad] = []
+    ads: List[Advertisement] = []
     # Audience engagement details
-    engagement: List[Audience] = []
+    engagement: List[AudienceEngagement] = []
     # File and path information
     gcp_blob: str = ""
     gcp_path: str = ""
@@ -51,11 +51,11 @@ class SegmentRecording(BaseModel):
                 topics=segment.topics,
                 categories=segment.categories,
                 ads=[
-                    Ad(brand=ad.brand, product=ad.product, start=ad.start, stop=ad.stop)
+                    Advertisement(brand=ad.brand, product=ad.product, start=ad.start, stop=ad.stop)
                     for ad in segment.ads
                 ],
                 engagement=[
-                    Audience(
+                    AudienceEngagement(
                         platform=engagement.platform,
                         identifier=engagement.identifier,
                         context=engagement.context,
@@ -67,8 +67,8 @@ class SegmentRecording(BaseModel):
                 gcp_blob=analysis.gcp_blob or "",
                 gcp_path=segment.gcp_path or "",
                 file_size=segment.file_size or 0.0,
-                host=segment.show_metadata.host,
-                program_name=segment.show_metadata.program_name,
+                host=segment.show_metadata.host or "",
+                program_name=segment.show_metadata.program_name or "",
             )
 
             # Append the created SegmentRecording to the result list

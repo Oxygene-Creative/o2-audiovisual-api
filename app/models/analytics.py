@@ -17,29 +17,14 @@ class AudienceEngagement(BaseModel):
     start: Optional[float] = Field(description="Timestamp in transcript the engagement stops")
 
 class ShowMetadata(BaseModel):
-    host: str = Field(description="Name of the radio host(s)")
-    program_name: str = Field(description="Name of the radio program")
+    host: Optional[str] = Field(description="Name of the radio host(s)")
+    program_name: Optional[str] = Field(description="Name of the radio program")
     start: Optional[float] = Field(description="Start timestamp in transcript the host identifies themselves")
     start: Optional[float] = Field(description="Stop timestamp in transcript the host identifies themselves")
 
 class File(BaseModel):
     url: Optional[str] = ""
     size: Optional[int] = 0
-
-
-class Ad(BaseModel):
-    brand: Optional[str] = ""
-    product: Optional[str] = ""
-    start: Optional[float] = 0.0
-    stop: Optional[float] = 0.0
-
-
-class Audience(BaseModel):
-    platform: Optional[str] = ""
-    identifier: Optional[str] = ""
-    context: Optional[str] = ""
-    start: Optional[float] = 0.0
-    stop: Optional[float] = 0.0
 
 
 class MediaTypeEnum(str, Enum):
