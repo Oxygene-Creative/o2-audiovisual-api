@@ -19,7 +19,7 @@ class Upload(BaseModel):
     blob: str
     timestamp_str: Optional[str]
     
-audio_router = RedisRouter()
+audio_router = RedisRouter("redis://localhost:6379")
 
 @audio_router.get("/analysis/audio")
 async def start_audio_analysis(upload: Upload):
