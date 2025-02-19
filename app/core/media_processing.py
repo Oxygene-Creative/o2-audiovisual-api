@@ -45,16 +45,16 @@ def slice_audio(speech_segments, audio_path):
 
         # Generate the output file name with start and stop values
         extract_file_name= f"{audio_file_name}_{segment['start']:.2f}_{segment['stop']:.2f}.mp3"
-
+        extract_file_path=f"{os.getcwd()}/o2-files/{extract_file_name}"
         # Export the sliced audio
         subfolder_check(f"{os.getcwd()}/o2-files")
-        extract.export(f"{os.getcwd()}/o2-files/{extract_file_name}", format="mp3")
+        extract.export(extract_file_path, format="mp3")
 
         extracted_files.append({ 
             "start": segment["start"], 
             "stop": segment["stop"],
             "duration": segment["duration"],
-            "audio_file": extract_file_name })
+            "audio_file": extract_file_path })
         
     return extracted_files
 

@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import FastAPI
 from faststream.redis import fastapi
-from app.models.analytics import AnalysisModel, Segment
+from app.models.analytics import AnalysisModel, Segment, Activity
 from datetime import datetime
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
 from app.core.gcp import delete_blob, download_file, upload
@@ -61,7 +61,14 @@ async def audio_seg(data: AnalysisModel):
     print(f"Time taken for audio segmentation: {time_taken:.2f} seconds.")
     
     # transform activity segments and add to analysis object
-    data.activity = {item["labels"]: item["duration"] for item in activity_segments}
+    activity = {item["labels"]: item["duration"] for item in activity_segments}
+    
+    data.activity = Activity(
+        male = activity["male"] or 0.0,
+        female = activity["female"] or 0.0,
+        music = activity["music"] or 0.0,
+        noEnergy = activity["noEnergy"] or 0.0
+    )
     
     # slice audio file based on speech segments
     speech_segment_files = slice_audio(speech_segments, data.audio_path)

@@ -15,7 +15,8 @@ import os
 transcript_router = fastapi.RedisRouter(os.environ['REDIS_URI'])
 
 @transcript_router.subscriber("av:audio_transcribe")
-@transcript_router.publisher("av:transcript_embeddings")
+# @transcript_router.publisher("av:transcript_embeddings")
+@transcript_router.publisher("av:transcript_sentiment")
 async def audio_transcribe(data: AnalysisModel):
     keywords = get_all_keywords()
     # Start timing
@@ -134,9 +135,9 @@ async def transcript_llm(data: AnalysisModel):
     print(f"Time taken to analyze show metadata, ads and engagement using llm: {time_taken:.2f} seconds.")
     
     if data.type == "audio":
-        await transcript_router.broker.publisher(data, "av:upload_audio_gcp")
+        await transcript_router.broker.publish(data, "av:upload_audio_gcp")
     elif data.type == "video":
-        await transcript_router.broker.publisher(data, "av:upload_video_gcp")
+        await transcript_router.broker.publish(data, "av:upload_video_gcp")
 
 
 @transcript_router.subscriber("av:save_analysis_es")
@@ -150,6 +151,9 @@ async def save_analysis_es(data: AnalysisModel):
     recording = Recording.create_from_analysis_model(data)
     # Convert the Recording object to a dictionary
     recording_dict = recording.dict()
+    
+    print("Recording Info: ")
+    print(recording_dict)
 
     save("recording", recording_dict)
     
@@ -160,6 +164,8 @@ async def save_analysis_es(data: AnalysisModel):
         }
         for segment in segment_recordings
     ]
+    print("Segment Info: ")
+    print(actions)
     
     save_bulk(actions)
     

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime
@@ -46,7 +46,7 @@ class Segment(BaseModel):
     audio_file: Optional[str] = ""
     gcp_path: Optional[str] = ""
     file_size: Optional[float] = 0.0
-    embeddings: List[float] = []
+    embeddings: Any = None
     ads: List[Advertisement] = []
     show_metadata: Optional[ShowMetadata] = None
     engagement: List[AudienceEngagement] = []
