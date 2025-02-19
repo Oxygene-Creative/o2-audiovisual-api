@@ -18,19 +18,6 @@ nltk.download('wordnet')
 nltk.download('stopwords')
 stop_words = stopwords.words('english')
 
-# Load a pre-trained sentiment analysis pipeline
-classifier = pipeline("sentiment-analysis")
-
-def sentiment_analysis(text):
-    result = classifier(text)[0]  # Returns a dictionary with label and score
-    label = result['label']
-    if label == "POSITIVE":
-        return "Positive"
-    elif label == "NEGATIVE":
-        return "Negative"
-    else:
-        return "Neutral"
-
 def match_keywords(text, keywords):
     """
     Match words in the text to categories using fuzzy matching.

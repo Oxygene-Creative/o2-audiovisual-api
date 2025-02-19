@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from app.analyzers.embeddings import embed_text
 from app.analyzers.llm import llm_transcript_analysis
-from app.analyzers.nlp import categorize_text, match_keywords, sentiment_analysis, topic_modelling
+from app.analyzers.nlp import categorize_text, match_keywords, topic_modelling
+from app.analyzers.sentiment import sentiment_analysis
 from app.models.recording import Recording, SegmentRecording
 from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel
