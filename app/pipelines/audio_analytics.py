@@ -47,7 +47,7 @@ async def start_audio_analysis(upload: Upload):
     return "Audio file is downloaded and analysis is ongoing!"
 
 @audio_router.subscriber("av:audio_seg")
-@audio_router.subscriber("av:audio_transcribe")
+@audio_router.publisher("av:audio_transcribe")
 async def audio_seg(data: AnalysisModel):
     # Start timing
     start_time = time.time()

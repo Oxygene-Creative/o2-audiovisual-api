@@ -17,6 +17,7 @@ broker = RedisBroker(os.environ['REDIS_URI'])
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await broker.connect()
+    await audio_router.broker.connect()
     yield
     await broker.close()
     
