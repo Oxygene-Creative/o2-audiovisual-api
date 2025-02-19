@@ -3,7 +3,7 @@ from app.analyzers.embeddings import embed_text
 from app.analyzers.llm import llm_transcript_analysis
 from app.analyzers.nlp import categorize_text, match_keywords, sentiment_analysis, topic_modelling
 from app.models.recording import Recording, SegmentRecording
-from faststream.redis import RedisRouter
+from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel
 from datetime import datetime
 import time 
@@ -12,7 +12,7 @@ from app.core.graphql import get_all_keywords, get_tags
 from app.core.es import save, save_bulk
 import os
 
-transcript_router = RedisRouter(os.environ['REDIS_URI'])
+transcript_router = fastapi.RedisRouter(os.environ['REDIS_URI'])
 
 @transcript_router.subscriber("av:audio_transcribe")
 @transcript_router.publisher("av:transcript_embeddings")
