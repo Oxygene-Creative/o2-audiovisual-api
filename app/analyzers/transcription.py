@@ -26,8 +26,8 @@ def transcribe(audio_url: str):
     # Language information
     transcription_info = {
         "language": info.language,
-        "language_probability": info.language_probability,
-        "transcript": ""
+        "language_score": info.language_probability,
+        "raw_text": ""
     }
 
     formatted_lines = []
@@ -37,7 +37,7 @@ def transcribe(audio_url: str):
         formatted_line = f"[{segment.start:.1f} - {segment.end:.1f}] {text}"
         formatted_lines.append(formatted_line)
 
-    transcription_info["transcript"] = "\n ".join(formatted_lines)
+    transcription_info["raw_text"] = "\n ".join(formatted_lines)
     return transcription_info
 
 def post_process_transcription(transcript: str, keywords: list[str]):

@@ -10,7 +10,9 @@ class SegmentRecording(BaseModel):
     timestamp: datetime
     # Core segment details
     duration: float = 0.0
-    transcript: Optional[str] = ""
+    raw_text: Optional[str] = ""
+    language: Optional[str] = ""
+    language_score: Optional[float] = 0.0
     sentiment: Optional[str] = ""
     emotions: List[str] = []
     embeddings: List[float] = []
@@ -43,7 +45,9 @@ class SegmentRecording(BaseModel):
                 recording_id=analysis.id or "",
                 timestamp=segment_timestamp,
                 duration=segment.duration or 0.0,
-                transcript=segment.transcript,
+                raw_text=segment.raw_text,
+                language=segment.language,
+                language_scoew=segment.language_score,
                 sentiment=segment.sentiment,
                 emotions=segment.emotions,
                 embeddings=segment.embeddings,

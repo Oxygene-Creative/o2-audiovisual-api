@@ -14,7 +14,7 @@ class AudienceEngagement(BaseModel):
     identifier: Optional[str] = Field(description="Handle, hashtag, phone number, etc.")
     context: Optional[str] = Field(description="Context of the call to action")
     start: Optional[float] = Field(description="Timestamp in transcript the engagement starts")
-    start: Optional[float] = Field(description="Timestamp in transcript the engagement stops")
+    stop: Optional[float] = Field(description="Timestamp in transcript the engagement stops")
 
 class ShowMetadata(BaseModel):
     host: Optional[str] = Field(description="Name of the radio host(s)")
@@ -36,7 +36,9 @@ class Segment(BaseModel):
     start: Optional[float] = 0.0
     stop: Optional[float] = 0.0
     duration: Optional[float] = 0.0
-    transcript: Optional[str] = ""
+    raw_text: Optional[str] = ""
+    language: Optional[str] = ""
+    language_score: Optional[float] = 0.0
     sentiment: Optional[str] = ""
     emotions: List[str] = []
     keywords: List[str] = []

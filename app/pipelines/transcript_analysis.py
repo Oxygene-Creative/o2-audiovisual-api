@@ -23,8 +23,10 @@ async def audio_transcribe(data: AnalysisModel):
     start_time = time.time()
     for index, segment in enumerate(data.segments):
         transcript = transcribe(segment.audio_file)
-        processed_transcript = post_process_transcription(transcript, keywords)
-        data.segments[index].transcript = processed_transcript
+        processed_transcript = post_process_transcription(transcript['raw_text'], keywords)
+        data.segments[index].raw_text = processed_transcript
+        data.segments[index].language = transcript['language']
+        data.segments[index].language_score = transcript['language_score']
     
     # End timing
     end_time = time.time()
@@ -38,7 +40,7 @@ async def transcript_embeddings(data: AnalysisModel):
     # Start timing
     start_time = time.time()
     for index, segment in enumerate(data.segments):
-        clean_transcript = remove_timestamps_and_format(segment.transcript)
+        clean_transcript = remove_timestamps_and_format(segment.raw_text)
         embeddings = embed_text(clean_transcript)
         data.segments[index].embeddings = embeddings
     
@@ -56,7 +58,7 @@ async def transcript_sentiment(data: AnalysisModel):
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
-            clean_transcript = remove_timestamps_and_format(segment.transcript)
+            clean_transcript = remove_timestamps_and_format(segment.raw_text)
             sentiment = sentiment_analysis(clean_transcript)
             data.segments[index].sentiment = sentiment
         
@@ -78,7 +80,7 @@ async def transcript_categories(data: AnalysisModel):
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
-            clean_transcript = remove_timestamps_and_format(segment.transcript)
+            clean_transcript = remove_timestamps_and_format(segment.raw_text)
             category_matches = categorize_text(clean_transcript, categories)
             data.segments[index].categories = category_matches
         
@@ -100,7 +102,7 @@ async def transcript_keywords(data: AnalysisModel):
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
-            clean_transcript = remove_timestamps_and_format(segment.transcript)
+            clean_transcript = remove_timestamps_and_format(segment.raw_text)
             keyword_matches = match_keywords(clean_transcript, keywords)
             data.segments[index].keywords = keyword_matches
         
@@ -121,7 +123,7 @@ async def transcript_topics(data: AnalysisModel):
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
-            clean_transcript = remove_timestamps_and_format(segment.transcript)
+            clean_transcript = remove_timestamps_and_format(segment.raw_text)
             topics = topic_modelling(clean_transcript)
             data.segments[index].topics = topics
         
@@ -142,7 +144,7 @@ async def transcript_llm(data: AnalysisModel):
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
-            llm_analysis = llm_transcript_analysis(segment.transcript)
+            llm_analysis = llm_transcript_analysis(segment.raw_text)
             data.segments[index].ads = llm_analysis.ads
             data.segments[index].show_metadata = llm_analysis.show_metadata
             data.segments[index].engagement = llm_analysis.engagement
