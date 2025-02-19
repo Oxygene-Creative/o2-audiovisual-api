@@ -38,7 +38,7 @@ def split_and_embed_text(text: str):
     embeddings = embedding_model.encode(docs)
     return embeddings
 
-def embed_text(text: str | list[str]):
+def embed_text(text: str):
     embeddings = embedding_model.encode(text)
     return embeddings
 
