@@ -90,37 +90,41 @@ async def audio_seg(msg: str):
 @audio_router.publisher("av:save_analysis_es")
 async def upload_audio_gcp(msg: str):
     data = AnalysisModel.model_validate_json(msg)
-    # Start timing
-    start_time = time.time()
-    for index, segment in enumerate(data.segments):
-        # file details
-        local_file_path = segment.audio_file
-        file_name = extract_file_name(local_file_path)
-        file_size = calc_file_size(local_file_path)
+    try:        
+        # Start timing
+        start_time = time.time()
+        for index, segment in enumerate(data.segments):
+            # file details
+            local_file_path = segment.audio_file
+            file_name = extract_file_name(local_file_path)
+            file_size = calc_file_size(local_file_path)
+            
+            # dest file path construction
+            recording_date = data.timestamp.date().isoformat()
+            dest_file_path = f"audio/{data.stream_name}/{recording_date}/{file_name}"
+            
+            # upload to gcp
+            upload(data.gcp_bucket, local_file_path, dest_file_path)
+            
+            # delete local file
+            delete_file(local_file_path)
+            
+            # update segment
+            data.segments[index].file_size = file_size
+            data.segments[index].gcp_path = dest_file_path
         
-        # dest file path construction
-        recording_date = data.timestamp.date().isoformat()
-        dest_file_path = f"audio/{data.stream_name}/{recording_date}/{file_name}"
+        # delete the master audio files
+        delete_file(data.audio_path)
+        delete_blob(data.gcp_bucket, data.gcp_blob)
         
-        # upload to gcp
-        upload(data.gcp_bucket, local_file_path, dest_file_path)
+        # End timing
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print(f"Time taken to upload audio files to gcp: {time_taken:.2f} seconds.")
         
-        # delete local file
-        delete_file(local_file_path)
-        
-        # update segment
-        data.segments[index].file_size = file_size
-        data.segments[index].gcp_path = dest_file_path
-    
-    # delete the master audio files
-    delete_file(data.audio_path)
-    delete_blob(data.gcp_bucket, data.gcp_blob)
-    
-    # End timing
-    end_time = time.time()
-    time_taken = end_time - start_time
-    print(f"Time taken to upload audio files to gcp: {time_taken:.2f} seconds.")
-    
-    return data.model_dump_json()
+        return data.model_dump_json()
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        await audio_router.broker.publish(data.model_dump_json(), "av:save_analysis_es")
     
 
