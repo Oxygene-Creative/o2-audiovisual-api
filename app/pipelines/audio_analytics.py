@@ -81,6 +81,8 @@ async def audio_seg(data: AnalysisModel):
         )
         data.segments.append(new_segment)
     
+    print(data)
+    
     return data
 
 @audio_router.subscriber("av:upload_audio_gcp")
