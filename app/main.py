@@ -15,12 +15,10 @@ async def lifespan(app: FastAPI):
     await audio_router.broker.connect()
     await video_router.broker.connect()
     await transcript_router.broker.connect()
-    await reporting_router.broker.connect()
     yield
     await audio_router.broker.close()
     await video_router.broker.close()
     await transcript_router.broker.close()
-    await reporting_router.broker.close()
     
 app = FastAPI(lifespan=lifespan)
 
