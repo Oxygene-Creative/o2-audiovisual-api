@@ -68,7 +68,7 @@ async def transcript_sentiment(data: AnalysisModel):
         return data
     except Exception as e:
         print(e)
-        transcript_router.broker.publish(data, "av:transcript_categories")
+        await transcript_router.broker.publish(data, "av:transcript_categories")
 
 @transcript_router.subscriber("av:transcript_categories")
 @transcript_router.publisher("av:transcript_keywords")
@@ -90,7 +90,7 @@ async def transcript_categories(data: AnalysisModel):
         return data
     except Exception as e:
         print(e)
-        transcript_router.broker.publish(data, "av:transcript_keywords")
+        await transcript_router.broker.publish(data, "av:transcript_keywords")
 
 @transcript_router.subscriber("av:transcript_keywords")
 @transcript_router.publisher("av:transcript_topics")
@@ -112,7 +112,7 @@ async def transcript_keywords(data: AnalysisModel):
         return data
     except Exception as e:
         print(e)
-        transcript_router.broker.publish(data, "av:transcript_topics")
+        await transcript_router.broker.publish(data, "av:transcript_topics")
 
 @transcript_router.subscriber("av:transcript_topics")
 @transcript_router.publisher("av:transcript_llm")
@@ -133,7 +133,7 @@ async def transcript_topics(data: AnalysisModel):
         return data
     except Exception as e:
         print(e)
-        transcript_router.broker.publish(data, "av:transcript_llm")
+        await transcript_router.broker.publish(data, "av:transcript_llm")
 
 @transcript_router.subscriber("av:transcript_llm")
 async def transcript_llm(data: AnalysisModel):

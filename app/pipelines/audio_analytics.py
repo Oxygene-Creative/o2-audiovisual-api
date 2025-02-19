@@ -41,7 +41,9 @@ async def start_audio_analysis(upload: Upload):
         stream_name=upload.stream_name,
         audio_path=audio_file_path,
         type="audio",
-        timestamp=timestamp
+        timestamp=timestamp,
+        gcp_bucket=upload.bucket,
+        gcp_blob=upload.blob
     )
     await audio_router.broker.publish(analysis, "av:audio_seg")
     return analysis_id

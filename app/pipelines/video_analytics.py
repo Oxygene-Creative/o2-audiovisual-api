@@ -43,6 +43,7 @@ async def start_video_analysis(upload: Upload):
         stream_id=upload.stream_id,
         stream_name=upload.stream_name,
         gcp_bucket=upload.bucket,
+        gcp_blob=upload.blob,
         video_path=video_file_path,
         audio_path=audio_file_path,
         type="video",
