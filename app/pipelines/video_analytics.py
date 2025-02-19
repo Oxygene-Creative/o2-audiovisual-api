@@ -49,7 +49,7 @@ async def start_video_analysis(upload: Upload):
         timestamp=timestamp
     )
     await video_router.broker.publish(analysis, "av:audio_seg")
-    return "Video file is downloaded and analysis is ongoing!"
+    return analysis_id
 
 
 @video_router.subscriber("av:upload_video_gcp")

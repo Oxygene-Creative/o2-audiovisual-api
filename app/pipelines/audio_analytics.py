@@ -44,7 +44,7 @@ async def start_audio_analysis(upload: Upload):
         timestamp=timestamp
     )
     await audio_router.broker.publish(analysis, "av:audio_seg")
-    return "Audio file is downloaded and analysis is ongoing!"
+    return analysis_id
 
 @audio_router.subscriber("av:audio_seg")
 @audio_router.publisher("av:audio_transcribe")
