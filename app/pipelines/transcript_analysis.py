@@ -48,7 +48,7 @@ async def transcript_embeddings(msg: str):
         for index, segment in enumerate(data.segments):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
             embeddings = embed_text(clean_transcript)
-            data.segments[index].embeddings = embeddings
+            data.segments[index].embeddings = embeddings.flatten().tolist()
         
         # End timing
         end_time = time.time()
