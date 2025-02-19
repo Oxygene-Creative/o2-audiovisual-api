@@ -97,7 +97,7 @@ def lda_topic_modeling(texts, num_topics=5, passes=10):
 
     return lda_model, corpus, dictionary
 
-def topic_modelling(text: list[str]):
+def topic_modelling(text: str):
     # Fit and transform
     processed_texts = preprocess_text(text)
     # Check if preprocessing resulted in empty texts

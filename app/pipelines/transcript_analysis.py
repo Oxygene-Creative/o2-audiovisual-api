@@ -153,8 +153,8 @@ async def transcript_topics(msg: str):
 
 @transcript_router.subscriber("av:transcript_llm")
 async def transcript_llm(msg: str):
+    data = AnalysisModel.model_validate_json(msg)
     try:
-        data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):

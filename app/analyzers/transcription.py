@@ -38,6 +38,7 @@ def transcribe(audio_url: str):
         formatted_lines.append(formatted_line)
 
     transcription_info["raw_text"] = "\n ".join(formatted_lines)
+    print(transcription_info["raw_text"])
     return transcription_info
 
 def post_process_transcription(transcript: str, keywords: list[str]):
