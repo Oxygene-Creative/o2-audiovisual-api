@@ -19,7 +19,7 @@ class Upload(BaseModel):
     blob: str
     timestamp_str: Optional[str]
     
-audio_router = fastapi.RedisRouter("redis://localhost:6379")
+audio_router = fastapi.RedisRouter(os.environ['REDIS_URI'])
 
 @audio_router.post("/analysis/audio")
 async def start_audio_analysis(upload: Upload):
@@ -74,7 +74,6 @@ async def audio_seg(data: AnalysisModel):
         )
         data.segments.append(new_segment)
     
-    # await audio_router.broker.publish(data, "av:audio_transcribe")
     return data
 
 @audio_router.subscriber("av:upload_audio_gcp")

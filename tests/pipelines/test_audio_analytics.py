@@ -73,6 +73,7 @@ async def test_audio_seg_message_publishing():
                 # Verify mock calls
                 mock_segment.assert_called_once_with("mock-audio.mp3")
                 mock_slicing.assert_called_once()
+                
         # async with TestRedisBroker(audio_router.broker) as br:
         #     response = await br.publish(
         #         mock_segment_data,

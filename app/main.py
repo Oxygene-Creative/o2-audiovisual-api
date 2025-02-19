@@ -5,6 +5,14 @@ from app.pipelines.reporting import reporting_router
 from app.pipelines.video_analytics import video_router
 from app.pipelines.audio_analytics import audio_router
 from app.pipelines.transcript_analysis import transcript_router
+from faststream.redis import RedisBroker
+import os
+from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+
+load_dotenv()
+
+broker = RedisBroker(os.environ['REDIS_URI'])
 
 core_router = StreamRouter()
 
@@ -14,7 +22,13 @@ core_router.include_router(video_router)
 core_router.include_router(audio_router)
 core_router.include_router(transcript_router)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await broker.start()
+    yield
+    await broker.close()
+    
+app = FastAPI(lifespan=lifespan)
 
 # Include routers for modular endpoints
 app.include_router(core_router)

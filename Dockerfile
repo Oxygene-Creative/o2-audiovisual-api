@@ -31,4 +31,6 @@ RUN mkdir ./o2-files
 EXPOSE 8210
 
 # Run fastapi using uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8210", "--workers", "6", "--root-path", "/api/audiovisual"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8210", "--workers", "6", "--root-path", "/api/av"]
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8210", "--root-path", "/api/av"]
