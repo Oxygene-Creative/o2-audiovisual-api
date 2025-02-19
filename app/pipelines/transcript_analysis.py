@@ -72,6 +72,9 @@ async def transcript_sentiment(msg: str):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
             sentiment = sentiment_analysis(clean_transcript)
             data.segments[index].sentiment = sentiment
+            
+            print("Sentiment per segment: ")
+            print(data.segments[index].sentiment)
         
         # End timing
         end_time = time.time()
@@ -94,8 +97,10 @@ async def transcript_categories(msg: str):
         for index, segment in enumerate(data.segments):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
             category_matches = categorize_text(clean_transcript, categories)
-            data.segments[index].categories = category_matches
-        
+            data.segments[index].tags = category_matches
+
+            print("Matched tags:")
+            print(data.segments[index].tags)
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time
@@ -119,6 +124,8 @@ async def transcript_keywords(msg: str):
             keyword_matches = match_keywords(clean_transcript, keywords)
             data.segments[index].keywords = keyword_matches
         
+            print("Matched queries:")
+            print(data.segments[index].keywords)
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time
@@ -140,6 +147,8 @@ async def transcript_topics(msg: str):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
             topics = topic_modelling(clean_transcript)
             data.segments[index].topics = topics
+            print("Topics discovered for each segment:")
+            print(data.segments[index].topics)
         
         # End timing
         end_time = time.time()
@@ -162,7 +171,10 @@ async def transcript_llm(msg: str):
             data.segments[index].ads = llm_analysis.ads
             data.segments[index].show_metadata = llm_analysis.show_metadata
             data.segments[index].engagement = llm_analysis.engagement
-        
+            print("Ads, Show Metadata and Engagement discovered for each segment:")
+            print(data.segments[index].ads)
+            print(data.segments[index].show_metadata)
+            print(data.segments[index].engagement)
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time

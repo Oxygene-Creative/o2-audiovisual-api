@@ -18,7 +18,7 @@ class SegmentRecording(BaseModel):
     embeddings: List[float] = []
     keywords: List[str] = []
     topics: List[str] = []
-    categories: List[str] = []
+    tags: List[str] = []
     # Advertisement details
     ads: List[Advertisement] = []
     # Audience engagement details
@@ -53,7 +53,7 @@ class SegmentRecording(BaseModel):
                 embeddings=segment.embeddings,
                 keywords=segment.keywords,
                 topics=segment.topics,
-                categories=segment.categories,
+                tags=segment.tags,
                 ads=[
                     Advertisement(brand=ad.brand, product=ad.product, start=ad.start, stop=ad.stop)
                     for ad in segment.ads

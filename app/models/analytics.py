@@ -42,7 +42,7 @@ class Segment(BaseModel):
     sentiment: Optional[str] = ""
     emotions: List[str] = []
     keywords: List[str] = []
-    categories: List[str] = []
+    tags: List[str] = []
     topics: List[str] = []
     start_time: Optional[datetime] = None
     audio_file: Optional[str] = ""
