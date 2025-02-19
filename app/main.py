@@ -12,21 +12,7 @@ from contextlib import asynccontextmanager
 
 load_dotenv()
 
-broker = RedisBroker(
-    os.environ['REDIS_URI'],  
-    connection_kwargs={
-        "decode_responses": True
-    }
-)
-broker = RedisBroker()
-
-core_router = StreamRouter()
-
-# include faststream handlers
-core_router.include_router(reporting_router)
-core_router.include_router(video_router)
-core_router.include_router(audio_router)
-core_router.include_router(transcript_router)
+broker = RedisBroker(os.environ['REDIS_URI'])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +21,13 @@ async def lifespan(app: FastAPI):
     await broker.close()
     
 app = FastAPI(lifespan=lifespan)
+
+# include faststream handlers
+core_router = StreamRouter()
+core_router.include_router(reporting_router)
+core_router.include_router(video_router)
+core_router.include_router(audio_router)
+core_router.include_router(transcript_router)
 
 # Include routers for modular endpoints
 app.include_router(core_router)
