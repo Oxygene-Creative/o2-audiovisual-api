@@ -50,7 +50,8 @@ async def start_audio_analysis(upload: Upload):
 
 @audio_router.subscriber("av:audio_seg")
 @audio_router.publisher("av:audio_transcribe")
-async def audio_seg(data: AnalysisModel):
+async def audio_seg(msg: str):
+    data = AnalysisModel.model_validate_json(msg)
     # Start timing
     start_time = time.time()
     activity_segments, speech_segments = gender_music_segmentation(data.audio_path)
@@ -83,13 +84,12 @@ async def audio_seg(data: AnalysisModel):
         )
         data.segments.append(new_segment)
     
-    print(data)
-    
-    return data
+    return data.model_dump_json()
 
 @audio_router.subscriber("av:upload_audio_gcp")
 @audio_router.publisher("av:save_analysis_es")
-async def upload_audio_gcp(data: AnalysisModel):
+async def upload_audio_gcp(msg: str):
+    data = AnalysisModel.model_validate_json(msg)
     # Start timing
     start_time = time.time()
     for index, segment in enumerate(data.segments):
@@ -121,6 +121,6 @@ async def upload_audio_gcp(data: AnalysisModel):
     time_taken = end_time - start_time
     print(f"Time taken to upload audio files to gcp: {time_taken:.2f} seconds.")
     
-    return data
+    return data.model_dump_json()
     
 

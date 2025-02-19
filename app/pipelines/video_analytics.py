@@ -49,13 +49,14 @@ async def start_video_analysis(upload: Upload):
         type="video",
         timestamp=timestamp
     )
-    await video_router.broker.publish(analysis, "av:audio_seg")
+    await video_router.broker.publish(analysis.model_dump_json(), "av:audio_seg")
     return analysis_id
 
 
 @video_router.subscriber("av:upload_video_gcp")
 @video_router.publisher("av:save_analysis_es")
-async def upload_video_gcp(data: AnalysisModel):
+async def upload_video_gcp(msg: str):
+    data = AnalysisModel.model_validate_json(msg)
     # Start timing
     start_time = time.time()
     for index, segment in enumerate(data.segments):
@@ -89,6 +90,6 @@ async def upload_video_gcp(data: AnalysisModel):
     time_taken = end_time - start_time
     print(f"Time taken to upload video files to gcp: {time_taken:.2f} seconds.")
     
-    return data
+    return data.model_dump_json()
 
 

@@ -15,46 +15,56 @@ import os
 transcript_router = fastapi.RedisRouter(os.environ['REDIS_URI'])
 
 @transcript_router.subscriber("av:audio_transcribe")
-# @transcript_router.publisher("av:transcript_embeddings")
-@transcript_router.publisher("av:transcript_sentiment")
-async def audio_transcribe(data: AnalysisModel):
-    keywords = get_all_keywords()
-    # Start timing
-    start_time = time.time()
-    for index, segment in enumerate(data.segments):
-        transcript = transcribe(segment.audio_file)
-        processed_transcript = post_process_transcription(transcript['raw_text'], keywords)
-        data.segments[index].raw_text = processed_transcript
-        data.segments[index].language = transcript['language']
-        data.segments[index].language_score = transcript['language_score']
-    
-    # End timing
-    end_time = time.time()
-    time_taken = end_time - start_time
-    print(f"Time taken to transcribe audio: {time_taken:.2f} seconds.")
-    return data
+@transcript_router.publisher("av:transcript_embeddings")
+async def audio_transcribe(msg: str):
+    try:
+        data = AnalysisModel.model_validate_json(msg)
+        keywords = get_all_keywords()
+        # Start timing
+        start_time = time.time()
+        for index, segment in enumerate(data.segments):
+            transcript = transcribe(segment.audio_file)
+            processed_transcript = post_process_transcription(transcript['raw_text'], keywords)
+            data.segments[index].raw_text = processed_transcript
+            data.segments[index].language = transcript['language']
+            data.segments[index].language_score = transcript['language_score']
+        
+        # End timing
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print(f"Time taken to transcribe audio: {time_taken:.2f} seconds.")
+        return data.model_dump_json()
+    except Exception as e:
+        print(e)
+        print("Transcript model failed. Can't continue")
 
 @transcript_router.subscriber("av:transcript_embeddings")
 @transcript_router.publisher("av:transcript_sentiment")
-async def transcript_embeddings(data: AnalysisModel):
-    # Start timing
-    start_time = time.time()
-    for index, segment in enumerate(data.segments):
-        clean_transcript = remove_timestamps_and_format(segment.raw_text)
-        embeddings = embed_text(clean_transcript)
-        data.segments[index].embeddings = embeddings
+async def transcript_embeddings(msg: str):
+    try:
+        data = AnalysisModel.model_validate_json(msg)
+        # Start timing
+        start_time = time.time()
+        for index, segment in enumerate(data.segments):
+            clean_transcript = remove_timestamps_and_format(segment.raw_text)
+            embeddings = embed_text(clean_transcript)
+            data.segments[index].embeddings = embeddings
+        
+        # End timing
+        end_time = time.time()
+        time_taken = end_time - start_time
+        print(f"Time taken to embed audio transcripts: {time_taken:.2f} seconds.")
+        
+        return data.model_dump_json()
+    except Exception as e:
+        print(e)
+        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_sentiment")
     
-    # End timing
-    end_time = time.time()
-    time_taken = end_time - start_time
-    print(f"Time taken to embed audio transcripts: {time_taken:.2f} seconds.")
-    
-    return data
-
 @transcript_router.subscriber("av:transcript_sentiment")
 @transcript_router.publisher("av:transcript_categories")
-async def transcript_sentiment(data: AnalysisModel):
+async def transcript_sentiment(msg: str):
     try:
+        data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
@@ -67,15 +77,16 @@ async def transcript_sentiment(data: AnalysisModel):
         time_taken = end_time - start_time
         print(f"Time taken to analyse sentiments for transcripts: {time_taken:.2f} seconds.")
         
-        return data
+        return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data, "av:transcript_categories")
+        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_categories")
 
 @transcript_router.subscriber("av:transcript_categories")
 @transcript_router.publisher("av:transcript_keywords")
-async def transcript_categories(data: AnalysisModel):
+async def transcript_categories(msg: str):
     try:
+        data = AnalysisModel.model_validate_json(msg)
         categories = get_tags(data.type)
         # Start timing
         start_time = time.time()
@@ -89,15 +100,16 @@ async def transcript_categories(data: AnalysisModel):
         time_taken = end_time - start_time
         print(f"Time taken to categorize audio transcripts: {time_taken:.2f} seconds.")
         
-        return data
+        return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data, "av:transcript_keywords")
+        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_keywords")
 
 @transcript_router.subscriber("av:transcript_keywords")
 @transcript_router.publisher("av:transcript_topics")
-async def transcript_keywords(data: AnalysisModel):
+async def transcript_keywords(msg: str):
     try:
+        data = AnalysisModel.model_validate_json(msg)
         keywords = get_all_keywords()
         # Start timing
         start_time = time.time()
@@ -111,15 +123,16 @@ async def transcript_keywords(data: AnalysisModel):
         time_taken = end_time - start_time
         print(f"Time taken to match keywords in audio transcripts: {time_taken:.2f} seconds.")
         
-        return data
+        return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data, "av:transcript_topics")
+        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_topics")
 
 @transcript_router.subscriber("av:transcript_topics")
 @transcript_router.publisher("av:transcript_llm")
-async def transcript_topics(data: AnalysisModel):
+async def transcript_topics(msg: str):
     try:
+        data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
@@ -132,15 +145,15 @@ async def transcript_topics(data: AnalysisModel):
         time_taken = end_time - start_time
         print(f"Time taken to model topics in audio transcripts: {time_taken:.2f} seconds.")
         
-        return data
+        return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data, "av:transcript_llm")
+        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_llm")
 
 @transcript_router.subscriber("av:transcript_llm")
-async def transcript_llm(data: AnalysisModel):
+async def transcript_llm(msg: str):
     try:
-        
+        data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
@@ -155,20 +168,21 @@ async def transcript_llm(data: AnalysisModel):
         print(f"Time taken to analyze show metadata, ads and engagement using llm: {time_taken:.2f} seconds.")
         
         if data.type == "audio":
-            await transcript_router.broker.publish(data, "av:upload_audio_gcp")
+            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
         elif data.type == "video":
-            await transcript_router.broker.publish(data, "av:upload_video_gcp")
+            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
     except Exception as e:
         # Handle any other exception (fallback)
         print(f"Unexpected error: {e}")
         if data.type == "audio":
-            await transcript_router.broker.publish(data, "av:upload_audio_gcp")
+            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
         elif data.type == "video":
-            await transcript_router.broker.publish(data, "av:upload_video_gcp")
+            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
 
 @transcript_router.subscriber("av:save_analysis_es")
-async def save_analysis_es(data: AnalysisModel):
+async def save_analysis_es(msg: str):
     try:
+        data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
         
@@ -177,7 +191,7 @@ async def save_analysis_es(data: AnalysisModel):
         segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
         recording = Recording.create_from_analysis_model(data)
         # Convert the Recording object to a dictionary
-        recording_dict = recording.dict()
+        recording_dict = dict(recording)
         
         print("Recording Info: ")
         print(recording_dict)
@@ -187,7 +201,7 @@ async def save_analysis_es(data: AnalysisModel):
         actions = [
             {
                 "_index": index_id,  
-                "_source": segment.dict(),
+                "_source": dict(segment),
             }
             for segment in segment_recordings
         ]

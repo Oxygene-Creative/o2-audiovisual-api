@@ -48,7 +48,7 @@ class Segment(BaseModel):
     audio_file: Optional[str] = ""
     gcp_path: Optional[str] = ""
     file_size: Optional[float] = 0.0
-    embeddings: Any = None
+    embeddings: List[float] = []
     ads: List[Advertisement] = []
     show_metadata: Optional[ShowMetadata] = None
     engagement: List[AudienceEngagement] = []
