@@ -45,7 +45,7 @@ async def start_audio_analysis(upload: Upload):
         gcp_bucket=upload.bucket,
         gcp_blob=upload.blob
     )
-    await audio_router.broker.publish(analysis, "av:audio_seg")
+    await audio_router.broker.publish(analysis.model_dump_json(), "av:audio_seg")
     return analysis_id
 
 @audio_router.subscriber("av:audio_seg")
