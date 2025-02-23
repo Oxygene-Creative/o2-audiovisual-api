@@ -11,6 +11,7 @@ from app.analyzers.segmentation import gender_music_segmentation
 from app.core.media_processing import slice_audio
 from pydantic import BaseModel
 import uuid
+from app.core.redis import redis_broker
 
 class Upload(BaseModel):
     stream_id: str
@@ -19,7 +20,7 @@ class Upload(BaseModel):
     blob: str
     timestamp_str: Optional[str]
     
-audio_router = fastapi.RedisRouter(os.environ['REDIS_URI'])
+audio_router = fastapi.RedisRouter(redis_broker)
 
 @audio_router.post("/analysis/audio")
 async def start_audio_analysis(upload: Upload):

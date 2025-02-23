@@ -7,18 +7,15 @@ from app.pipelines.audio_analytics import audio_router
 from app.pipelines.transcript_analysis import transcript_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
+from app.core.redis import redis_broker
 
 load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await audio_router.broker.connect()
-    await video_router.broker.connect()
-    await transcript_router.broker.connect()
+    await redis_broker.connect()
     yield
-    await audio_router.broker.close()
-    await video_router.broker.close()
-    await transcript_router.broker.close()
+    await redis_broker.close()
     
 app = FastAPI(lifespan=lifespan)
 
