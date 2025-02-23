@@ -29,3 +29,4 @@ core_router.include_router(transcript_router)
 # Include routers for modular endpoints
 app.include_router(core_router)
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
+# app.include_router(embeddings_router, prefix="/nlp", tags=["embeddings"])
