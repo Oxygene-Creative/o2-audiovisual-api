@@ -21,10 +21,10 @@ app = FastAPI(lifespan=lifespan)
 
 # include faststream handlers
 core_router = StreamRouter()
-redis_broker.include_router(reporting_router)
-redis_broker.include_router(video_router)
-redis_broker.include_router(audio_router)
-redis_broker.include_router(transcript_router)
+core_router.include_router(reporting_router)
+core_router.include_router(video_router)
+core_router.include_router(audio_router)
+core_router.include_router(transcript_router)
 
 # Include routers for modular endpoints
 app.include_router(core_router)
