@@ -9,7 +9,7 @@ from app.models.analytics import AnalysisModel
 from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
-from app.core.graphql import get_all_keywords, get_tags
+from app.core.graphql import get_all_terms, get_tags
 from app.core.es import save, save_bulk
 import os
 
@@ -91,7 +91,12 @@ async def transcript_sentiment(msg: str):
 async def transcript_categories(msg: str):
     try:
         data = AnalysisModel.model_validate_json(msg)
-        categories = get_tags(data.type)
+        tag_name = ""
+        if data.type == "audio":
+            tag_name = "Radio"
+        elif data.type == "video":
+            tag_name == "Tv"
+        categories = get_tags(tag_name)
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
@@ -116,7 +121,7 @@ async def transcript_categories(msg: str):
 async def transcript_keywords(msg: str):
     try:
         data = AnalysisModel.model_validate_json(msg)
-        keywords = get_all_keywords()
+        keywords = get_all_terms()
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
@@ -198,8 +203,12 @@ async def save_analysis_es(msg: str):
         data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
-        
-        index_id = f"{data.type}_{data.stream_id}"
+        stream_type = ""
+        if data.type == "audio":
+            stream_type = "radio"
+        elif data.type == "video":
+            stream_type == "tv"
+        index_id = f"{stream_type}_{data.stream_id}"
         
         segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
         recording = Recording.create_from_analysis_model(data)
