@@ -20,8 +20,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # include faststream handlers
-# core_router = StreamRouter()
-# core_router.include_router(reporting_router)
+core_router = StreamRouter("redis://redis:6379")
+core_router.include_router(reporting_router)
 # core_router.include_router(video_router)
 # core_router.include_router(audio_router)
 # core_router.include_router(transcript_router)
