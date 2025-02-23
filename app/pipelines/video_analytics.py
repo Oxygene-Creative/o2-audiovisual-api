@@ -10,9 +10,8 @@ import os
 from app.core.media_processing import extract_audio_from_video, slice_video
 import time 
 import uuid
-from app.core.redis import redis_broker
 
-video_router = fastapi.RedisRouter(redis_broker)
+video_router = fastapi.RedisRouter()
 
 class Upload(BaseModel):
     stream_id: str

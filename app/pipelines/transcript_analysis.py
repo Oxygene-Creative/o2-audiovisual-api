@@ -8,13 +8,12 @@ from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel
 from datetime import datetime
 import time 
-from app.core.redis import redis_broker
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
 from app.core.graphql import get_all_terms, get_tags
 from app.core.es import save, save_bulk
 import os
 
-transcript_router = fastapi.RedisRouter(redis_broker)
+transcript_router = fastapi.RedisRouter()
 
 @transcript_router.subscriber("av:audio_transcribe")
 @transcript_router.publisher("av:transcript_embeddings")
