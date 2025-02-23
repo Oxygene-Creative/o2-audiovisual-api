@@ -8,9 +8,11 @@ from app.pipelines.transcript_analysis import transcript_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from app.core.redis import redis_broker
+import os
 
 load_dotenv()
-core_router = StreamRouter("redis://redis:6379")
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+core_router = StreamRouter(REDIS_URI)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,9 +27,9 @@ app = FastAPI(lifespan=lifespan)
 # include faststream handlers
 
 core_router.include_router(reporting_router)
-# core_router.include_router(video_router)
-# core_router.include_router(audio_router)
-# core_router.include_router(transcript_router)
+core_router.include_router(video_router)
+core_router.include_router(audio_router)
+core_router.include_router(transcript_router)
 
 # Include routers for modular endpoints
 app.include_router(core_router)
