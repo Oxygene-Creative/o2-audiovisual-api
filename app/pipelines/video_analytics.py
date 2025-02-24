@@ -11,7 +11,8 @@ from app.core.media_processing import extract_audio_from_video, slice_video
 import time 
 import uuid
 
-video_router = fastapi.RedisRouter()
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+video_router = fastapi.RedisRouter(REDIS_URI)
 
 class Upload(BaseModel):
     stream_id: str

@@ -13,7 +13,11 @@ from app.core.graphql import get_all_terms, get_tags
 from app.core.es import save, save_bulk
 import os
 
-transcript_router = fastapi.RedisRouter()
+from dotenv import load_dotenv
+load_dotenv()
+
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+transcript_router = fastapi.RedisRouter(REDIS_URI)
 
 @transcript_router.subscriber("av:audio_transcribe")
 @transcript_router.publisher("av:transcript_embeddings")

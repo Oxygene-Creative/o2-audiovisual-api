@@ -17,8 +17,11 @@ class Upload(BaseModel):
     bucket: str
     blob: str
     timestamp_str: Optional[str]
-    
-audio_router = fastapi.RedisRouter()
+from dotenv import load_dotenv
+load_dotenv()
+
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+audio_router = fastapi.RedisRouter(REDIS_URI)
 
 @audio_router.post("/analysis/audio")
 async def start_audio_analysis(upload: Upload):
