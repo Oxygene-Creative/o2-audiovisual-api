@@ -19,9 +19,15 @@ core_router = StreamRouter(REDIS_URI)
 async def lifespan(app: FastAPI):
     await redis_broker.connect()
     await core_router.broker.connect()
+    await transcript_router.broker.connect()
+    await audio_router.broker.connect()
+    await video_router.broker.connect()
     yield
     await redis_broker.close()
     await core_router.broker.close()
+    await transcript_router.broker.close()
+    await audio_router.broker.close()
+    await video_router.broker.close()
     
 app = FastAPI(lifespan=lifespan)
 
