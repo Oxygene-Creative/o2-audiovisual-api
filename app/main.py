@@ -1,3 +1,4 @@
+from app.core.config import setup_env
 from fastapi import FastAPI
 from app.routers.embeddings import embeddings_router
 from faststream.redis.fastapi import RedisRouter as StreamRouter
@@ -35,3 +36,8 @@ core_router.include_router(transcript_router)
 app.include_router(core_router)
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 # app.include_router(embeddings_router, prefix="/nlp", tags=["embeddings"])
+
+
+@app.on_event("startup")
+async def startup_event():
+    setup_env()

@@ -3,6 +3,8 @@ from typing import List, Any
 import os
 from dotenv import load_dotenv
 
+from app.models.graphql import Config
+
 load_dotenv()
 
 GRAPHQL_URI = os.environ['GRAPHQL_URI']
@@ -51,3 +53,17 @@ def get_tags(stream_type: str) -> List[str]:
     for res in response['findTags']:
         tags.extend(res['values'])
     return tags
+
+def get_configs() -> List[Config]:
+    query = """ 
+    query ($query: FindConfigInput!){
+        findConfigs(query: $query){
+            key
+            value
+        }
+    }
+    """
+    variables = { "query": {} }
+    response = fetch_data(query, variables)
+    
+    return response['findConfigs']
