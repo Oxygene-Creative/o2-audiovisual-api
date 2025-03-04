@@ -23,12 +23,11 @@ transcript_router = fastapi.RedisRouter(REDIS_URI)
 # transcript_router = fastapi.RedisRouter(redis_broker)
 
 @transcript_router.subscriber("av:audio_transcribe")
-# @transcript_router.publisher("av:transcript_embeddings")
-@transcript_router.publisher("av:transcript_sentiment")
+@transcript_router.publisher("av:transcript_embeddings")
 async def audio_transcribe(msg: str):
     try:
         data = AnalysisModel.model_validate_json(msg)
-        keywords = get_all_keywords()
+        keywords = get_all_terms()
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
@@ -45,7 +44,7 @@ async def audio_transcribe(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        print("Transcript model failed. Can't continue")
+        await transcript_router.broker.publish(msg, "av:transcript_embeddings")
 
 @transcript_router.subscriber("av:transcript_embeddings")
 @transcript_router.publisher("av:transcript_sentiment")
@@ -67,7 +66,7 @@ async def transcript_embeddings(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_sentiment")
+        await transcript_router.broker.publish(msg, "av:transcript_sentiment")
     
 @transcript_router.subscriber("av:transcript_sentiment")
 @transcript_router.publisher("av:transcript_categories")
@@ -92,7 +91,7 @@ async def transcript_sentiment(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_categories")
+        await transcript_router.broker.publish(msg, "av:transcript_categories")
 
 @transcript_router.subscriber("av:transcript_categories")
 @transcript_router.publisher("av:transcript_keywords")
@@ -122,7 +121,7 @@ async def transcript_categories(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_keywords")
+        await transcript_router.broker.publish(msg, "av:transcript_keywords")
 
 @transcript_router.subscriber("av:transcript_keywords")
 @transcript_router.publisher("av:transcript_topics")
@@ -147,7 +146,7 @@ async def transcript_keywords(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_topics")
+        await transcript_router.broker.publish(msg, "av:transcript_topics")
 
 @transcript_router.subscriber("av:transcript_topics")
 @transcript_router.publisher("av:transcript_llm")
@@ -171,7 +170,7 @@ async def transcript_topics(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(data.model_dump_json(), "av:transcript_llm")
+        await transcript_router.broker.publish(msg, "av:transcript_llm")
 
 @transcript_router.subscriber("av:transcript_llm")
 async def transcript_llm(msg: str):
