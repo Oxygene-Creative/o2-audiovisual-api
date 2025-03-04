@@ -80,8 +80,8 @@ async def transcript_sentiment(msg: str):
             sentiment = sentiment_analysis(clean_transcript)
             data.segments[index].sentiment = sentiment
             
-            print("Sentiment per segment: ")
-            print(data.segments[index].sentiment)
+            # print("Sentiment per segment: ")
+            # print(data.segments[index].sentiment)
         
         # End timing
         end_time = time.time()
@@ -183,10 +183,10 @@ async def transcript_llm(msg: str):
             data.segments[index].ads = llm_analysis.ads
             data.segments[index].show_metadata = llm_analysis.show_metadata
             data.segments[index].engagement = llm_analysis.engagement
-            print("Ads, Show Metadata and Engagement discovered for each segment:")
-            print(data.segments[index].ads)
-            print(data.segments[index].show_metadata)
-            print(data.segments[index].engagement)
+            # print("Ads, Show Metadata and Engagement discovered for each segment:")
+            # print(data.segments[index].ads)
+            # print(data.segments[index].show_metadata)
+            # print(data.segments[index].engagement)
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time

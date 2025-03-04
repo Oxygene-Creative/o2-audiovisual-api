@@ -29,7 +29,6 @@ def match_keywords(text, keywords):
     for word in text_words:
         # Find closest category matches to the word
         match, score = process.extractOne(word, keywords)
-        print(f"Word: {word}, Match: {match}, Score: {score}")
         if score > 95:  # Threshold to accept a match
             matched_keywords.add(match)
 
@@ -102,7 +101,7 @@ def topic_modelling(text: str):
     processed_texts = preprocess_text(text)
     # Check if preprocessing resulted in empty texts
     if not processed_texts:
-        raise ValueError("All input texts were filtered out during preprocessing.")
+        return []
     
     lda_model, corpus, dictionary = lda_topic_modeling(processed_texts, num_topics=3)
     topics = []
