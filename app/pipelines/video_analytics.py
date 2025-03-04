@@ -12,10 +12,10 @@ import time
 import uuid
 from app.core.redis import redis_broker
 
-# REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
-# video_router = fastapi.RedisRouter(REDIS_URI)
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+video_router = fastapi.RedisRouter(REDIS_URI)
 
-video_router = fastapi.RedisRouter(redis_broker)
+# video_router = fastapi.RedisRouter(redis_broker)
 
 class Upload(BaseModel):
     stream_id: str

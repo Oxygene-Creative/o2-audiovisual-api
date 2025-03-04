@@ -17,10 +17,10 @@ from app.core.redis import redis_broker
 from dotenv import load_dotenv
 load_dotenv()
 
-# REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
-# transcript_router = fastapi.RedisRouter(REDIS_URI)
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+transcript_router = fastapi.RedisRouter(REDIS_URI)
 
-transcript_router = fastapi.RedisRouter(redis_broker)
+# transcript_router = fastapi.RedisRouter(redis_broker)
 
 @transcript_router.subscriber("av:audio_transcribe")
 @transcript_router.publisher("av:transcript_embeddings")
