@@ -23,7 +23,8 @@ transcript_router = fastapi.RedisRouter(REDIS_URI)
 # transcript_router = fastapi.RedisRouter(redis_broker)
 
 @transcript_router.subscriber("av:audio_transcribe")
-@transcript_router.publisher("av:transcript_embeddings")
+# @transcript_router.publisher("av:transcript_embeddings")
+@transcript_router.publisher("av:transcript_sentiment")
 async def audio_transcribe(msg: str):
     try:
         data = AnalysisModel.model_validate_json(msg)
