@@ -30,31 +30,29 @@ def fetch_data(query: str, variables: Any):
         return None
 
 def get_all_terms() -> List[str]:
-    # query = """
-    # query {
-    #     findUniqueTerms
-    # }
-    # """
-    # variables = { }
-    # response = fetch_data(query, variables)
-    # return response['findUniqueTerms']
-    return ["Mpesa", "Safaricom"]
+    query = """
+    query {
+        findUniqueTerms
+    }
+    """
+    variables = { }
+    response = fetch_data(query, variables)
+    return response['findUniqueTerms']
 
 def get_tags(stream_type: str) -> List[str]:
-    # query = """
-    # query ($query: FindTagInput!){
-    #     findTags(query: $query){
-    #         values
-    #     }
-    # }
-    # """
-    # variables = { "query": { "name": stream_type } }
-    # response = fetch_data(query, variables)
-    # tags = []
-    # for res in response['findTags']:
-    #     tags.extend(res['values'])
-    # return tags
-    return ["business", "sports", "health"]
+    query = """
+    query ($query: FindTagInput!){
+        findTags(query: $query){
+            values
+        }
+    }
+    """
+    variables = { "query": { "name": stream_type } }
+    response = fetch_data(query, variables)
+    tags = []
+    for res in response['findTags']:
+        tags.extend(res['values'])
+    return tags
 
 def get_configs() -> List[Config]:
     query = """ 
