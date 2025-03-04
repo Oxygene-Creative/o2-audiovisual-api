@@ -47,7 +47,7 @@ class SegmentRecording(BaseModel):
                 duration=segment.duration or 0.0,
                 raw_text=segment.raw_text,
                 language=segment.language,
-                language_scoew=segment.language_score,
+                language_score=segment.language_score,
                 sentiment=segment.sentiment,
                 emotions=segment.emotions,
                 embeddings=segment.embeddings,
@@ -55,8 +55,13 @@ class SegmentRecording(BaseModel):
                 topics=segment.topics,
                 tags=segment.tags,
                 ads=[
-                    Advertisement(brand=ad.brand, product=ad.product, start=ad.start, stop=ad.stop)
-                    for ad in segment.ads
+                    Advertisement(
+                        brand=ad.brand or "",
+                        product=ad.product or "",
+                        start=ad.start,
+                        stop=ad.stop
+                    )
+                    for ad in (segment.ads or [])
                 ],
                 engagement=[
                     AudienceEngagement(
@@ -71,8 +76,8 @@ class SegmentRecording(BaseModel):
                 gcp_blob=analysis.gcp_blob or "",
                 gcp_path=segment.gcp_path or "",
                 file_size=segment.file_size or 0.0,
-                host=segment.show_metadata.host or "",
-                program_name=segment.show_metadata.program_name or "",
+                host=(segment.show_metadata.host if segment.show_metadata else "") or "",
+                program_name=(segment.show_metadata.program_name if segment.show_metadata else "") or "",
             )
 
             # Append the created SegmentRecording to the result list
