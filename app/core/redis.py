@@ -1,7 +1,5 @@
-from faststream.redis import RedisBroker
+from faststream.redis import fastapi
 import os
 
-# Create shared broker instance
-redis_broker = RedisBroker(
-    os.getenv("REDIS_URI", "redis://redis:6379")
-)
+REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+redis_router = fastapi.RedisRouter(REDIS_URI)
