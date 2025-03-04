@@ -1,5 +1,5 @@
 # base image
-FROM python:3.10-bullseye
+FROM python:3.9-bullseye
 
 # setup working directory
 WORKDIR /code
