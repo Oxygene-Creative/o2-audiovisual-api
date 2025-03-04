@@ -11,8 +11,10 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await redis_broker.connect()
+    await redis_router.broker.connect()
     yield
-    await redis_broker.connect()
+    await redis_broker.close()
+    await redis_router.broker.close()
     
 app = FastAPI(lifespan=lifespan)
 
