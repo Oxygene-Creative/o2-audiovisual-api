@@ -101,7 +101,7 @@ async def upload_audio_gcp(msg: str):
             
             # dest file path construction
             recording_date = data.timestamp.date().isoformat()
-            dest_file_path = f"audio/{data.stream_name}/{recording_date}/{file_name}"
+            dest_file_path = f"radio/{data.stream_name}/{recording_date}/{file_name}"
             
             # upload to gcp
             upload(data.gcp_bucket, local_file_path, dest_file_path)

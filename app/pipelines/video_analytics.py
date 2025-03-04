@@ -66,7 +66,7 @@ async def upload_video_gcp(msg: str):
             
             # dest file path construction
             recording_date = data.timestamp.date().isoformat()
-            dest_file_path = f"video/{data.stream_name}/{recording_date}/{file_name}"
+            dest_file_path = f"tv/{data.stream_name}/{recording_date}/{file_name}"
             
             # upload to gcp
             upload(data.gcp_bucket, local_file_path, dest_file_path)

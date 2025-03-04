@@ -5,7 +5,7 @@ from app.analyzers.nlp import categorize_text, match_keywords, topic_modelling
 from app.analyzers.sentiment import sentiment_analysis
 from app.models.recording import Recording, SegmentRecording
 from faststream.redis import fastapi
-from app.models.analytics import AnalysisModel
+from app.models.analytics import AnalysisModel, ShowMetadata
 from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
@@ -175,9 +175,9 @@ async def transcript_llm(msg: str):
         start_time = time.time()
         for index, segment in enumerate(data.segments):
             llm_analysis = llm_transcript_analysis(segment.raw_text)
-            data.segments[index].ads = llm_analysis.ads
-            data.segments[index].show_metadata = llm_analysis.show_metadata
-            data.segments[index].engagement = llm_analysis.engagement
+            data.segments[index].ads = llm_analysis.ads if llm_analysis.ads is not None else []
+            data.segments[index].show_metadata = llm_analysis.show_metadata if llm_analysis.show_metadata is not None else ShowMetadata()
+            data.segments[index].engagement = llm_analysis.engagement if llm_analysis.engagement is not None else []
             # print("Ads, Show Metadata and Engagement discovered for each segment:")
             # print(data.segments[index].ads)
             # print(data.segments[index].show_metadata)
@@ -217,22 +217,12 @@ async def save_analysis_es(msg: str):
         # Convert the Recording object to a dictionary
         recording_dict = dict(recording)
         
-        print("Recording Info: ")
-        print(recording_dict)
+        print("Saving Recording Info: ")
 
-        save("recording", recording_dict)
+        save("recordings", recording_dict)
         
-        actions = [
-            {
-                "_index": index_id,  
-                "_source": dict(segment),
-            }
-            for segment in segment_recordings
-        ]
-        print("Segment Info: ")
-        print(actions)
-        
-        save_bulk(actions)
+        for segment in segment_recordings:
+            save(index_id, dict(segment))
         
         # End timing
         end_time = time.time()
