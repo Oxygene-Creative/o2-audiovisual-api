@@ -3,18 +3,16 @@ from fastapi import FastAPI
 from app.routers.embeddings import embeddings_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from app.core.redis import redis_router
+from app.core.redis import redis_router, redis_broker
 import os
 
 load_dotenv()
-# REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
-# core_router = StreamRouter(REDIS_URI)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await redis_router.broker.connect()
+    await redis_broker.connect()
     yield
-    await redis_router.broker.connect()
+    await redis_broker.connect()
     
 app = FastAPI(lifespan=lifespan)
 
