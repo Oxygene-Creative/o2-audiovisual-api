@@ -6,10 +6,11 @@ from dateutil.relativedelta import relativedelta
 DateRangeType = Literal['daily', 'monthly']
 
 def search_mentions(
+    indexes: List[str],
     keywords: List[str],
     date: datetime,
     date_range: DateRangeType = 'daily',
-    size: int = 100
+    size: int = 0
 ) -> dict:
     
     # Calculate date range based on date_range parameter
@@ -137,7 +138,7 @@ def search_mentions(
     
     try:
         # Execute search
-        response = search(index="segment_recordings", body=query)
+        response = search(index=indexes, body=query)
 
         # Process results
         results = {

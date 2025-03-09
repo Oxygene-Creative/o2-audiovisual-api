@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 
 DateRangeType = Literal['daily', 'monthly']
 
-def get_stream_demographics(
+def demographics_analysis(
     date: datetime,
     date_range: DateRangeType = 'daily',
 ) -> dict:

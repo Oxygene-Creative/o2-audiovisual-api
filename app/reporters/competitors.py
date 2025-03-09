@@ -1,23 +1,22 @@
-from typing import List, Optional, Literal
-from datetime import datetime, timedelta
-from app.core.es import search
-from dateutil.relativedelta import relativedelta
-
+from typing import List, Literal
+from datetime import datetime
 from app.models.reports import Competitor
 from app.reporters.mentions import search_mentions
 
 DateRangeType = Literal['daily', 'monthly']
 
 def competitor_analysis(
+    indexes: List[str],
     competitors: List[Competitor],
     date: datetime,
     date_range: DateRangeType = 'daily',
-    size: int = 100
+    size: int = 0
 ):  
     results = {}
     
     for competitor in competitors:
         results[competitor.name] = search_mentions(
+            indexes=indexes,
             keywords=competitor.keywords,
             date=date,
             date_range=date_range,
