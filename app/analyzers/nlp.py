@@ -13,6 +13,7 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from gensim import corpora
 from gensim.models import LdaModel
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Download NLTK resources
 nltk.download('punkt_tab')
@@ -124,10 +125,17 @@ def lda_topic_modeling(texts, num_topics=5, passes=10):
     
     return lda_model, corpus, dictionary
 
-def topic_modelling(text: List[str], num_topics=3):
-    
+def topic_modelling(text: str, num_topics=3):
+    # split text
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=200,
+        chunk_overlap=20,
+        length_function=len,
+        separators=["\n\n", "\n", ".", "!", "?", " "]
+    )
+    docs = text_splitter.split_text(text)
     # Fit and transform
-    processed_texts = preprocess_text(text)
+    processed_texts = preprocess_text(docs)
     # Check if preprocessing resulted in empty texts
     if not processed_texts:
         return []

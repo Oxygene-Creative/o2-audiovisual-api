@@ -4,7 +4,6 @@ from fastapi import APIRouter
 from app.analyzers.nlp import match_keywords, categorize_text, topic_modelling
 from app.analyzers.sentiment import sentiment_analysis
 from pydantic import BaseModel
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 import json
 
 nlp_router = APIRouter()
@@ -43,15 +42,6 @@ def analyze_keywords( request: KeywordsRequest ):
 @nlp_router.post("/topics")
 def analyze_topics( request: TopicsRequest ):
     clean_transcript = remove_timestamps_and_format(request.text)
-    # split text
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=200,
-        chunk_overlap=20,
-        length_function=len,
-        separators=["\n\n", "\n", ".", "!", "?", " "]
-    )
-    docs = text_splitter.split_text(clean_transcript)
-    result = topic_modelling(docs, num_topics=request.num_topics)
-    json_data = json.loads(result.model_dump_json())
-    return json_data
+    result = topic_modelling(clean_transcript, num_topics=request.num_topics)
+    return result
 

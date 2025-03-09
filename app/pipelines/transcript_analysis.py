@@ -147,21 +147,20 @@ async def transcript_topics(msg: str):
         data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
-        transcript = []
         for index, segment in enumerate(data.segments):
-            clean_transcript = remove_timestamps_and_format(segment.raw_text)
-            transcript.append(clean_transcript)
-        
-        topics = topic_modelling(transcript, 10)
-        final_topics_objects = []
-        for topic_dict in topics:
-            # Convert the dictionary to a Topic object
-            topic_obj = Topic(
-                label=topic_dict["label"],
-                words=[TopicWord(word=w["word"], score=w["score"]) for w in topic_dict["words"]]
-            )
-            final_topics_objects.append(topic_obj)
-        data.topics = final_topics_objects
+            if segment.duration > 30:
+                clean_transcript = remove_timestamps_and_format(segment.raw_text)
+                topics = topic_modelling(clean_transcript, 3)
+                
+                final_topics_objects = []
+                for topic_dict in topics:
+                    # Convert the dictionary to a Topic object
+                    topic_obj = Topic(
+                        label=topic_dict["label"],
+                        words=[TopicWord(word=w["word"], score=w["score"]) for w in topic_dict["words"]]
+                    )
+                    final_topics_objects.append(topic_obj)
+                segment.topics = final_topics_objects
         
         # End timing
         end_time = time.time()
@@ -221,10 +220,6 @@ async def save_analysis_es(msg: str):
         
         recording = Recording.create_from_analysis_model(data)
         recording_dict = recording.model_dump_json()
-        
-        data_dict = data.recording.model_dump_json()
-        with open('recording.json', 'w') as f:
-            f.write(data_dict)
                 
         save("recordings", recording_dict)
         

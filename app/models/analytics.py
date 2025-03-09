@@ -34,7 +34,14 @@ class MediaTypeEnum(str, Enum):
     video = "video"
     audio = "audio"
 
-
+class TopicWord(BaseModel):
+    word: str
+    score: float
+    
+class Topic(BaseModel):
+    label: str
+    words: List[TopicWord]
+    
 class Segment(BaseModel):
     start: Optional[float] = 0.0
     stop: Optional[float] = 0.0
@@ -46,22 +53,14 @@ class Segment(BaseModel):
     emotions: List[str] = []
     keywords: List[str] = []
     tags: List[TagAnalysis] = []
-    start_time: Optional[datetime] = None
     audio_file: Optional[str] = ""
     gcp_path: Optional[str] = ""
     file_size: Optional[float] = 0.0
     embeddings: List[float] = []
     ads: List[Advertisement] = []
     show_metadata: Optional[ShowMetadata] = None
-    engagement: List[AudienceEngagement] = []
-
-class TopicWord(BaseModel):
-    word: str
-    score: float
-    
-class Topic(BaseModel):
-    label: str
-    words: List[TopicWord]
+    engagement: List[AudienceEngagement] = []    
+    topics: List[Topic] = []
 
 class Activity(BaseModel):
     male: Optional[float] = 0.0
@@ -81,7 +80,6 @@ class AnalysisModel(BaseModel):
     timestamp: Optional[datetime] = None
     activity: Optional[Activity] = Activity()
     segments: List[Segment] = []
-    topics: List[Topic] = []
     
 class LLMAnalysisModel(BaseModel):
     ads: List[Advertisement] = []

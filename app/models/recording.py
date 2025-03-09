@@ -18,6 +18,7 @@ class SegmentRecording(BaseModel):
     embeddings: List[float] = []
     keywords: List[str] = []
     tags: List[TagAnalysis] = []
+    topics: List[Topic] = []
     # Advertisement details
     ads: List[Advertisement] = []
     # Audience engagement details
@@ -52,6 +53,7 @@ class SegmentRecording(BaseModel):
                 embeddings=segment.embeddings,
                 keywords=segment.keywords,
                 tags=segment.tags,
+                topics=segment.topics,
                 ads=[
                     Advertisement(
                         brand=ad.brand or "",
@@ -93,7 +95,6 @@ class Recording(BaseModel):
     music: float
     file_size: float
     duration: float
-    topics: List[Topic] = []
 
     @classmethod
     def create_from_analysis_model(cls, analysis: AnalysisModel) -> "Recording":
@@ -116,6 +117,5 @@ class Recording(BaseModel):
             female=activity.female or 0.0,
             music=activity.music or 0.0,
             file_size=total_file_size,
-            duration=total_duration,
-            topics=analysis.topics or [],
+            duration=total_duration
         )
