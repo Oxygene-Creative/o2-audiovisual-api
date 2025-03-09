@@ -5,7 +5,7 @@ from app.analyzers.nlp import categorize_text, match_keywords, topic_modelling
 from app.analyzers.sentiment import sentiment_analysis
 from app.models.recording import Recording, SegmentRecording
 from faststream.redis import fastapi
-from app.models.analytics import AnalysisModel, ShowMetadata
+from app.models.analytics import AnalysisModel, ShowMetadata, Topic, TopicWord
 from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
@@ -39,7 +39,7 @@ async def audio_transcribe(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(msg, "av:transcript_embeddings")
+        # await transcript_router.broker.publish(msg, "av:transcript_embeddings")
 
 @transcript_router.subscriber("av:transcript_embeddings")
 @transcript_router.publisher("av:transcript_sentiment")
@@ -61,7 +61,7 @@ async def transcript_embeddings(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(msg, "av:transcript_sentiment")
+        # await transcript_router.broker.publish(msg, "av:transcript_sentiment")
     
 @transcript_router.subscriber("av:transcript_sentiment")
 @transcript_router.publisher("av:transcript_categories")
@@ -86,7 +86,7 @@ async def transcript_sentiment(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(msg, "av:transcript_categories")
+        # await transcript_router.broker.publish(msg, "av:transcript_categories")
 
 @transcript_router.subscriber("av:transcript_categories")
 @transcript_router.publisher("av:transcript_keywords")
@@ -105,9 +105,6 @@ async def transcript_categories(msg: str):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
             category_matches = categorize_text(clean_transcript, categories)
             data.segments[index].tags = category_matches
-
-            print("Matched tags:")
-            print(data.segments[index].tags)
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time
@@ -116,7 +113,7 @@ async def transcript_categories(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(msg, "av:transcript_keywords")
+        # await transcript_router.broker.publish(msg, "av:transcript_keywords")
 
 @transcript_router.subscriber("av:transcript_keywords")
 @transcript_router.publisher("av:transcript_topics")
@@ -141,7 +138,7 @@ async def transcript_keywords(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(msg, "av:transcript_topics")
+        # await transcript_router.broker.publish(msg, "av:transcript_topics")
 
 @transcript_router.subscriber("av:transcript_topics")
 @transcript_router.publisher("av:transcript_llm")
@@ -150,12 +147,21 @@ async def transcript_topics(msg: str):
         data = AnalysisModel.model_validate_json(msg)
         # Start timing
         start_time = time.time()
+        transcript = []
         for index, segment in enumerate(data.segments):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
-            topics = topic_modelling(clean_transcript)
-            data.segments[index].topics = topics
-            print("Topics discovered for each segment:")
-            print(data.segments[index].topics)
+            transcript.append(clean_transcript)
+        
+        topics = topic_modelling(transcript, 10)
+        final_topics_objects = []
+        for topic_dict in topics:
+            # Convert the dictionary to a Topic object
+            topic_obj = Topic(
+                label=topic_dict["label"],
+                words=[TopicWord(word=w["word"], score=w["score"]) for w in topic_dict["words"]]
+            )
+            final_topics_objects.append(topic_obj)
+        data.topics = final_topics_objects
         
         # End timing
         end_time = time.time()
@@ -165,7 +171,7 @@ async def transcript_topics(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        await transcript_router.broker.publish(msg, "av:transcript_llm")
+        # await transcript_router.broker.publish(msg, "av:transcript_llm")
 
 @transcript_router.subscriber("av:transcript_llm")
 async def transcript_llm(msg: str):
@@ -178,10 +184,7 @@ async def transcript_llm(msg: str):
             data.segments[index].ads = llm_analysis.ads if llm_analysis.ads is not None else []
             data.segments[index].show_metadata = llm_analysis.show_metadata if llm_analysis.show_metadata is not None else ShowMetadata()
             data.segments[index].engagement = llm_analysis.engagement if llm_analysis.engagement is not None else []
-            # print("Ads, Show Metadata and Engagement discovered for each segment:")
-            # print(data.segments[index].ads)
-            # print(data.segments[index].show_metadata)
-            # print(data.segments[index].engagement)
+            
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time
@@ -194,10 +197,10 @@ async def transcript_llm(msg: str):
     except Exception as e:
         # Handle any other exception (fallback)
         print(f"Unexpected error: {e}")
-        if data.type == "audio":
-            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
-        elif data.type == "video":
-            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
+        # if data.type == "audio":
+        #     await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
+        # elif data.type == "video":
+        #     await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
 
 @transcript_router.subscriber("av:save_analysis_es")
 async def save_analysis_es(msg: str):
@@ -213,10 +216,11 @@ async def save_analysis_es(msg: str):
         index_id = f"{stream_type}_{data.stream_id}"
         
         segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
+        
         recording = Recording.create_from_analysis_model(data)
         recording_dict = recording.model_dump_json()
+        print(recording_dict)
         
-        print("Saving Recording Info: ")
         save("recordings", recording_dict)
         
         for segment in segment_recordings:

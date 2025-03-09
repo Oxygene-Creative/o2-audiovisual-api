@@ -1,4 +1,6 @@
+from typing import List
 from transformers import pipeline
+from app.models.analytics import TagAnalysis
 from fuzzywuzzy import process
 from app.analyzers.embeddings import embed_text, embedding_model
 from app.core.llm import llm
@@ -18,6 +20,8 @@ nltk.download('wordnet')
 nltk.download('stopwords')
 stop_words = stopwords.words('english')
 
+classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
 def match_keywords(text, keywords):
     """
     Match words in the text to categories using fuzzy matching.
@@ -35,24 +39,15 @@ def match_keywords(text, keywords):
     return list(matched_keywords) if matched_keywords else []
 
 def categorize_text(text, categories, threshold=0.3):
-    """
-    Categorize text based on semantic similarity to category names.
-    """
-    # Encode the text and category names
-    text_embedding = embed_text(text)
-    category_embeddings = embed_text(categories)
-
-    # Compute similarity scores
-    similarities = embedding_model.similarity(text_embedding, category_embeddings)[0]
-    scores, indices = torch.topk(similarities, k=len(categories))
+    results = classifier(text, categories, multi_label=True)
+    tags = [
+        {"label": label, "score": score} 
+        for label, score in zip(results['labels'], results['scores'])
+    ]
     
-    matched_categories = []
+    tag_objects = [TagAnalysis(label=t['label'], score=t['score']) for t in tags]
     
-    for score, idx in zip(scores, indices):
-        if score > threshold:
-            matched_categories.append(categories[idx])
-    
-    return matched_categories 
+    return tag_objects 
 
 def preprocess_text(texts):
     stop_words = set(stopwords.words('english'))
@@ -80,52 +75,89 @@ def preprocess_text(texts):
 def lda_topic_modeling(texts, num_topics=5, passes=10):
     # Create a dictionary representation of the documents
     dictionary = corpora.Dictionary(texts)
-
-    # Filter extremes to remove very rare and overly common words
-    dictionary.filter_extremes(no_below=1, no_above=0.8)
+    
+    # Filter extremes with less strict parameters
+    dictionary.filter_extremes(
+        no_below=1,      # Appear in at least 1 document
+        no_above=1.0,    # Can appear in 100% of documents
+        keep_n=None      # Don't limit vocabulary size
+    )
 
     # Create a bag-of-words corpus
     corpus = [dictionary.doc2bow(text) for text in texts]
     
+    # Remove empty documents from corpus
+    corpus = [doc for doc in corpus if doc]
+    
     # Check if the corpus is empty (no terms left)
     if len(corpus) == 0:
         raise ValueError("Cannot compute LDA over an empty collection (no terms).")
-
-    # Train LDA model
-    lda_model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=num_topics, passes=passes)
-
+    
+    # Train LDA model    
+    lda_model = LdaModel(
+        corpus=corpus,
+        id2word=dictionary,
+        num_topics=min(num_topics, len(dictionary)),
+        passes=passes,
+        alpha=0.1,       # Set a low alpha for more distinct topics
+        eta=0.01,        # Set a low eta for more distinct topics
+        random_state=42,
+        iterations=100,  # Increase iterations
+        chunksize=2000,
+        eval_every=10    # Evaluate model every 10 iterations
+    )
+    
     return lda_model, corpus, dictionary
 
-def topic_modelling(text: str):
+def topic_modelling(text: List[str], num_topics=3):
+    
     # Fit and transform
     processed_texts = preprocess_text(text)
     # Check if preprocessing resulted in empty texts
     if not processed_texts:
         return []
     
-    lda_model, corpus, dictionary = lda_topic_modeling(processed_texts, num_topics=3)
-    topics = []
-    for idx in range(lda_model.num_topics):
-        # Get the top words for the topic
-        topic = lda_model.show_topic(idx, topn=5)
-        words = [word for word, _ in topic]
-        topics.append(words)
+    lda_model, corpus, dictionary = lda_topic_modeling(processed_texts, num_topics=num_topics)
     
+    topic_word_dist = lda_model.state.get_lambda()
+    topics = []
+    
+    for idx, topic_dist in enumerate(topic_word_dist):
+        # Get top words and their probabilities
+        topic_words = [(lda_model.id2word[id], prob) 
+                      for id, prob in enumerate(topic_dist)]
+        
+        # Sort by probability
+        topic_words = sorted(topic_words, key=lambda x: x[1], reverse=True)
+        
+        # Get top N words with their probabilities
+        top_words = topic_words[:5]
+        topics.append(top_words)
+
     prompt = ChatPromptTemplate.from_messages(
-        [("user", "I have a topic that is described by the following keywords: {keywords} Please give a single label to define the topic.")],
+        [("user", "I have a topic that is described by the following words: {keywords} Please give a single label to define the topic. The label has to be one or two words maximum")],
     )
     
     chain = prompt | llm | StrOutputParser()
     
     final_topics = []
     
-    # Get all topics and their words
-    for words in topics:
-        keyword_string = ", ".join(words)
-        # create human readable labe for the topic
-        label = chain.invoke({"keywords": keyword_string })
-        final_topics.append({ "label": label, "words": words })
+    for topic_words in topics:
+        # Create simpler keyword string for labeling
+        simple_keywords = ", ".join(word for word, _ in topic_words)
         
+        # Get label from chain
+        label = chain.invoke({"keywords": simple_keywords})
+        
+        # Create dictionary with label and words+scores
+        final_topics.append({
+            "label": label,
+            "words": [{
+                "word": word,
+                "score": float(score)
+            } for word, score in topic_words]
+        })
+
     return final_topics
 
 

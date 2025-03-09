@@ -2,6 +2,8 @@ from app.core.config import setup_env
 from fastapi import FastAPI
 from app.routers.embeddings import embeddings_router
 from app.routers.ads import ads_router
+from app.routers.transcription import transcribe_router
+from app.routers.nlp import nlp_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from app.core.redis import redis_router, redis_broker
@@ -32,7 +34,8 @@ app.include_router(reporting_router)
 # Include routers for modular endpoints
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(ads_router, prefix="/analysis", tags=["ads"])
-
+app.include_router(nlp_router, prefix="/analysis", tags=["nlp"])
+app.include_router(transcribe_router, prefix="/analysis", tags=["nlp"])
 
 @app.on_event("startup")
 async def startup_event():

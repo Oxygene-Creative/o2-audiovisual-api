@@ -20,12 +20,15 @@ class ShowMetadata(BaseModel):
     host: Optional[str] = Field(description="Name of the radio host(s)")
     program_name: Optional[str] = Field(description="Name of the radio program")
     start: Optional[float] = Field(description="Start timestamp in transcript the host identifies themselves")
-    start: Optional[float] = Field(description="Stop timestamp in transcript the host identifies themselves")
+    stop: Optional[float] = Field(description="Stop timestamp in transcript the host identifies themselves")
 
 class File(BaseModel):
     url: Optional[str] = ""
     size: Optional[int] = 0
 
+class TagAnalysis(BaseModel):
+    label: str
+    score: float
 
 class MediaTypeEnum(str, Enum):
     video = "video"
@@ -42,8 +45,7 @@ class Segment(BaseModel):
     sentiment: Optional[str] = ""
     emotions: List[str] = []
     keywords: List[str] = []
-    tags: List[str] = []
-    topics: List[str] = []
+    tags: List[TagAnalysis] = []
     start_time: Optional[datetime] = None
     audio_file: Optional[str] = ""
     gcp_path: Optional[str] = ""
@@ -53,6 +55,13 @@ class Segment(BaseModel):
     show_metadata: Optional[ShowMetadata] = None
     engagement: List[AudienceEngagement] = []
 
+class TopicWord(BaseModel):
+    word: str
+    score: float
+    
+class Topic(BaseModel):
+    label: str
+    words: List[TopicWord]
 
 class Activity(BaseModel):
     male: Optional[float] = 0.0
@@ -72,8 +81,8 @@ class AnalysisModel(BaseModel):
     timestamp: Optional[datetime] = None
     activity: Optional[Activity] = Activity()
     segments: List[Segment] = []
+    topics: List[Topic] = []
     
-
 class LLMAnalysisModel(BaseModel):
     ads: List[Advertisement] = []
     show_metadata: Optional[ShowMetadata] = None

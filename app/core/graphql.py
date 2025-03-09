@@ -36,8 +36,12 @@ def get_all_terms() -> List[str]:
     }
     """
     variables = { }
-    response = fetch_data(query, variables)
-    return response['findUniqueTerms']
+    try:
+        response = fetch_data(query, variables)
+        return response['findUniqueTerms']
+    except Exception as e:
+        print(f"Error fetching terms: {e}")  # Optional: log the error
+        return []
 
 def get_tags(stream_type: str) -> List[str]:
     query = """
@@ -48,11 +52,16 @@ def get_tags(stream_type: str) -> List[str]:
     }
     """
     variables = { "query": { "name": stream_type } }
-    response = fetch_data(query, variables)
-    tags = []
-    for res in response['findTags']:
-        tags.extend(res['values'])
-    return tags
+    try:
+        response = fetch_data(query, variables)
+        tags = []
+        
+        for res in response['findTags']:
+            tags.extend(res['values'])
+        return tags
+    except Exception as e:
+        print(f"Error fetching terms: {e}")  # Optional: log the error
+        return ["sports", "news", "lifestyle", "education", "energy"]
 
 def get_configs() -> List[Config]:
     query = """ 
@@ -64,6 +73,9 @@ def get_configs() -> List[Config]:
     }
     """
     variables = { "query": {} }
-    response = fetch_data(query, variables)
-    
-    return response['findConfigs']
+    try:
+        response = fetch_data(query, variables)
+        return response['findConfigs']
+    except Exception as e:
+        print(f"Error fetching terms: {e}")  # Optional: log the error
+        return None

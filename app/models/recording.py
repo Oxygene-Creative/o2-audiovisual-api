@@ -2,7 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime, timedelta
-from app.models.analytics import Activity, AnalysisModel, Advertisement, AudienceEngagement
+from app.models.analytics import Activity, AnalysisModel, Advertisement, AudienceEngagement, TagAnalysis, Topic
 import uuid
 
 class SegmentRecording(BaseModel):
@@ -17,8 +17,7 @@ class SegmentRecording(BaseModel):
     emotions: List[str] = []
     embeddings: List[float] = []
     keywords: List[str] = []
-    topics: List[str] = []
-    tags: List[str] = []
+    tags: List[TagAnalysis] = []
     # Advertisement details
     ads: List[Advertisement] = []
     # Audience engagement details
@@ -52,7 +51,6 @@ class SegmentRecording(BaseModel):
                 emotions=segment.emotions,
                 embeddings=segment.embeddings,
                 keywords=segment.keywords,
-                topics=segment.topics,
                 tags=segment.tags,
                 ads=[
                     Advertisement(
@@ -85,6 +83,8 @@ class SegmentRecording(BaseModel):
 
         return segment_recordings
 
+
+    
 class Recording(BaseModel):
     id: str
     timestamp: datetime
@@ -95,6 +95,7 @@ class Recording(BaseModel):
     music: float
     file_size: float
     duration: float
+    topics: List[Topic] = []
 
     @classmethod
     def create_from_analysis_model(cls, analysis: AnalysisModel) -> "Recording":
@@ -118,4 +119,5 @@ class Recording(BaseModel):
             music=activity.music or 0.0,
             file_size=total_file_size,
             duration=total_duration,
+            topics=analysis.topics or [],
         )
