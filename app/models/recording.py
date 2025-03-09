@@ -83,8 +83,6 @@ class SegmentRecording(BaseModel):
 
         return segment_recordings
 
-
-    
 class Recording(BaseModel):
     id: str
     timestamp: datetime

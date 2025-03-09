@@ -22,10 +22,17 @@ stop_words = stopwords.words('english')
 
 classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
-def match_keywords(text, keywords):
+def match_keywords(text: str, keywords: List[str]):
     """
     Match words in the text to categories using fuzzy matching.
     """
+    # Check if text is empty, None, or whitespace
+    if not text or text.isspace():
+        return []
+
+    # Check if keywords is empty or None
+    if not keywords or not isinstance(keywords, list):
+        return []
     # Extract only alphanumeric words and convert to lowercase
     text_words = re.findall(r'\b\w+\b', text.lower())
     matched_keywords = set()
@@ -38,7 +45,15 @@ def match_keywords(text, keywords):
 
     return list(matched_keywords) if matched_keywords else []
 
-def categorize_text(text, categories, threshold=0.3):
+def categorize_text(text: str, categories: List[str], threshold=0.3):
+    # Check if text is empty, None, or whitespace
+    if not text or text.isspace():
+        return []
+
+    # Check if keywords is empty or None
+    if not categories or not isinstance(categories, list):
+        return []
+    
     results = classifier(text, categories, multi_label=True)
     tags = [
         {"label": label, "score": score} 

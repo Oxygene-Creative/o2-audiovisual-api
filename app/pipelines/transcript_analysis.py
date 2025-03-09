@@ -10,9 +10,10 @@ from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
 from app.core.graphql import get_all_terms, get_tags
-from app.core.es import save, save_bulk
+from app.core.es import save
 import os
 from app.core.redis import redis_router as transcript_router
+
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -39,7 +40,7 @@ async def audio_transcribe(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        # await transcript_router.broker.publish(msg, "av:transcript_embeddings")
+        await transcript_router.broker.publish(msg, "av:transcript_embeddings")
 
 @transcript_router.subscriber("av:transcript_embeddings")
 @transcript_router.publisher("av:transcript_sentiment")
@@ -61,7 +62,7 @@ async def transcript_embeddings(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        # await transcript_router.broker.publish(msg, "av:transcript_sentiment")
+        await transcript_router.broker.publish(msg, "av:transcript_sentiment")
     
 @transcript_router.subscriber("av:transcript_sentiment")
 @transcript_router.publisher("av:transcript_categories")
@@ -86,7 +87,7 @@ async def transcript_sentiment(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        # await transcript_router.broker.publish(msg, "av:transcript_categories")
+        await transcript_router.broker.publish(msg, "av:transcript_categories")
 
 @transcript_router.subscriber("av:transcript_categories")
 @transcript_router.publisher("av:transcript_keywords")
@@ -113,7 +114,7 @@ async def transcript_categories(msg: str):
         return data.model_dump_json()
     except Exception as e:
         print(e)
-        # await transcript_router.broker.publish(msg, "av:transcript_keywords")
+        await transcript_router.broker.publish(msg, "av:transcript_keywords")
 
 @transcript_router.subscriber("av:transcript_keywords")
 @transcript_router.publisher("av:transcript_topics")
@@ -127,18 +128,17 @@ async def transcript_keywords(msg: str):
             clean_transcript = remove_timestamps_and_format(segment.raw_text)
             keyword_matches = match_keywords(clean_transcript, keywords)
             data.segments[index].keywords = keyword_matches
-        
-            print("Matched queries:")
-            print(data.segments[index].keywords)
+            
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time
         print(f"Time taken to match keywords in audio transcripts: {time_taken:.2f} seconds.")
         
         return data.model_dump_json()
+
     except Exception as e:
         print(e)
-        # await transcript_router.broker.publish(msg, "av:transcript_topics")
+        await transcript_router.broker.publish(msg, "av:transcript_topics")
 
 @transcript_router.subscriber("av:transcript_topics")
 @transcript_router.publisher("av:transcript_llm")
@@ -169,9 +169,10 @@ async def transcript_topics(msg: str):
         print(f"Time taken to model topics in audio transcripts: {time_taken:.2f} seconds.")
         
         return data.model_dump_json()
+
     except Exception as e:
         print(e)
-        # await transcript_router.broker.publish(msg, "av:transcript_llm")
+        await transcript_router.broker.publish(msg, "av:transcript_llm")
 
 @transcript_router.subscriber("av:transcript_llm")
 async def transcript_llm(msg: str):
@@ -194,13 +195,14 @@ async def transcript_llm(msg: str):
             await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
         elif data.type == "video":
             await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
+
     except Exception as e:
         # Handle any other exception (fallback)
         print(f"Unexpected error: {e}")
-        # if data.type == "audio":
-        #     await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
-        # elif data.type == "video":
-        #     await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
+        if data.type == "audio":
+            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_audio_gcp")
+        elif data.type == "video":
+            await transcript_router.broker.publish(data.model_dump_json(), "av:upload_video_gcp")
 
 @transcript_router.subscriber("av:save_analysis_es")
 async def save_analysis_es(msg: str):
@@ -219,8 +221,11 @@ async def save_analysis_es(msg: str):
         
         recording = Recording.create_from_analysis_model(data)
         recording_dict = recording.model_dump_json()
-        print(recording_dict)
         
+        data_dict = data.recording.model_dump_json()
+        with open('recording.json', 'w') as f:
+            f.write(data_dict)
+                
         save("recordings", recording_dict)
         
         for segment in segment_recordings:

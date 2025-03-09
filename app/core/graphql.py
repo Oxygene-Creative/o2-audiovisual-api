@@ -41,7 +41,7 @@ def get_all_terms() -> List[str]:
         return response['findUniqueTerms']
     except Exception as e:
         print(f"Error fetching terms: {e}")  # Optional: log the error
-        return []
+        return ["NCBA", "KCB", "Safaricom", "MPESA", "Lipa na mpesa"]
 
 def get_tags(stream_type: str) -> List[str]:
     query = """
