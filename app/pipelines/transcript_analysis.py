@@ -209,20 +209,18 @@ async def save_analysis_es(msg: str):
         if data.type == "audio":
             stream_type = "radio"
         elif data.type == "video":
-            stream_type == "tv"
+            stream_type = "tv"
         index_id = f"{stream_type}_{data.stream_id}"
         
         segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
         recording = Recording.create_from_analysis_model(data)
-        # Convert the Recording object to a dictionary
-        recording_dict = dict(recording)
+        recording_dict = recording.model_dump_json()
         
         print("Saving Recording Info: ")
-
         save("recordings", recording_dict)
         
         for segment in segment_recordings:
-            save(index_id, dict(segment))
+            save(index_id, segment.model_dump_json())
         
         # End timing
         end_time = time.time()

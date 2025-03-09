@@ -67,10 +67,10 @@ async def audio_seg(msg: str):
     activity = {item["labels"]: item["duration"] for item in activity_segments}
     
     data.activity = Activity(
-        male = activity["male"] or 0.0,
-        female = activity["female"] or 0.0,
-        music = activity["music"] or 0.0,
-        noEnergy = activity["noEnergy"] or 0.0
+        male=activity.get("male", 0.0),
+        female=activity.get("female", 0.0),
+        music=activity.get("music", 0.0),
+        noEnergy=activity.get("noEnergy", 0.0)
     )
     
     # slice audio file based on speech segments
