@@ -7,12 +7,12 @@ import os
 
 embeddings_router = APIRouter()
 
-@embeddings_router.get("/text")
+@embeddings_router.post("/text")
 def create_text_embeddings(text: list[str]):
     embeddings = embed_text(text)
     return { "embeddings" : embeddings }
 
-@embeddings_router.get("/image")
+@embeddings_router.post("/image")
 def create_image_embeddings(bucket: str, image_url: str, extension: str):
     destination_url = f"{os.getcwd()}/o2-files/{uuid.uuid4()}.{extension}"
     download_file(bucket, image_url, destination_url)

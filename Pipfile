@@ -38,6 +38,7 @@ zstandard = "*"
 nltk = "*"
 gensim = "*"
 faststream = {extras = ["redis"], version = "*"}
+langchain-openai = "*"
 
 [dev-packages]
 pytest = "*"
