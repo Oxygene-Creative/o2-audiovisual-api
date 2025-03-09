@@ -14,3 +14,7 @@ def save(index: str, doc):
     
 def save_bulk(actions):
     bulk(es_client, actions)
+    
+def search(index, query):
+    results = es_client.search(index=index, body=query)
+    return results
