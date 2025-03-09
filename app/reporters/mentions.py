@@ -145,32 +145,14 @@ def search_mentions(
                 "date_range": date_range,
                 "start_date": start_date.isoformat(),
                 "end_date": end_date.isoformat(),
-                "total_hits": response["hits"]["total"]["value"]
+                "total_segments": response["hits"]["total"]["value"],
+                "total_ads": response["aggregations"]["ad_matches"]["matching"]["doc_count"]
             },
-            "matching_segments": [hit["_source"] for hit in response["hits"]["hits"]],
-            "aggregations": {
-                "matching_keywords": {
-                    "buckets": response["aggregations"]["matching_keywords"]["buckets"]
-                },
-                "program_distribution": {
-                    "buckets": response["aggregations"]["program_distribution"]["buckets"]
-                },
-                "sentiment_distribution": {
-                    "buckets": response["aggregations"]["sentiment_distribution"]["buckets"]
-                },
-                "tags_distribution": {
-                    "buckets": response["aggregations"]["tags_distribution"]["buckets"]
-                },
-                "topics_distribution": {
-                    "buckets": response["aggregations"]["topics_distribution"]["buckets"]
-                },
-                "time_distribution": {
-                    "buckets": response["aggregations"]["time_distribution"]["buckets"]
-                }
-            }
+            "mentions": [hit["_source"] for hit in response["hits"]["hits"]],
+            "sentiment_distribution": response["aggregations"]["sentiment_distribution"]["buckets"],
+            "topics_distribution": response["aggregations"]["topics_distribution"]["buckets"],
+            "time_distribution": response["aggregations"]["time_distribution"]["buckets"]
         }
-
-        return results
 
     except Exception as e:
         raise Exception(f"Error executing Elasticsearch query: {str(e)}")
