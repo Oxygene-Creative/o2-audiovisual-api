@@ -5,6 +5,7 @@ from app.routers.ads import ads_router
 from app.routers.transcription import transcribe_router
 from app.routers.nlp import nlp_router
 from app.routers.reports import reports_router
+from app.routers.chat import chat_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from app.core.redis import redis_router, redis_broker
@@ -13,6 +14,7 @@ from app.pipelines.audio_analytics import audio_router
 from app.pipelines.reporting import reporting_router
 from app.pipelines.video_analytics import video_router
 from app.pipelines.transcript_analysis import transcript_router
+
 
 load_dotenv()
 
@@ -38,6 +40,7 @@ app.include_router(ads_router, prefix="/analysis", tags=["ads"])
 app.include_router(nlp_router, prefix="/analysis", tags=["nlp"])
 app.include_router(transcribe_router, prefix="/analysis", tags=["transcription"])
 app.include_router(reports_router, prefix="/reports", tags=["reports"])
+app.include_router(chat_router, prefix="/agents", tags=["agents"])
 
 @app.on_event("startup")
 async def startup_event():
