@@ -34,13 +34,13 @@ def demographics_analysis(
         "aggs": {
             "per_stream": {
                 "terms": {
-                    "field": "stream_id",
+                    "field": "stream_id.keyword",
                     "size": 1000  # Adjust based on number of streams
                 },
                 "aggs": {
                     "stream_name": {
                         "terms": {
-                            "field": "stream_name"
+                            "field": "stream_name.keyword"
                         }
                     },
                     "total_male": {
@@ -107,7 +107,7 @@ def demographics_analysis(
     }
 
     try:
-        response = search(index="recordings", body=query)
+        response = search(index="recordings", query=query)
 
         # Process results into a more usable format
         results = {
@@ -125,11 +125,11 @@ def demographics_analysis(
                         "female": bucket["total_female"]["value"],
                         "music": bucket["total_music"]["value"]
                     },
-                    "averages": {
-                        "male": bucket["avg_male"]["value"],
-                        "female": bucket["avg_female"]["value"],
-                        "music": bucket["avg_music"]["value"]
-                    }
+                    # "averages": {
+                    #     "male": bucket["avg_male"]["value"],
+                    #     "female": bucket["avg_female"]["value"],
+                    #     "music": bucket["avg_music"]["value"]
+                    # }
                 }
                 for bucket in response["aggregations"]["per_stream"]["buckets"]
             ],

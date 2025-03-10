@@ -38,14 +38,14 @@ nltk = "*"
 gensim = "*"
 faststream = {extras = ["redis"], version = "*"}
 langchain-openai = "*"
-wordcloud = "*"
-plotly = "*"
-pandas = "*"
 jinja2 = "*"
 weasyprint = "*"
 matplotlib = "*"
 langchain-elasticsearch = "*"
 langchain-huggingface = "*"
+wordcloud = "*"
+plotly = "*"
+pandas = "*"
 
 [dev-packages]
 pytest = "*"

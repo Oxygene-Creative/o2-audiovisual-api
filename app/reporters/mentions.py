@@ -32,7 +32,6 @@ def search_mentions(
         ])
 
     # Base query
-    # Base query
     query = {
         "size": size,
         "query": {
@@ -49,17 +48,29 @@ def search_mentions(
                     {
                         "bool": {
                             "should": [
-                                {"terms": {"keywords": keywords}},
                                 {
-                                    "nested": {
-                                        "path": "ads",
-                                        "query": {
-                                            "bool": {
-                                                "should": ad_match_conditions
-                                            }
+                                    "match_phrase": {
+                                        "raw_text": {
+                                            "query": " ".join(keywords),
+                                            "slop": 100  # Allows words to be this many positions apart
                                         }
                                     }
-                                }
+                                },
+                                {
+                                    "terms": {
+                                        "raw_text": keywords  # This will match individual words
+                                    }
+                                },
+                                # {
+                                #     "nested": {
+                                #         "path": "ads",
+                                #         "query": {
+                                #             "bool": {
+                                #                 "should": ad_match_conditions
+                                #             }
+                                #         }
+                                #     }
+                                # }
                             ],
                             "minimum_should_match": 1
                         }
@@ -82,39 +93,39 @@ def search_mentions(
             ]
         },
         "aggs": {
-            "matching_ads": {
-                "nested": {
-                    "path": "ads"
-                },
-                "aggs": {
-                    "ad_matches": {
-                        "filter": {
-                            "bool": {
-                                "should": ad_match_conditions
-                            }
-                        }
-                    },
-                    "ads_over_time": {
-                        "date_histogram": {
-                            "field": "timestamp",
-                            "calendar_interval": interval,
-                            "min_doc_count": 0,
-                            "extended_bounds": {
-                                "min": start_date.isoformat(),
-                                "max": end_date.isoformat()
-                            }
-                        }
-                    }
-                }
-            },
+            # "matching_ads": {
+            #     "nested": {
+            #         "path": "ads"
+            #     },
+            #     "aggs": {
+            #         "matching": {  # Added this level
+            #             "filter": {
+            #                 "bool": {
+            #                     "should": ad_match_conditions
+            #                 }
+            #             }
+            #         },
+            #         "ads_over_time": {
+            #             "date_histogram": {
+            #                 "field": "timestamp",
+            #                 "calendar_interval": interval,
+            #                 "min_doc_count": 0,
+            #                 "extended_bounds": {
+            #                     "min": start_date.isoformat(),
+            #                     "max": end_date.isoformat()
+            #                 }
+            #             }
+            #         }
+            #     }
+            # },
             "sentiment_distribution": {
                 "terms": {
-                    "field": "sentiment"
+                    "field": "sentiment.keyword"  # Add .keyword for text fields
                 }
             },
             "topics_distribution": {
                 "terms": {
-                    "field": "topics"
+                    "field": "topics.keyword"  # Add .keyword for text fields
                 }
             },
             "time_distribution": {
@@ -138,22 +149,40 @@ def search_mentions(
     
     try:
         # Execute search
-        response = search(index=indexes, body=query)
+        response = search(index=indexes, query=query)
 
         # Process results
+        # results = {
+        #     "metadata": {
+        #         "date_range": date_range,
+        #         "start_date": start_date.isoformat(),
+        #         "end_date": end_date.isoformat(),
+        #         "total_segments": response["hits"]["total"]["value"],
+        #         "total_ads": response["aggregations"]["matching_ads"]["matching"]["doc_count"]
+        #     },
+        #     "mentions": [hit["_source"] for hit in response["hits"]["hits"]],
+        #     "sentiment_distribution": response["aggregations"]["sentiment_distribution"]["buckets"],
+        #     "topics_distribution": response["aggregations"]["topics_distribution"]["buckets"],
+        #     "time_distribution": response["aggregations"]["time_distribution"]["buckets"]
+        # }
+        print(f"Debug - Response received: {response}")
+        
         results = {
             "metadata": {
                 "date_range": date_range,
                 "start_date": start_date.isoformat(),
                 "end_date": end_date.isoformat(),
-                "total_segments": response["hits"]["total"]["value"],
-                "total_ads": response["aggregations"]["ad_matches"]["matching"]["doc_count"]
+                "total_segments": response.get("hits", {}).get("total", {}).get("value", 0)
             },
-            "mentions": [hit["_source"] for hit in response["hits"]["hits"]],
-            "sentiment_distribution": response["aggregations"]["sentiment_distribution"]["buckets"],
-            "topics_distribution": response["aggregations"]["topics_distribution"]["buckets"],
-            "time_distribution": response["aggregations"]["time_distribution"]["buckets"]
+            "mentions": [hit.get("_source", {}) for hit in response.get("hits", {}).get("hits", [])],
+            "aggregations": {
+                "sentiment_distribution": response.get("aggregations", {}).get("sentiment_distribution", {}).get("buckets", []),
+                "topics_distribution": response.get("aggregations", {}).get("topics_distribution", {}).get("buckets", []),
+                "time_distribution": response.get("aggregations", {}).get("time_distribution", {}).get("buckets", [])
+            }
         }
+        
+        return results
 
     except Exception as e:
         raise Exception(f"Error executing Elasticsearch query: {str(e)}")

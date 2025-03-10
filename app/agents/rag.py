@@ -37,15 +37,13 @@ def invoke_rag_chain(question: str):
     Question: {question}"""
     )
     
-    chat_llm = llm.with_structured_output(QuotedAnswer)
-    
-    vector_retriever = get_es_retriever()
+    vector_retriever = get_es_retriever("radio_*")
     
     chain = (
         {"context": vector_retriever | format_docs, "question": RunnablePassthrough()}
         | prompt
-        | chat_llm
-        # | StrOutputParser()
+        | llm
+        | StrOutputParser()
     )
     
     response = chain.invoke(question)
