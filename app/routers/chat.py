@@ -5,7 +5,7 @@ from app.models.agents import ChatInput
 
 chat_router = APIRouter()
 
-@chat_router.post("/rag")
+@chat_router.post("/qa")
 def rag(request: ChatInput):
     response = invoke_rag_chain(request.question)
     return response

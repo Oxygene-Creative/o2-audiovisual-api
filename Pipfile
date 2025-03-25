@@ -46,6 +46,7 @@ langchain-huggingface = "*"
 wordcloud = "*"
 plotly = "*"
 pandas = "*"
+colour = "*"
 
 [dev-packages]
 pytest = "*"
