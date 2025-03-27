@@ -79,6 +79,32 @@ def generate_pdf(data, output_path):
     
     HTML(string=html_content).write_pdf(target=output_path,stylesheets=[css])
     
+    # # Use BytesIO for memory handling
+    # pdf_bytes = BytesIO(pdf)
+    # reader = PdfReader(pdf_bytes)
+    # writer = PdfWriter()
+    
+    # # Copy pages
+    # for page in reader.pages:
+    #     writer.add_page(page)
+    
+    # # Add attachments
+    # for root, dirs, files in os.walk("generated/attachments"):
+    #     for file in files:
+    #         file_path = os.path.join(root, file)
+    #         with open(file_path, 'rb') as f:
+    #             writer.add_attachment(file, f.read())
+    
+    # # Save final PDF
+    # output = BytesIO()
+    # writer.write(output)
+    # # return output.getvalue()
+
+    # # Write final PDF to disk
+    # with open(output_path, 'wb') as output_file:
+    #     writer.write(output_file)
+    
+   
     
 # if __name__ == "__main__":
 #     # Sample data

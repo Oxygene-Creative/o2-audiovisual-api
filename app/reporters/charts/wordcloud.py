@@ -28,4 +28,7 @@ def create_word_cloud(word_frequencies):
     plt.close()
     img.seek(0)
     
+    # with open("saved_wordcloud.png", "wb") as f:
+    #     f.write(img.read())
+    
     return base64.b64encode(img.getvalue()).decode()

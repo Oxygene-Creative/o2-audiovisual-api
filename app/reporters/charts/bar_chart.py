@@ -1,6 +1,10 @@
 import matplotlib.pyplot as plt
 import io
 import base64
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+from pptx.dml.color import RGBColor
+from pptx.util import Inches, Pt
 
 def create_bar_chart(labels, values, colors):
     plt.figure(figsize=(12, 8))
@@ -117,3 +121,35 @@ def create_horizontal_bar_chart(labels, values, colors):
     img.seek(0)
     
     return base64.b64encode(img.getvalue()).decode()
+
+def create_bar_chart_ppt(placeholder, categories, values, chart_colors):
+    if placeholder.is_placeholder:
+        # Add chart data
+        chart_data = CategoryChartData()
+        chart_data.categories = categories
+        chart_data.add_series('Series 1', values)
+
+        # Add chart to slide
+        chart = placeholder.insert_chart(
+            XL_CHART_TYPE.COLUMN_CLUSTERED,
+            chart_data
+        ).chart
+        
+        # Format Chart
+        chart.has_title = False
+        # Apply different colors to individual bars (if single series)
+        for i, point in enumerate(chart.series[0].points):
+            point.format.fill.solid()
+            point.format.fill.fore_color.rgb = RGBColor(*chart_colors[i])
+            
+        # Customize legend
+        chart.has_legend = True                        
+        chart.legend.position = XL_LEGEND_POSITION.RIGHT                 
+        chart.legend.font.size = Inches(0.2)           
+        chart.legend.include_in_layout = False 
+        
+        # Add data labels to the chart
+        for series in chart.series:
+            series.data_labels.show_percentage = True
+            series.data_labels.number_format = "0%"   
+            series.data_labels.font.size = Inches(0.2)

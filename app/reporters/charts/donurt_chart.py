@@ -1,6 +1,10 @@
 import matplotlib.pyplot as plt
 import io
 import base64
+from pptx.dml.color import RGBColor
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.chart.data import CategoryChartData
+from pptx.util import Inches, Pt
 
 def create_donut_chart(labels, values, colors, legend_position='right'):
     """Create a donut chart"""
@@ -60,3 +64,28 @@ def create_donut_chart(labels, values, colors, legend_position='right'):
     img.seek(0)
     
     return base64.b64encode(img.getvalue()).decode()
+
+def create_donut_chart_ppt(placeholder, categories, series, chart_colors):
+    if placeholder.is_placeholder:
+        # Prepare the chart data
+        chart_data = CategoryChartData()
+        chart_data.categories = categories
+        chart_data.add_series("Title", series)
+        
+        # Add a line chart to the placeholder
+        chart = placeholder.insert_chart(
+            XL_CHART_TYPE.DOUGHNUT, chart_data 
+        ).chart
+        
+        # Format Chart
+        chart.has_title = False
+        # Apply colors to each segment of the donut based on the new RGBColor array
+        for i, point in enumerate(chart.series[0].points):
+            point.format.fill.solid()
+            point.format.fill.fore_color.rgb = RGBColor(*chart_colors[i])
+
+        # Add data labels to the donut chart
+        for series in chart.series:
+            series.data_labels.show_percentage = True
+            series.data_labels.number_format = "0%"   
+            series.data_labels.font.size = Inches(0.2)

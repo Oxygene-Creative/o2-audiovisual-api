@@ -4,19 +4,12 @@ from matplotlib.dates import DateFormatter
 import io
 import base64
 from matplotlib.ticker import MaxNLocator
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.chart.data import CategoryChartData
+from app.reporters.ppt_generators.slides.colors import hex_to_rgb
+from pptx.dml.color import RGBColor
+
 def create_volume_chart(dates, values, date_format='auto'):
-    """
-    Create a volume/area chart
-    
-    Parameters:
-    dates: list of dates (can be strings or datetime objects)
-    values: list of numerical values
-    date_format: str, optional
-        'auto': automatically detect format
-        'monthly': for monthly data (e.g., '2023-01')
-        'hourly': for datetime with hours (e.g., '2023-01-01 00:00') - will show only hours
-        'daily': for daily data (e.g., '2023-01-01')
-    """
     plt.figure(figsize=(12, 4))
     
     # Set the font sizes
@@ -79,3 +72,28 @@ def create_volume_chart(dates, values, date_format='auto'):
     img.seek(0)
     
     return base64.b64encode(img.getvalue()).decode()
+
+def create_volume_chart_ppt(placeholder, dates, values, date_format, color_hex):
+    if placeholder.is_placeholder:
+        # Prepare the chart data
+        chart_data = CategoryChartData()
+
+        if date_format == 'hourly':
+            categories = [date.strftime("%H:%M") for date in dates]
+            chart_data.categories = categories
+        elif date_format == 'daily':
+            categories = [date.strftime("%d %b").lstrip("0") for date in dates]
+            chart_data.categories = categories
+
+        chart_data.add_series("Mentions", values)
+
+        # Add a line chart to the placeholder
+        chart = placeholder.insert_chart(
+            XL_CHART_TYPE.AREA, chart_data 
+        ).chart
+
+        # Format Series
+        chart.has_title = False
+        chart.series[0].format.fill.solid()
+        chart_rgb_color = hex_to_rgb(color_hex)
+        chart.series[0].format.fill.fore_color.rgb = RGBColor(*chart_rgb_color)
