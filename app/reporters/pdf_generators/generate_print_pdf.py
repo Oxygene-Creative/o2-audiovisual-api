@@ -50,56 +50,38 @@ def generate_pdf(data, output_path):
     
     # Render template
     html_content = template.render(
+        # account details
         account_name=data['account']['name'],
         account_logo=data['account']['logo'],
+        brand_colors=data['account']['brand_colors'],
         report_date=datetime.now().strftime('%d %b %Y'),
+        # volume of mentions
         volume_summary=data['volume_summary'],
         volume_mentions_summary=data['volume_mentions_summary'],
+        volume_chart=volume_chart,
+        # sentiment analysis
         sentiment_summary=data['sentiment_summary'],
         sentiment_mentions_summary=data['sentiment_mentions_summary'],
-        volume_chart=volume_chart,
-        sov_summary=data['volume_summary'],
-        trends_summary=data['volume_summary'],
+        sentiment_mentions=data['sentiment_mentions'],
         sentiment_chart=sentiment_chart,
         sentiment_sources_chart=sentiment_sources_chart,
-        brand_colors=data['brand_colors'],
-        sentiment_mentions=data['sentiment_mentions'],
-        trending_topics_chart=trending_topics_chart,
+        # share of voice
+        sov_summary=data['sov_summary'],
         share_of_voice_chart=share_of_voice_chart,
+        # trending topics
+        trends_summary=data['trending_topics_summary'],
+        trending_topics_chart=trending_topics_chart,
+        # mentions 
+        mentions=data['mentions'],
+        # others
         app_base_url="http://ai.oxygene.co.ke",
-        mentions=data['mentions']
     )
     
     HTML(string=html_content).write_pdf(target=output_path,stylesheets=[css])
     
-    # # Use BytesIO for memory handling
-    # pdf_bytes = BytesIO(pdf)
-    # reader = PdfReader(pdf_bytes)
-    # writer = PdfWriter()
     
-    # # Copy pages
-    # for page in reader.pages:
-    #     writer.add_page(page)
-    
-    # # Add attachments
-    # for root, dirs, files in os.walk("generated/attachments"):
-    #     for file in files:
-    #         file_path = os.path.join(root, file)
-    #         with open(file_path, 'rb') as f:
-    #             writer.add_attachment(file, f.read())
-    
-    # # Save final PDF
-    # output = BytesIO()
-    # writer.write(output)
-    # # return output.getvalue()
-
-    # # Write final PDF to disk
-    # with open(output_path, 'wb') as output_file:
-    #     writer.write(output_file)
-    
-    
-if __name__ == "__main__":
-    # Sample data
-    with open('generated/data/print_safaricom_data.json', 'r', encoding='utf-8') as f:
-        print_data = json.load(f)
-    generate_pdf(print_data, "generated/reports/print_safaricom.pdf")
+# if __name__ == "__main__":
+#     # Sample data
+#     with open('generated/data/print_safaricom_data.json', 'r', encoding='utf-8') as f:
+#         print_data = json.load(f)
+#     generate_pdf(print_data, "generated/reports/print_safaricom.pdf")
