@@ -51,17 +51,17 @@ def generate_pptx(data, template_path, output_path, date_format, report_date):
         print(f"Error generating presentation: {e}")
         raise
 
-if __name__ == "__main__":
-    try:
-        template_path = "templates/ppt_template.pptx"  # Use .potx extension
-        output_path = "generated/reports/tv_ncba.pptx"  # Save as .pptx
+# if __name__ == "__main__":
+#     try:
+#         template_path = "templates/ppt_template.pptx"  # Use .potx extension
+#         output_path = "./reporters/samples/reports/tv_ncba.pptx"  # Save as .pptx
 
-        # Load sample data
-        with open('generated/data/tv_ncba_data.json', 'r', encoding='utf-8') as f:
-            tv_data = json.load(f)
+#         # Load sample data
+#         with open('./reporters/samples/data/tv_ncba_data.json', 'r', encoding='utf-8') as f:
+#             tv_data = json.load(f)
         
-        report_date = datetime.now().strftime('%d %B %Y')
+#         report_date = datetime.now().strftime('%d %B %Y')
         
-        generate_pptx(tv_data, template_path, output_path, "hourly", report_date)
-    except Exception as e:
-        print(f"Error in main: {e}")
+#         generate_pptx(tv_data, template_path, output_path, "hourly", report_date)
+#     except Exception as e:
+#         print(f"Error in main: {e}")

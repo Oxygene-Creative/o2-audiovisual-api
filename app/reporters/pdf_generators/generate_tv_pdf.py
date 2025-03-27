@@ -89,6 +89,6 @@ def generate_pdf(data, output_path):
 
 # if __name__ == "__main__":
 #     # Sample data
-#     with open('generated/data/tv_ncba_data.json', 'r', encoding='utf-8') as f:
+#     with open('./reporters/samples/data/tv_ncba_data.json', 'r', encoding='utf-8') as f:
 #         tv_data = json.load(f)
-#     generate_pdf(tv_data, "generated/reports/tv_ncba.pdf")
+#     generate_pdf(tv_data, "./reporters/samples/reports/tv_ncba.pdf")

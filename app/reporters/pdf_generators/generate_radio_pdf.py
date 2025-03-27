@@ -88,7 +88,7 @@ def generate_pdf(data, output_path):
 
 # if __name__ == "__main__":
 #     # Sample data
-#     with open('generated/data/radio_eabl_data.json', 'r', encoding='utf-8') as f:
+#     with open('./reporters/samples/data/radio_eabl_data.json', 'r', encoding='utf-8') as f:
 #         radio_data = json.load(f)
-#     generate_pdf(radio_data, "generated/reports/radio_eabl.pdf")
+#     generate_pdf(radio_data, "./reporters/samples/reports/radio_eabl.pdf")
     

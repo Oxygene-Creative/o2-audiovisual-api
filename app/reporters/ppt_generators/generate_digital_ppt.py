@@ -58,10 +58,10 @@ def generate_pptx(data, template_path, output_path, date_format, report_date):
 # if __name__ == "__main__":
 #     try:
 #         template_path = "templates/ppt_template.pptx"  # Use .potx extension
-#         output_path = "generated/reports/digital_safaricom.pptx"  # Save as .pptx
+#         output_path = "./reporters/samples/reports/digital_safaricom.pptx"  # Save as .pptx
 
 #         # Load sample data
-#         with open('generated/data/digital_safaricom_data.json', 'r', encoding='utf-8') as f:
+#         with open('./reporters/samples/data/digital_safaricom_data.json', 'r', encoding='utf-8') as f:
 #             digital_data = json.load(f)
         
 #         report_date = datetime.now().strftime('%d %B %Y')

@@ -115,7 +115,7 @@ def generate_pdf(data, output_path):
 
 # if __name__ == "__main__":
 #     # Sample data
-#     with open('generated/data/digital_safaricom_data.json', 'r', encoding='utf-8') as f:
+#     with open('./reporters/samples/data/digital_safaricom_data.json', 'r', encoding='utf-8') as f:
 #         digital_data = json.load(f)
-#     generate_pdf(digital_data, "generated/reports/digital_safaricom.pdf")
+#     generate_pdf(digital_data, "./reporters/samples/reports/digital_safaricom.pdf")
 
