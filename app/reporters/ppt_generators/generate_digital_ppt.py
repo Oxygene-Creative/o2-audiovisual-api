@@ -8,6 +8,7 @@ from app.reporters.ppt_generators.slides.share_of_voice import add_share_of_voic
 from app.reporters.ppt_generators.slides.demographics import add_demographics_slide
 from app.reporters.ppt_generators.slides.influencers import add_influencers_slide
 from app.reporters.ppt_generators.slides.mentions import add_mentions_slide
+from app.reporters.ppt_generators.slides.source_title_slide import add_source_title_slide
 from datetime import datetime
 
 def check_data(data: dict, key_to_check: str) -> bool:
@@ -46,6 +47,15 @@ def generate_pptx(data, template_path, output_path, date_format, report_date):
         ]
         
         for source in sources_data:
+            
+            # source title slide
+            add_source_title_slide(
+                prs, 
+                source['source'], 
+                data['account']['brand_colors']['primary'],
+                data['account']['logo']
+            )
+            
             volume_mentions_render = check_data(source['data'], 'volume_mentions')
             
             if volume_mentions_render and isinstance(source['data']['volume_mentions']['dates'], list) and len(source['data']['volume_mentions']['dates']) > 0:

@@ -9,6 +9,13 @@ def add_sentiment_slide(prs, data, report_date, title="SENTIMENT ANALYSIS"):
                             if layout.name == "Sentiment Slide"][0]
         slide = prs.slides.add_slide(sentiment_layout)
         
+        # print("First Slide Placeholders:")
+        for shape in slide.placeholders:
+            print(f"Index: {shape.placeholder_format.idx}")
+            print(f"Type: {shape.placeholder_format.type}")
+            print(f"Name: {shape.name}")
+            print("---")
+        
         primary_color_rgb = hex_to_rgb(data['account']['brand_colors']['primary'])
         text_color_rgb = hex_to_rgb("#666666")
         slide_header(report_date, data, slide, prs.slide_width, 12)
@@ -25,7 +32,7 @@ def add_sentiment_slide(prs, data, report_date, title="SENTIMENT ANALYSIS"):
         mentions_summary.text = data['sentiment_mentions_summary']
         change_text_color(mentions_summary, text_color_rgb)
         
-        sentiment_chart = slide.placeholders[24]
+        sentiment_chart = slide.placeholders[23]
         sentiment_chart_colors = [hex_to_rgb(color) for color in data['sentiment']['colors']]
         create_donut_chart_ppt(
             sentiment_chart,
