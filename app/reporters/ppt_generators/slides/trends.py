@@ -3,6 +3,7 @@ from app.reporters.ppt_generators.slides.colors import hex_to_rgb, change_text_c
 from app.reporters.ppt_generators.slides.header import slide_header
 from app.reporters.charts.wordcloud import create_word_cloud
 from app.reporters.ppt_generators.slides.images import base64_to_image
+from io import BytesIO
 
 def add_trends_topics_slide(prs, data, report_date, title="TRENDING TOPICS AND KEYWORDS"):
     try:
@@ -31,14 +32,7 @@ def add_trends_topics_slide(prs, data, report_date, title="TRENDING TOPICS AND K
         wordcloud_placeholder = slide.placeholders[11]
         
         if wordcloud_placeholder.is_placeholder:
-            trending_topics_image = Image.open(trending_topics_chart_stream)
-            image_width, image_height = trending_topics_image.size 
-            image_aspect_ratio = image_width / image_height
-            
-            picture = wordcloud_placeholder.insert_picture(trending_topics_chart_stream)  
-            # Resize the picture to fit the aspect ratio properly
-            # if picture.width / picture.height != image_aspect_ratio:
-            #     picture.height = int(picture.width / image_aspect_ratio)
+            wordcloud_placeholder.insert_picture(trending_topics_chart_stream)  
 
         
     except Exception as e:
