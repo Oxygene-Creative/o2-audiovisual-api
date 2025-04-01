@@ -31,7 +31,11 @@ def add_title_slide(prs, title_heading, primary_color_hex, logo_base64):
         # set logo
         logo_placeholder = title_slide.placeholders[15]
         logo_img_stream = sanitize_image(logo_base64)
-        logo_placeholder.insert_picture(logo_img_stream)
+        picture = logo_placeholder.insert_picture(logo_img_stream)
+        picture.crop_top = 0
+        picture.crop_left = 0
+        picture.crop_bottom = 0
+        picture.crop_right = 0
 
     except Exception as e:
         print(f"Error creating title slide: {e}")

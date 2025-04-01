@@ -32,8 +32,11 @@ def add_trends_topics_slide(prs, data, report_date, title="TRENDING TOPICS AND K
         wordcloud_placeholder = slide.placeholders[11]
         
         if wordcloud_placeholder.is_placeholder:
-            wordcloud_placeholder.insert_picture(trending_topics_chart_stream)  
-
+            picture = wordcloud_placeholder.insert_picture(trending_topics_chart_stream)  
+            picture.crop_top = 0
+            picture.crop_left = 0
+            picture.crop_bottom = 0
+            picture.crop_right = 0
         
     except Exception as e:
         print(f"Error creating trends and topics slide: {e}")

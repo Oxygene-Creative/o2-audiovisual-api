@@ -35,5 +35,9 @@ def slide_header(report_date, data, slide, slide_width, logo_placeholder_idx):
     logo_placeholder = slide.placeholders[logo_placeholder_idx]
     logo_img = data['account']['logo']
     logo_img_stream = sanitize_image(logo_img)
-    logo_placeholder.insert_picture(logo_img_stream)
+    picture = logo_placeholder.insert_picture(logo_img_stream)
+    picture.crop_top = 0
+    picture.crop_left = 0
+    picture.crop_bottom = 0
+    picture.crop_right = 0
 
