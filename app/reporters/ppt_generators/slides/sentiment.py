@@ -2,7 +2,7 @@ from app.reporters.ppt_generators.slides.colors import hex_to_rgb, change_text_c
 from app.reporters.ppt_generators.slides.header import slide_header
 from app.reporters.charts.donurt_chart import create_donut_chart_ppt
 
-def add_sentiment_slide(prs, data, report_date):
+def add_sentiment_slide(prs, data, report_date, title="SENTIMENT ANALYSIS"):
     try:
         # Add sentiments slide
         sentiment_layout = [layout for layout in prs.slide_layouts 
@@ -14,7 +14,7 @@ def add_sentiment_slide(prs, data, report_date):
         slide_header(report_date, data, slide, prs.slide_width, 12)
         
         heading = slide.placeholders[20] 
-        heading.text = "SENTIMENT ANALYSIS"
+        heading.text = title.upper()
         change_text_color(heading, primary_color_rgb)
         
         summary = slide.placeholders[21] 
@@ -25,7 +25,7 @@ def add_sentiment_slide(prs, data, report_date):
         mentions_summary.text = data['sentiment_mentions_summary']
         change_text_color(mentions_summary, text_color_rgb)
         
-        sentiment_chart = slide.placeholders[23]
+        sentiment_chart = slide.placeholders[24]
         sentiment_chart_colors = [hex_to_rgb(color) for color in data['sentiment']['colors']]
         create_donut_chart_ppt(
             sentiment_chart,
@@ -34,14 +34,14 @@ def add_sentiment_slide(prs, data, report_date):
             sentiment_chart_colors
         )
         
-        sentiment_sources_chart = slide.placeholders[24]
-        sentiment_sources_chart_colors = [hex_to_rgb(color) for color in data['sentiment_sources']['colors']]
-        create_donut_chart_ppt(
-            sentiment_sources_chart,
-            data['sentiment_sources']['labels'],
-            data['sentiment_sources']['values'],
-            sentiment_sources_chart_colors
-        )
+        # sentiment_sources_chart = slide.placeholders[23]
+        # sentiment_sources_chart_colors = [hex_to_rgb(color) for color in data['sentiment_sources']['colors']]
+        # create_donut_chart_ppt(
+        #     sentiment_sources_chart,
+        #     data['sentiment_sources']['labels'],
+        #     data['sentiment_sources']['values'],
+        #     sentiment_sources_chart_colors
+        # )
         
         total_sentiments = slide.placeholders[25]
         total_sentiments.text = str(data['sentiment_mentions']['total'])

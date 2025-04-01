@@ -1,115 +1,73 @@
 from app.reporters.ppt_generators.slides.colors import hex_to_rgb, change_text_color
 from app.reporters.ppt_generators.slides.header import slide_header
-from pptx.dml.color import RGBColor
+import requests
+from io import BytesIO
 
-def bind_common_placeholders(prs, slide, data, report_date):
-    primary_color_rgb = hex_to_rgb(data['account']['brand_colors']['primary'])
-    text_color_rgb = hex_to_rgb("#666666")
-    slide_header(report_date, data, slide, prs.slide_width, 12)
-    
-    heading = slide.placeholders[20] 
-    heading.text = "MENTIONS"
-    change_text_color(heading, primary_color_rgb)
-    
-def add_mention_link(placeholder, id, report_type, primary_color_rgb, data=None):
-    # Add text with hyperlink for handle
-    link_frame = placeholder.text_frame
-    link_frame.clear()  # Clear existing text
-    p = link_frame.paragraphs[0]
-    run = p.add_run()
-    run.text = "Read Article"
-    if report_type == 'print':
-        run.text = "Read Article"
-        run.hyperlink.address = f"https://ai.oxygene.co.ke/app/viewer?type=image&id={id}"
-    elif report_type == 'digital':
-        run.text = "Read Article"
-        # run.hyperlink.address = f"https://ai.oxygene.co.ke/app/viewer?type=webpage&id={id}"
-        run.hyperlink.address = data['website_address']
-    elif report_type == 'tv':
-        run.text = "Watch Video"
-        run.hyperlink.address = f"https://ai.oxygene.co.ke/app/viewer?type=video&id={id}"
-    elif report_type == 'radio':
-        run.text = "Play Audio"
-        run.hyperlink.address = f"https://ai.oxygene.co.ke/app/viewer?type=audio&id={id}"
-    
-    run.font.underline = True
-    run.font.color.rgb = RGBColor(*primary_color_rgb)
-    
-def add_mentions_slide(prs, data, report_date, report_type):
+def add_influencers_slide(prs, data, report_date, title="TOP INFLUENCERS"):
     try:
         # Add inluencers slide
-        mentions_layout = [layout for layout in prs.slide_layouts 
-                            if layout.name == "Mentions Slide"][0]
+        influencers_layout = [layout for layout in prs.slide_layouts 
+                            if layout.name == "influencers Slide"][0]
+        slide = prs.slides.add_slide(influencers_layout)
+        
         primary_color_rgb = hex_to_rgb(data['account']['brand_colors']['primary'])
+        text_color_rgb = hex_to_rgb("#666666")
+        slide_header(report_date, data, slide, prs.slide_width, 21)
+        
+        heading = slide.placeholders[20] 
+        heading.text = title.upper()
+        change_text_color(heading, primary_color_rgb)
+        
+        # Get all placeholders
+        placeholders = slide.placeholders
         placeholder_indices = [
-            {'heading': 21, 'summary': 22, 'metadata': 23, 'link': 24},     
-            {'heading': 25, 'summary': 26, 'metadata': 27, 'link': 28},
-            {'heading': 29, 'summary': 30, 'metadata': 31, 'link': 32}
+            {'pic': 11, 'name': 22, 'handle': 23, 'followers': 24},     
+            {'pic': 25, 'name': 26, 'handle': 27, 'followers': 28},     
+            {'pic': 29, 'name': 30, 'handle': 31, 'followers': 32},
+            {'pic': 33, 'name': 34, 'handle': 35, 'followers': 36},     
+            {'pic': 37, 'name': 38, 'handle': 39, 'followers': 40},     
+            {'pic': 41, 'name': 42, 'handle': 43, 'followers': 44},
+            {'pic': 45, 'name': 46, 'handle': 47, 'followers': 48},     
+            {'pic': 49, 'name': 50, 'handle': 51, 'followers': 52},     
+            {'pic': 53, 'name': 54, 'handle': 55, 'followers': 56},
         ]  
         
-        quotient, remainder = divmod(len(data['mentions']), 3)
-        # calc no of slides and unused placeholders to remove later on
-        if remainder > 0:
-            no_slides = quotient + 1
-            no_unused_placeholders = 3 - remainder
-            unused_placeholders = placeholder_indices[-no_unused_placeholders:]  
-        else:
-            no_slides = quotient
-            unused_placeholders = []  
-        
-        # grab the last slide
-        slide = None
-        placeholders = None
-        for i in range(no_slides):
-            mentions_batch = data['mentions'][i:i+3]
-            # generate slide per batch
-            slide = prs.slides.add_slide(mentions_layout)
-            # Bind some common placeholders
-            bind_common_placeholders(prs, slide, data, report_date)
-            # Get all placeholders
-            placeholders = slide.placeholders
-            
-            for batch_index, mention in enumerate(mentions_batch):
-                mention_index = (i*3) + batch_index
-                try:
-                    # Get placeholders using indices
-                    heading_idx = placeholder_indices[batch_index]['heading']
-                    heading = placeholders[heading_idx]
-                    summary_idx = placeholder_indices[batch_index]['summary']
-                    summary = placeholders[summary_idx]
-                    metadata_idx = placeholder_indices[batch_index]['metadata']
-                    metadata = placeholders[metadata_idx]
-                    link_idx = placeholder_indices[batch_index]['link']
-                    link = placeholders[link_idx]
-                    
-                    # Populate data
-                    summary.text = mention.get('summary', '')
-                    add_mention_link(link, 12, report_type, primary_color_rgb, data['mentions'][mention_index])
-                    
-                    if report_type == 'print':
-                        heading.text = mention.get('heading', '')
-                        metadata.text = f"Author: {mention.get('author', '')}, Date: {mention.get('date', '')}, Publication: {mention.get('publication', '')}"
-                    elif report_type == 'digital':
-                        heading.text = f"{mention.get('headline', '')}"
-                        metadata.text = f"Author: {mention.get('author', '')}, Date: {mention.get('date', '')}, Website: {mention.get('website', '')}"
-                    elif report_type == 'tv':
-                        heading.text = f"Show: {mention.get('show', '')} by {mention.get('presenter', '')}"
-                        metadata.text = f"Date: {mention.get('date', '')}, {mention.get('time', '')}, Station: {mention.get('station', '')}"
-                    elif report_type == 'radio':
-                        heading.text = f"Show: {mention.get('show', '')} by {mention.get('presenter', '')}"
-                        metadata.text = f"Date: {mention.get('date', '')}, {mention.get('time', '')}, Station: {mention.get('station', '')}"
-                    
-                except KeyError as e:
-                    print(f"Couldn't find placeholder: {e}")
-                except Exception as e:
-                    print(f"Error processing mention {mention_index + 1}: {e}")  
+        # Process influencers
+        for idx, (indices, influencer) in enumerate(zip(placeholder_indices, data['influencers'])):
+            try:
+                # Get placeholders using indices
+                pic = placeholders[indices['pic']]
+                name = placeholders[indices['name']]
+                handle = placeholders[indices['handle']]
+                followers = placeholders[indices['followers']]
+                
+                # Populate data
+                if influencer.get('avatar'):
+                    # Download the image
+                    response = requests.get(influencer['avatar'])
+                    if response.status_code == 200:
+                        image_stream = BytesIO(response.content)
+                        pic.insert_picture(image_stream)
+                name.text = influencer.get('name', '')
+                handle.text = f"@{influencer.get('screen_name', '')}"
+                change_text_color(handle, primary_color_rgb)
+                followers.text = f"{str(influencer.get('followers', ''))} followers"
+                change_text_color(followers, text_color_rgb)
+                
+            except requests.RequestException as e:
+                print(f"Error downloading image for influencer {idx + 1}: {e}")
+            except KeyError as e:
+                print(f"Couldn't find placeholder: {e}")
+            except Exception as e:
+                print(f"Error processing influencer {idx + 1}: {e}")  
         
         # Get indices to remove
+        num_influencers = len(data['influencers'])
         indices_to_remove = []
-        for idx, indices in enumerate(unused_placeholders):
+        for idx, indices in enumerate(placeholder_indices[num_influencers:]):
             indices_to_remove.extend(indices.values())
         
-        # # Remove shapes that match our unused indices
+        # Remove shapes that match our unused indices
         for idx in indices_to_remove:
             shape = placeholders[idx]
             try:
@@ -117,7 +75,7 @@ def add_mentions_slide(prs, data, report_date, report_type):
                 element.getparent().remove(element)
             except Exception as e:
                 print(f"Error removing placeholder {idx}: {e}")
-
+        
     except Exception as e:
-        print(f"Error creating mentions slide: {e}")
+        print(f"Error creating influencers slide: {e}")
         raise

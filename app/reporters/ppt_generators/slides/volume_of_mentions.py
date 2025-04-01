@@ -5,13 +5,13 @@ from app.reporters.charts.volume_chart import create_volume_chart_ppt
 from app.reporters.charts.bar_chart import create_bar_chart_ppt
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 
-def bind_common_placeholders(prs, slide, data, report_date):
+def bind_common_placeholders(prs, slide, data, report_date, title="VOLUME OF MENTIONS"):
     primary_color_rgb = hex_to_rgb(data['account']['brand_colors']['primary'])
     text_color_rgb = hex_to_rgb("#666666")
     slide_header(report_date, data, slide, prs.slide_width, 12)
     
     heading = slide.placeholders[20] 
-    heading.text = "VOLUME OF MENTIONS"
+    heading.text = title.upper()
     change_text_color(heading, primary_color_rgb)
     
     summary = slide.placeholders[21] 
@@ -23,7 +23,7 @@ def bind_common_placeholders(prs, slide, data, report_date):
     change_text_color(mentions_summary, text_color_rgb)
    
         
-def add_volume_mentions_slide_area_chart(prs, data, date_format, report_date):
+def add_volume_mentions_slide_area_chart(prs, data, date_format, report_date, title):
     try:
         
         # Add volume of mentions slide
@@ -32,17 +32,17 @@ def add_volume_mentions_slide_area_chart(prs, data, date_format, report_date):
         slide = prs.slides.add_slide(line_chart_layout)
         
         # Bind some common placeholders
-        bind_common_placeholders(prs, slide, data, report_date)
+        bind_common_placeholders(prs, slide, data, report_date, title)
         
         volume_mentions_chart = slide.placeholders[23]
         if volume_mentions_chart.is_placeholder:
             
-            dates = [datetime.strptime(date, "%Y-%m-%d") for date in data['volume_data']['dates']]
+            dates = [datetime.strptime(date, "%Y-%m-%d") for date in data['volume_mentions']['dates']]
             
             create_volume_chart_ppt(
                 volume_mentions_chart, 
                 dates, 
-                data['volume_data']['values'],
+                data['volume_mentions']['values'],
                 date_format,
                 data['account']['brand_colors']['primary']
             )
@@ -62,11 +62,11 @@ def add_volume_mentions_slide_bar_chart(prs, data, report_date):
         
         volume_mentions_chart = slide.placeholders[23]
         if volume_mentions_chart.is_placeholder:
-            bar_chart_colors = [hex_to_rgb(color) for color in data['volume_data']['colors']]
+            bar_chart_colors = [hex_to_rgb(color) for color in data['volume_mentions']['colors']]
             create_bar_chart_ppt(
                 volume_mentions_chart, 
-                data['volume_data']['labels'], 
-                data['volume_data']['values'],
+                data['volume_mentions']['labels'], 
+                data['volume_mentions']['values'],
                 bar_chart_colors
             )
 

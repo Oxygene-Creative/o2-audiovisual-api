@@ -4,7 +4,7 @@ from app.reporters.ppt_generators.slides.header import slide_header
 from app.reporters.charts.wordcloud import create_word_cloud
 from app.reporters.ppt_generators.slides.images import base64_to_image
 
-def add_trends_topics_slide(prs, data, report_date):
+def add_trends_topics_slide(prs, data, report_date, title="TRENDING TOPICS AND KEYWORDS"):
     try:
         # Add trending topics slide
         side_picture_layout = [layout for layout in prs.slide_layouts 
@@ -16,7 +16,7 @@ def add_trends_topics_slide(prs, data, report_date):
         slide_header(report_date, data, slide, prs.slide_width, 12)
         
         heading = slide.placeholders[20] 
-        heading.text = "TRENDING TOPICS AND KEYWORDS"
+        heading.text = title.upper()
         change_text_color(heading, primary_color_rgb)
         
         summary = slide.placeholders[21] 

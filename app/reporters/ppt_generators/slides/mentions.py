@@ -2,13 +2,13 @@ from app.reporters.ppt_generators.slides.colors import hex_to_rgb, change_text_c
 from app.reporters.ppt_generators.slides.header import slide_header
 from pptx.dml.color import RGBColor
 
-def bind_common_placeholders(prs, slide, data, report_date):
+def bind_common_placeholders(prs, slide, data, report_date, title="MENTIONS"):
     primary_color_rgb = hex_to_rgb(data['account']['brand_colors']['primary'])
     text_color_rgb = hex_to_rgb("#666666")
     slide_header(report_date, data, slide, prs.slide_width, 12)
     
     heading = slide.placeholders[20] 
-    heading.text = "MENTIONS"
+    heading.text = title.upper()
     change_text_color(heading, primary_color_rgb)
     
 def add_mention_link(placeholder, id, report_type, primary_color_rgb, data=None):

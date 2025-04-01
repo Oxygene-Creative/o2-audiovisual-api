@@ -1,5 +1,6 @@
 from app.reporters.ppt_generators.slides.colors import hex_to_rgb, change_text_color
 from app.reporters.ppt_generators.slides.images import sanitize_image
+from pathlib import Path
 
 def add_title_slide(prs, title_heading, primary_color_hex, logo_base64):
     try:
@@ -13,7 +14,7 @@ def add_title_slide(prs, title_heading, primary_color_hex, logo_base64):
         subtitle = title_slide.placeholders[1]  
         
         # Set the text
-        title.text = title_heading
+        title.text = title_heading.upper()
         subtitle.text = "MEDIA REPORT"
         
         # Text color
@@ -23,9 +24,9 @@ def add_title_slide(prs, title_heading, primary_color_hex, logo_base64):
         
         # Set cover image
         cover_image_placeholder = title_slide.placeholders[12]
-        report_cover_img = './templates/report-cover.jpg'
-        report_cover_img_stream = sanitize_image(report_cover_img)
-        cover_image_placeholder.insert_picture(report_cover_img_stream)
+        BASE_DIR = Path(__file__).parent.parent
+        report_cover_path = str(BASE_DIR / "templates" / "report-cover.jpg")
+        cover_image_placeholder.insert_picture(report_cover_path)
         
         # set logo
         logo_placeholder = title_slide.placeholders[15]

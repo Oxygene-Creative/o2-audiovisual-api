@@ -14,7 +14,7 @@ from app.pipelines.audio_analytics import audio_router
 from app.pipelines.reporting import reporting_router
 from app.pipelines.video_analytics import video_router
 from app.pipelines.transcript_analysis import transcript_router
-
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -27,6 +27,14 @@ async def lifespan(app: FastAPI):
     await redis_router.broker.close()
     
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # include faststream handlers
 app.include_router(audio_router)

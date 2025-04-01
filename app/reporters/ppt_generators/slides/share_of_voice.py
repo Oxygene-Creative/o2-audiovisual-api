@@ -2,7 +2,7 @@ from app.reporters.ppt_generators.slides.colors import hex_to_rgb, change_text_c
 from app.reporters.ppt_generators.slides.header import slide_header
 from app.reporters.charts.pie_chart import create_pie_chart_ppt
 
-def add_share_of_voice_slide(prs, data, report_date):
+def add_share_of_voice_slide(prs, data, report_date, title="SHARE OF VOICE"):
     try:
         # Add share of voice slide
         side_chart_layout = [layout for layout in prs.slide_layouts 
@@ -14,7 +14,7 @@ def add_share_of_voice_slide(prs, data, report_date):
         slide_header(report_date, data, slide, prs.slide_width, 12)
         
         heading = slide.placeholders[20] 
-        heading.text = "SHARE OF VOICE"
+        heading.text = title.upper()
         change_text_color(heading, primary_color_rgb)
         
         summary = slide.placeholders[21] 

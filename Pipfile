@@ -47,6 +47,7 @@ wordcloud = "*"
 plotly = "*"
 pandas = "*"
 colour = "*"
+python-pptx = "*"
 
 [dev-packages]
 pytest = "*"
