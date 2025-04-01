@@ -12,7 +12,7 @@ class TranscribeRequest(BaseModel):
     audio_url: str
     queries: List[str]
     
-class TranscritionRequest(BaseModel):
+class TranscriptionRequest(BaseModel):
     indexes: str
     
 @transcribe_router.post("/transcribe")
@@ -22,7 +22,7 @@ def transcribe(request: TranscribeRequest):
     return json_data
 
 @transcribe_router.post("/transcription")
-def get_transcription(request: TranscritionRequest):
+def get_transcription(request: TranscriptionRequest):
     
     # Search query
     query = {

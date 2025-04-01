@@ -10,7 +10,6 @@ gemini_rate_limiter = InMemoryRateLimiter(
     max_bucket_size=10,  # Controls the maximum burst size.
 )
 
-# Load environment variables from '.env'
 load_dotenv()
 
 # Initialize language model
