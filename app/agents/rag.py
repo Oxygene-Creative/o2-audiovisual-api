@@ -26,6 +26,26 @@ def get_es_retriever(indexes):
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
+def create_rag_chain():
+    prompt = ChatPromptTemplate.from_template(
+        """Answer the question based only on the context provided.
+        Make sure you give citations
+        (majorly use id of the document and the relevant quote)
+    Context: {context}
+    Question: {question}"""
+    )
+   
+    vector_retriever = get_es_retriever("radio_*")
+   
+    chain = (
+        {"context": vector_retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+    
+    return chain
+
 def invoke_rag_chain(question: str):
     prompt = ChatPromptTemplate.from_template(
         """Answer the question based only on the context provided. 
