@@ -27,19 +27,47 @@ async def handle_audio_transcribe(msg: str):
         # Start timing
         start_time = time.time()
 
-        for index, segment in enumerate(data.segments):
-            # Transcribe audio
+        # Allow up to 2 concurrent calls to LLM
+        llm_semaphore = asyncio.Semaphore(2)  
+
+        # Define an async function for processing a single segment
+        async def process_segment(index, segment):
             transcript = await asyncio.to_thread(transcribe, segment.audio_file)
+            
+            # Introduce a delay before calling the LLM-powered function
+            await asyncio.sleep(0.5) 
 
-            # Process transcript
-            processed_transcript = await asyncio.to_thread(
-                post_process_transcription, transcript["raw_text"], keywords
-            )
+            # Control access to the LLM with the semaphore
+            async with llm_semaphore:
+                processed_transcript = await asyncio.to_thread(
+                    post_process_transcription, transcript["raw_text"], keywords
+                )
 
-            # Update segment attributes
             data.segments[index].raw_text = processed_transcript
             data.segments[index].language = transcript["language"]
             data.segments[index].language_score = transcript["language_score"]
+
+        # Create tasks for all segments
+        tasks = [
+            process_segment(index, segment) for index, segment in enumerate(data.segments)
+        ]
+
+        # Run all tasks concurrently
+        await asyncio.gather(*tasks)
+
+        # for index, segment in enumerate(data.segments):
+        #     # Transcribe audio
+        #     transcript = await asyncio.to_thread(transcribe, segment.audio_file)
+
+        #     # Process transcript
+        #     processed_transcript = await asyncio.to_thread(
+        #         post_process_transcription, transcript["raw_text"], keywords
+        #     )
+
+        #     # Update segment attributes
+        #     data.segments[index].raw_text = processed_transcript
+        #     data.segments[index].language = transcript["language"]
+        #     data.segments[index].language_score = transcript["language_score"]
 
         # End timing
         end_time = time.time()
