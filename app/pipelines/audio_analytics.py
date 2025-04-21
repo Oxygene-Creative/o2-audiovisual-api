@@ -15,10 +15,14 @@ from dotenv import load_dotenv
 from app.core.redis import redis_router as audio_router
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
+import httpx
 load_dotenv()
 
 # Create a global executor for process-based parallelism
 executor = ProcessPoolExecutor()
+
+GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
+SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
 class Upload(BaseModel):
     stream_id: str
@@ -28,8 +32,22 @@ class Upload(BaseModel):
     timestamp_str: Optional[str]
 
 async def async_gender_music_segmentation(audio_path):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(executor, gender_music_segmentation, audio_path)
+    if GPU_ACTIVATED and SEGMENTATION_GPU_URL:
+        try:
+            async with httpx.AsyncClient() as client:
+                # Open the audio file for binary upload
+                with open(audio_path, "rb") as audio_file:
+                    files = {"file": (os.path.basename(audio_path), audio_file, "audio/mpeg")}
+                    response = await client.post(f"{SEGMENTATION_GPU_URL}/segment-audio", files=files)
+                    response.raise_for_status()
+                    response_data = response.json()
+                    return response_data["activity"], response_data["speech"]
+        except httpx.HTTPError as e:
+            print(f"HTTP error during GPU segmentation: {e}")
+            raise
+    else:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(executor, gender_music_segmentation, audio_path)
 
 async def handle_start_audio_analysis(upload: Upload):
     try:
@@ -74,11 +92,6 @@ async def handle_audio_segmentation(msg: str):
         # Start timing
         start_time = time.time()
 
-        # Perform segmentation (offloaded to thread if necessary)
-        # activity_segments, speech_segments = await asyncio.to_thread(
-        #     gender_music_segmentation, data.audio_path
-        # )
-
         # Use the process pool executor for CPU-heavy segmentation
         activity_segments, speech_segments = await async_gender_music_segmentation(data.audio_path)
 
@@ -94,6 +107,7 @@ async def handle_audio_segmentation(msg: str):
             female=activity.get("female", 0.0),
             music=activity.get("music", 0.0),
             noEnergy=activity.get("noEnergy", 0.0),
+            noise=activity.get("noise", 0.0),
         )
 
         # Slice audio file based on speech segments

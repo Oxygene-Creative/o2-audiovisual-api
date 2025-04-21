@@ -14,10 +14,33 @@ from app.core.es import save
 import os
 from app.core.redis import redis_router as transcript_router
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
+from concurrent.futures import ProcessPoolExecutor
+import httpx
 from dotenv import load_dotenv
 load_dotenv()
+
+# Create a global executor for process-based parallelism
+executor = ProcessPoolExecutor()
+
+GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
+TRANSCRIPTION_GPU_URL = os.getenv("TRANSCRIPTION_GPU_URL", "").strip()
+
+async def async_audio_transcription(audio_path):
+    if GPU_ACTIVATED and TRANSCRIPTION_GPU_URL:
+        try:
+            async with httpx.AsyncClient() as client:
+                # Open the audio file for binary upload
+                with open(audio_path, "rb") as audio_file:
+                    files = {"file": (os.path.basename(audio_path), audio_file, "audio/mpeg")}
+                    response = await client.post(f"{TRANSCRIPTION_GPU_URL}/transcribe", files=files)
+                    response.raise_for_status()
+                    response_data = response.json()
+                    return response_data["transcription"]
+        except httpx.HTTPError as e:
+            print(f"HTTP error during GPU segmentation: {e}")
+            raise
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(executor, transcribe, audio_path)
 
 async def handle_audio_transcribe(msg: str):
     try:
@@ -32,7 +55,8 @@ async def handle_audio_transcribe(msg: str):
 
         # Define an async function for processing a single segment
         async def process_segment(index, segment):
-            transcript = await asyncio.to_thread(transcribe, segment.audio_file)
+            # Async transcription using the process pool
+            transcript = await async_audio_transcription(segment.audio_file)
             
             # Introduce a delay before calling the LLM-powered function
             await asyncio.sleep(0.5) 
