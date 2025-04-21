@@ -30,8 +30,8 @@ def analyze_sentiment( request: TextRequest ):
     return result
 
 @nlp_router.post("/categorization")
-def analyze_categories( request: CategorizeRequest  ):
-    result = categorize_text(request.text, request.tags, request.threshold)
+async def analyze_categories( request: CategorizeRequest  ):
+    result = await categorize_text(request.text, request.tags, request.threshold)
     return result
 
 @nlp_router.post("/keywords")

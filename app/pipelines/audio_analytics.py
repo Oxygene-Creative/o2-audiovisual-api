@@ -14,8 +14,11 @@ import uuid
 from dotenv import load_dotenv
 from app.core.redis import redis_router as audio_router
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 load_dotenv()
+
+# Create a global executor for process-based parallelism
+executor = ProcessPoolExecutor()
 
 class Upload(BaseModel):
     stream_id: str
@@ -23,6 +26,10 @@ class Upload(BaseModel):
     bucket: str
     blob: str
     timestamp_str: Optional[str]
+
+async def async_gender_music_segmentation(audio_path):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(executor, gender_music_segmentation, audio_path)
 
 async def handle_start_audio_analysis(upload: Upload):
     try:
@@ -68,9 +75,12 @@ async def handle_audio_segmentation(msg: str):
         start_time = time.time()
 
         # Perform segmentation (offloaded to thread if necessary)
-        activity_segments, speech_segments = await asyncio.to_thread(
-            gender_music_segmentation, data.audio_path
-        )
+        # activity_segments, speech_segments = await asyncio.to_thread(
+        #     gender_music_segmentation, data.audio_path
+        # )
+
+        # Use the process pool executor for CPU-heavy segmentation
+        activity_segments, speech_segments = await async_gender_music_segmentation(data.audio_path)
 
         # Calculate time taken
         end_time = time.time()
