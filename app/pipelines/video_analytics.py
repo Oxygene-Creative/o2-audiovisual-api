@@ -11,6 +11,8 @@ from app.core.media_processing import extract_audio_from_video, slice_video
 import time 
 import uuid
 from app.core.redis import redis_router as video_router
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 class Upload(BaseModel):
     stream_id: str
@@ -19,8 +21,8 @@ class Upload(BaseModel):
     blob: str
     timestamp_str: Optional[str]
 
-@video_router.post("/analysis/video")
-async def start_video_analysis(upload: Upload):
+
+async def handle_start_video_analysis(upload: Upload):
     try:
         timestamp = datetime.strptime(upload.timestamp_str, "%Y-%m-%dT%H:%M:%S")
     except (ValueError, AttributeError):
@@ -30,10 +32,14 @@ async def start_video_analysis(upload: Upload):
     file_name = extract_file_name(upload.blob)
     subfolder_check(f"{os.getcwd()}/o2-files")
     video_file_path = f"{os.getcwd()}/o2-files/{file_name}"
-    download_file(upload.bucket, upload.blob, video_file_path)
+
+    # Use asyncio.to_thread to avoid blocking the event loop
+    await asyncio.to_thread(download_file, upload.bucket, upload.blob, video_file_path)
+    # download_file(upload.bucket, upload.blob, video_file_path)
     
     # extract audio from video
-    audio_file_path = extract_audio_from_video(video_file_path)
+    audio_file_path = await asyncio.to_thread(extract_audio_from_video, video_file_path)
+    # audio_file_path = extract_audio_from_video(video_file_path)
     
     analysis_id = uuid.uuid4()
     analysis = AnalysisModel(
@@ -50,17 +56,15 @@ async def start_video_analysis(upload: Upload):
     await video_router.broker.publish(analysis.model_dump_json(), "av:audio_seg")
     return analysis_id
 
-
-@video_router.subscriber("av:upload_video_gcp")
-@video_router.publisher("av:save_analysis_es")
-async def upload_video_gcp(msg: str):
+async def handle_video_upload(msg: str):
     data = AnalysisModel.model_validate_json(msg)
     try:
         # Start timing
         start_time = time.time()
         for index, segment in enumerate(data.segments):
             # slice video segment
-            local_file_path = slice_video(data.video_path, segment.start, segment.stop)
+            local_file_path = await asyncio.to_thread(slice_video, data.video_path, segment.start, segment.stop)
+            # local_file_path = slice_video(data.video_path, segment.start, segment.stop)
             file_name = extract_file_name(local_file_path)
             file_size = calc_file_size(local_file_path)
             
@@ -69,21 +73,28 @@ async def upload_video_gcp(msg: str):
             dest_file_path = f"tv/{data.stream_name}/{recording_date}/{file_name}"
             
             # upload to gcp
-            upload(data.gcp_bucket, local_file_path, dest_file_path)
+            await asyncio.to_thread(upload, data.gcp_bucket, local_file_path, dest_file_path)
+            # upload(data.gcp_bucket, local_file_path, dest_file_path)
             
             # delete local file
-            delete_file(local_file_path)
-            delete_file(segment.audio_file)
+            await asyncio.to_thread(delete_file, local_file_path)
+            await asyncio.to_thread(delete_file, segment.audio_file)
+
+            # delete_file(local_file_path)
+            # delete_file(segment.audio_file)
             
             # update segment
             data.segments[index].file_size = file_size
             data.segments[index].gcp_path = dest_file_path
         
         # delete the master files
-        delete_file(data.video_path)
-        delete_file(data.audio_path)
-        delete_blob(data.gcp_bucket, data.gcp_blob)
-        
+        # delete_file(data.video_path)
+        # delete_file(data.audio_path)
+        # delete_blob(data.gcp_bucket, data.gcp_blob)
+        await asyncio.to_thread(delete_file, data.video_path)
+        await asyncio.to_thread(delete_file, data.audio_path)
+        await asyncio.to_thread(delete_blob, data.gcp_bucket, data.gcp_blob)
+
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time
@@ -93,7 +104,15 @@ async def upload_video_gcp(msg: str):
     except Exception as e:
         print(f"Unexpected error: {e}")
         await video_router.broker.publish(data.model_dump_json(), "av:save_analysis_es")
+
+@video_router.post("/analysis/video")
+async def start_video_analysis(upload: Upload):
+    return await handle_start_video_analysis(upload)
     
+@video_router.subscriber("av:upload_video_gcp")
+@video_router.publisher("av:save_analysis_es")
+async def upload_video_gcp(msg: str):
+    return await handle_video_upload(msg)
     
 
 

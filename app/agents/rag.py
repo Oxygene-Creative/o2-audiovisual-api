@@ -30,7 +30,9 @@ def create_rag_chain():
     prompt = ChatPromptTemplate.from_template(
         """Answer the question based only on the context provided.
         Make sure you give citations
-        (majorly use id of the document and the relevant quote)
+        (majorly use id of the document and the relevant quote).
+
+        format for link that views the citation doc (http://localhost:3000/administration/asset-viewer?source=[print or tv or radio etc]&id=1234)
     Context: {context}
     Question: {question}"""
     )
@@ -47,24 +49,7 @@ def create_rag_chain():
     return chain
 
 def invoke_rag_chain(question: str):
-    prompt = ChatPromptTemplate.from_template(
-        """Answer the question based only on the context provided. 
-        Make sure you give citations 
-        (majorly use id of the document and the relevant quote)
-
-    Context: {context}
-
-    Question: {question}"""
-    )
-    
-    vector_retriever = get_es_retriever("radio_*")
-    
-    chain = (
-        {"context": vector_retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
+    chain = create_rag_chain()
     
     response = chain.invoke(question)
     
