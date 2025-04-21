@@ -9,13 +9,14 @@ from app.models.analytics import AnalysisModel, ShowMetadata, Topic, TopicWord
 from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
-from app.core.graphql import get_all_terms, get_tags
+from app.core.graphql import add_radio_stream_upload, add_tv_stream_upload, get_all_terms, get_tags
 from app.core.es import save
 import os
 from app.core.redis import redis_router as transcript_router
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 import httpx
+import json
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -44,7 +45,7 @@ async def async_audio_transcription(audio_path):
 
 async def handle_audio_transcribe(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
         keywords = await asyncio.to_thread(get_all_terms)  # Fetch keywords asynchronously
 
         # Start timing
@@ -56,7 +57,7 @@ async def handle_audio_transcribe(msg: str):
         # Define an async function for processing a single segment
         async def process_segment(index, segment):
             # Async transcription using the process pool
-            transcript = await async_audio_transcription(segment.audio_file)
+            transcript = await async_audio_transcription(segment["audio_file"])
             
             # Introduce a delay before calling the LLM-powered function
             await asyncio.sleep(0.5) 
@@ -67,13 +68,14 @@ async def handle_audio_transcribe(msg: str):
                     post_process_transcription, transcript["raw_text"], keywords
                 )
 
-            data.segments[index].raw_text = processed_transcript
-            data.segments[index].language = transcript["language"]
-            data.segments[index].language_score = transcript["language_score"]
+            data["segments"][index]["raw_text"] = processed_transcript
+            data["segments"][index]["language"] = transcript["language"]
+            data["segments"][index]["language_score"] = transcript["language_score"]
+
 
         # Create tasks for all segments
         tasks = [
-            process_segment(index, segment) for index, segment in enumerate(data.segments)
+            process_segment(index, segment) for index, segment in enumerate(data["segments"])
         ]
 
         # Run all tasks concurrently
@@ -99,7 +101,7 @@ async def handle_audio_transcribe(msg: str):
         print(f"Time taken to transcribe audio: {time_taken:.2f} seconds.")
 
         # Return updated data object
-        return data.model_dump_json()
+        return json.dumps(data)
 
     except Exception as e:
         print(f"Error during audio transcription: {e}")
@@ -107,33 +109,33 @@ async def handle_audio_transcribe(msg: str):
 
 async def handle_transcript_analysis(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        tag_name = "Radio" if data.type == "audio" else "Tv"
+        tag_name = "Radio" if data["type"] == "audio" else "Tv"
         categories = await asyncio.to_thread(get_tags, tag_name)
 
-        for index, segment in enumerate(data.segments):
+        for index, segment in enumerate(data["segments"]):
             # Clean transcript text
             clean_transcript = await asyncio.to_thread(
-                remove_timestamps_and_format, segment.raw_text
+                remove_timestamps_and_format, segment["raw_text"]
             )
 
             # Create embeddings
             embeddings = await asyncio.to_thread(embed_text, clean_transcript)
-            data.segments[index].embeddings = embeddings.tolist()
+            data["segments"][index]["embeddings"] = embeddings.tolist()
 
             # Sentiment analysis
             sentiment = await asyncio.to_thread(sentiment_analysis, clean_transcript)
-            data.segments[index].sentiment = sentiment
+            data["segments"][index]["sentiment"] = sentiment
 
             # Category analysis
             category_matches = await asyncio.to_thread(
                 categorize_text, clean_transcript, categories
             )
-            data.segments[index].tags = category_matches
+            data["segments"][index]["tags"] = category_matches
 
         # End timing
         end_time = time.time()
@@ -143,7 +145,7 @@ async def handle_transcript_analysis(msg: str):
         )
 
         # Return updated data object
-        return data.model_dump_json()
+        return json.dumps(data)
 
     except Exception as e:
         print(f"Error during transcript analysis: {e}")
@@ -152,20 +154,20 @@ async def handle_transcript_analysis(msg: str):
 
 async def handle_transcript_llm(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        for index, segment in enumerate(data.segments):
+        for index, segment in enumerate(data["segments"]):
             llm_analysis = await asyncio.to_thread(
-                llm_transcript_analysis, segment.raw_text
+                llm_transcript_analysis, segment["raw_text"]
             )
 
             # Update segment attributes
-            data.segments[index].ads = llm_analysis.ads or []
-            data.segments[index].show_metadata = llm_analysis.show_metadata or ShowMetadata()
-            data.segments[index].engagement = llm_analysis.engagement or []
+            data["segments"][index]["ads"] = llm_analysis.get("ads", [])
+            data["segments"][index]["show_metadata"] = llm_analysis.get("show_metadata", ShowMetadata()).dict()
+            data["segments"][index]["engagement"] = llm_analysis.get("engagement", [])
 
         # End timing
         end_time = time.time()
@@ -175,46 +177,78 @@ async def handle_transcript_llm(msg: str):
         )
 
         # Publish based on type
-        if data.type == "audio":
+        if data["type"]  == "audio":
             await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_audio_gcp"
+                json.dumps(data), "av:upload_audio_gcp"
             )
-        elif data.type == "video":
+        elif data["type"] == "video":
             await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_video_gcp"
+                json.dumps(data), "av:upload_video_gcp"
             )
 
     except Exception as e:
         print(f"Error during LLM transcript analysis: {e}")
-        if data.type == "audio":
+        if data["type"] == "audio":
             await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_audio_gcp"
+                json.dumps(data), "av:upload_audio_gcp"
             )
-        elif data.type == "video":
+        elif data["type"] == "video":
             await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_video_gcp"
+                json.dumps(data), "av:upload_video_gcp"
             )
     
 async def handle_save_analysis_es(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        stream_type = "radio" if data.type == "audio" else "tv"
-        index_id = f"{stream_type}_{data.stream_id}"
+        stream_type = "radio" if data["type"] == "audio" else "tv"
+        index_id = f"{stream_type}_{data['stream_id']}"
 
         # Create segment recordings
-        segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
-        recording = Recording.create_from_analysis_model(data)
-        recording_dict = recording.model_dump_json()
+        segment_recordings = SegmentRecording.create_segment_recordings_from_dict(data)
 
-        # Save recordings and segments to Elasticsearch
-        await asyncio.to_thread(save, "recordings", recording_dict)
         for segment in segment_recordings:
-            await asyncio.to_thread(save, index_id, segment.model_dump_json())
+            segment_json = segment.model_dump()()
+            await asyncio.to_thread(save, index_id, json.dumps(segment_json))
 
+        recording = Recording.create_from_analysis_model(data)
+
+        # Concatenate all `gcp_path` values from the segments into a comma-separated list
+        file_paths = ",".join(segment["gcp_path"] for segment in data.get("segments", []) if segment.get("gcp_path"))
+
+        if recording.type == "TV_STREAM":
+            add_tv_stream_upload(
+                tv_stream_id=recording.stream_id,
+                file_path=file_paths,
+                file_name=recording.stream_name,
+                file_size=recording.file_size,
+                timestamp=recording.timestamp.isoformat(),
+                male=recording.male,
+                female=recording.female,
+                music=recording.music,
+                noise=recording.noise,
+                noEnergy=recording.noEnergy,
+                recording_id=recording.id,
+                duration=recording.duration
+            )
+        elif recording.type == "RADIO_STREAM":
+            add_radio_stream_upload(
+                radio_stream_id=recording.stream_id,
+                file_path=file_paths,
+                file_name=recording.stream_name,
+                file_size=recording.file_size,
+                timestamp=recording.timestamp.isoformat(),
+                male=recording.male,
+                female=recording.female,
+                music=recording.music,
+                noise=recording.noise,
+                noEnergy=recording.noEnergy,
+                recording_id=recording.id,
+                duration=recording.duration
+            )
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time

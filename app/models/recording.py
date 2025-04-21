@@ -32,52 +32,52 @@ class SegmentRecording(BaseModel):
     program_name: Optional[str] = ""
 
     @classmethod
-    def create_segment_recordings_from_analysis_model(cls, analysis: AnalysisModel) -> List["SegmentRecording"]:
+    def create_segment_recordings_from_dict(cls, data: dict) -> List["SegmentRecording"]:
         segment_recordings = []
 
-        # Iterate over each segment in the analysis model
-        for i, segment in enumerate(analysis.segments):
+        # Iterate over each segment in the JSON data
+        for segment in data.get("segments", []):
             # Derive the absolute timestamp for the segment
-            segment_timestamp = analysis.timestamp + timedelta(seconds=segment.start or 0.0)
+            timestamp = datetime.fromisoformat(data["timestamp"]) + timedelta(seconds=segment.get("start", 0.0))
 
             # Create an instance of SegmentRecording for this segment
             segment_record = cls(
-                recording_id=analysis.id or "",
-                timestamp=segment_timestamp,
-                duration=segment.duration or 0.0,
-                raw_text=segment.raw_text,
-                language=segment.language,
-                language_score=segment.language_score,
-                sentiment=segment.sentiment,
-                emotions=segment.emotions,
-                embeddings=segment.embeddings,
-                keywords=segment.keywords,
-                tags=segment.tags,
-                topics=segment.topics,
+                recording_id=data.get("id", ""),
+                timestamp=timestamp,
+                duration=segment.get("duration", 0.0),
+                raw_text=segment.get("raw_text", ""),
+                language=segment.get("language", ""),
+                language_score=segment.get("language_score", 0.0),
+                sentiment=segment.get("sentiment", ""),
+                emotions=segment.get("emotions", []),
+                embeddings=segment.get("embeddings", []),
+                keywords=segment.get("keywords", []),
+                tags=[TagAnalysis(**tag) for tag in segment.get("tags", [])],
+                topics=[Topic(**topic) for topic in segment.get("topics", [])],
                 ads=[
                     Advertisement(
-                        brand=ad.brand or "",
-                        product=ad.product or "",
-                        start=ad.start,
-                        stop=ad.stop
+                        brand=ad.get("brand", ""),
+                        product=ad.get("product", ""),
+                        start=ad.get("start"),
+                        stop=ad.get("stop")
                     )
-                    for ad in (segment.ads or [])
+                    for ad in segment.get("ads", [])
                 ],
                 engagement=[
                     AudienceEngagement(
-                        platform=engagement.platform,
-                        identifier=engagement.identifier,
-                        context=engagement.context,
-                        start=engagement.start,
-                        stop=engagement.stop,
+                        platform=engagement.get("platform", ""),
+                        identifier=engagement.get("identifier", ""),
+                        context=engagement.get("context", ""),
+                        start=engagement.get("start", 0.0),
+                        stop=engagement.get("stop", 0.0),
                     )
-                    for engagement in segment.engagement
+                    for engagement in segment.get("engagement", [])
                 ],
-                gcp_blob=analysis.gcp_blob or "",
-                gcp_path=segment.gcp_path or "",
-                file_size=segment.file_size or 0.0,
-                host=(segment.show_metadata.host if segment.show_metadata else "") or "",
-                program_name=(segment.show_metadata.program_name if segment.show_metadata else "") or "",
+                gcp_blob=data.get("gcp_blob", ""),
+                gcp_path=segment.get("gcp_path", ""),
+                file_size=segment.get("file_size", 0.0),
+                host=segment.get("show_metadata", {}).get("host", ""),
+                program_name=segment.get("show_metadata", {}).get("program_name", ""),
             )
 
             # Append the created SegmentRecording to the result list
@@ -90,32 +90,41 @@ class Recording(BaseModel):
     timestamp: datetime
     stream_name: str
     stream_id: str
+    type: str
     male: float
     female: float
     music: float
+    noise: float
+    noEnergy: float
     file_size: float
     duration: float
 
     @classmethod
-    def create_from_analysis_model(cls, analysis: AnalysisModel) -> "Recording":
+    def create_from_analysis_model(cls, analysis: dict) -> "Recording":
         # Extract activity metrics
-        activity = analysis.activity or Activity()
+        activity = analysis.get("activity", {})
 
         # Calculate total file size as the sum of all segment file sizes
-        total_file_size = sum(segment.file_size or 0.0 for segment in analysis.segments)
+        total_file_size = sum(segment.get("file_size", 0.0) for segment in analysis.get("segments", []))
 
         # Calculate total duration as the sum of all segment durations
-        total_duration = sum(segment.duration or 0.0 for segment in analysis.segments)
+        total_duration = sum(segment.get("duration", 0.0) for segment in analysis.get("segments", []))
+
+        # Determine the stream type (e.g., TV or RADIO)
+        stream_type = "TV_STREAM" if analysis.get("type") == "video" else "RADIO_STREAM"
 
         # Create and return the Recording object
         return cls(
-            id=analysis.id,
-            timestamp=analysis.timestamp or datetime.now(),  
-            stream_name=analysis.stream_name or "", 
-            stream_id=analysis.stream_id or "",
-            male=activity.male or 0.0,
-            female=activity.female or 0.0,
-            music=activity.music or 0.0,
+            id=analysis.get("id", ""),
+            timestamp=datetime.fromisoformat(analysis.get("timestamp")),  
+            stream_name=analysis.get("stream_name", ""),
+            stream_id=analysis.get("stream_id", ""),
+            type=stream_type,
+            male=activity.get("male", 0.0),
+            female=activity.get("female", 0.0),
+            music=activity.get("music" or 0.0),
+            noise=activity.get("noise" or 0.0),
+            noEnergy=activity.get("noEnergy" or 0.0),
             file_size=total_file_size,
             duration=total_duration
         )

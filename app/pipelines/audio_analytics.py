@@ -16,6 +16,7 @@ from app.core.redis import redis_router as audio_router
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 import httpx
+import json
 load_dotenv()
 
 # Create a global executor for process-based parallelism
@@ -66,19 +67,19 @@ async def handle_start_audio_analysis(upload: Upload):
         # download_file(upload.bucket, upload.blob, audio_file_path)
         
         analysis_id = uuid.uuid4()
-        analysis = AnalysisModel(
-            id=str(analysis_id),
-            stream_id=upload.stream_id,
-            stream_name=upload.stream_name,
-            audio_path=audio_file_path,
-            type="audio",
-            timestamp=timestamp,
-            gcp_bucket=upload.bucket,
-            gcp_blob=upload.blob
-        )
+        analysis = {
+            "id": str(analysis_id),
+            "stream_id": upload["stream_id"],
+            "stream_name": upload["stream_name"],
+            "audio_path": audio_file_path,
+            "type": "audio",
+            "timestamp": timestamp.isoformat(),
+            "gcp_bucket": upload["bucket"],
+            "gcp_blob": upload["blob"],
+        }
 
         # Publish analysis object
-        await audio_router.broker.publish(analysis.model_dump_json(), "av:audio_seg")
+        await audio_router.broker.publish(json.dumps(analysis), "av:audio_seg")
         return analysis_id
         
     except Exception as e:
@@ -87,7 +88,7 @@ async def handle_start_audio_analysis(upload: Upload):
 
 async def handle_audio_segmentation(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
@@ -102,29 +103,29 @@ async def handle_audio_segmentation(msg: str):
 
         # Transform activity segments and add to analysis object
         activity = {item["labels"]: item["duration"] for item in activity_segments}
-        data.activity = Activity(
-            male=activity.get("male", 0.0),
-            female=activity.get("female", 0.0),
-            music=activity.get("music", 0.0),
-            noEnergy=activity.get("noEnergy", 0.0),
-            noise=activity.get("noise", 0.0),
-        )
+        data["activity"] = {
+            "male": activity.get("male", 0.0),
+            "female": activity.get("female", 0.0),
+            "music": activity.get("music", 0.0),
+            "noEnergy": activity.get("noEnergy", 0.0),
+            "noise": activity.get("noise", 0.0),
+        }
 
         # Slice audio file based on speech segments
         speech_segment_files = await asyncio.to_thread(
-            slice_audio, speech_segments, data.audio_path
+            slice_audio, speech_segments, data["audio_path"]
         )
 
         for segment in speech_segment_files:
-            new_segment = Segment(
-                start=segment["start"],
-                stop=segment["stop"],
-                duration=segment["duration"],
-                audio_file=segment["audio_file"],
-            )
-            data.segments.append(new_segment)
+            data["segments"] = []
+            data["segments"].append({
+                "start": segment["start"],
+                "stop": segment["stop"],
+                "duration": segment["duration"],
+                "audio_file": segment["audio_file"],
+            })
 
-        return data.model_dump_json()
+        return json.dumps(data)
 
     except Exception as e:
         print(f"Error during audio segmentation: {e}")
@@ -132,40 +133,40 @@ async def handle_audio_segmentation(msg: str):
     
 async def handle_audio_upload_gcp(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        for index, segment in enumerate(data.segments):
-            local_file_path = segment.audio_file
+        for index, segment in enumerate(data["segments"]):
+            local_file_path = segment["audio_file"]
             file_name = extract_file_name(local_file_path)
             file_size = calc_file_size(local_file_path)
 
             # Destination file path construction
-            recording_date = data.timestamp.date().isoformat()
-            dest_file_path = f"radio/{data.stream_name}/{recording_date}/{file_name}"
+            recording_date = data["timestamp"].date().isoformat()
+            dest_file_path = f"radio/{data["stream_name"]}/{recording_date}/{file_name}"
 
             # Upload to GCP (wrapped in asyncio.to_thread for non-blocking behavior)
-            await asyncio.to_thread(upload, data.gcp_bucket, local_file_path, dest_file_path)
+            await asyncio.to_thread(upload, data["gcp_bucket"], local_file_path, dest_file_path)
 
             # Delete local file
             await asyncio.to_thread(delete_file, local_file_path)
 
             # Update segment metadata
-            data.segments[index].file_size = file_size
-            data.segments[index].gcp_path = dest_file_path
+            data["segments"][index]["file_size"] = file_size
+            data["segments"][index]["gcp_path"] = dest_file_path
 
         # Delete the master audio file and GCP blob
-        await asyncio.to_thread(delete_file, data.audio_path)
-        await asyncio.to_thread(delete_blob, data.gcp_bucket, data.gcp_blob)
+        await asyncio.to_thread(delete_file, data["audio_path"])
+        await asyncio.to_thread(delete_blob, data["gcp_bucket"], data["gcp_blob"])
 
         # Calculate time taken
         end_time = time.time()
         time_taken = end_time - start_time
         print(f"Time taken to upload audio files to GCP: {time_taken:.2f} seconds.")
 
-        return data.model_dump_json()
+        return json.dumps(data)
 
     except Exception as e:
         print(f"Error during audio upload to GCP: {e}")
