@@ -68,14 +68,29 @@ class SearchService:
         self.es = es_client
         self.query_parser = QueryParser()
 
-    def search_index(self, index_name: str, query: str, size: int = 10):
+    def search_index(self, index_name: str, query: str, start_date: str = None, end_date: str = None, size: int = 10):
 
         try:
             # Parse the query and build Elasticsearch DSL query
             parsed_query = self.query_parser.parse_query(query)[0]
-            print(parsed_query)
             es_query = self.query_parser.build_es_query(parsed_query)
-            print(es_query)
+            
+            # Add date range filter if provided
+            if start_date or end_date:
+                date_range_query = {
+                    "range": {
+                        "timestamp": {  # Assuming the date field in the mappings is "timestamp"
+                            "gte": start_date,  # Greater than or equal to start_date
+                            "lte": end_date     # Less than or equal to end_date
+                        }
+                    }
+                }
+                # Combine date range filter with the main parsed query
+                es_query = {
+                    "bool": {
+                        "must": [es_query, date_range_query]
+                    }
+                }
             # Perform the search query
             response = self.es.search(
                 index=index_name,
