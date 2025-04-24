@@ -100,13 +100,12 @@
             }
         ],
         "mentions": {},
-        "sentiment_summary": "",
-        "sentiment_mentions_summary": "",
-        "engagements_summary": "",
-        "volume_mentions_summary": "",
-        "trends_summary": "",
-        "volume_summary": "",
-        "trending_topics_summary": ""
+        "sentiment_summary": "94% positive narratives reflecting trust and admiration, 5% neutral mentions revolving around technical seminars, and 1% miscellaneous observations.",
+        "volume_summary": "Volume fluctuates based on event-driven topics like AI advancements, mentorship trials, regional seminar milestones, and consistent financial narratives.",
+        "sentiment_mentions_summary": "Highly positive narratives celebrating professional achievements, influential mentorship sessions, and an inspiring journey from educator to Deputy Vice-Chancellor.",
+        "engagements_summary": "Engagement comprises keynote events, educational webinars, and professional milestones such as discussions around AI in accounting, mentorship strategies, and economic symposiums.",
+        "volume_mentions_summary": "Consistent mentions highlight impactful financial strategies, mentorship programs, visibility across global platforms, and reinforcing methodologies in education alongside women leadership initiatives.",
+        "trending_topics_summary": "Trending videos feature transformative seminars, rural-to-global mentoring impacts, proactive AI shifts, and economically charged panel symposia aligned with empowering professions like finance and accounting."
     },
     "linkedin": {
         "volume_mentions": {
@@ -281,13 +280,12 @@
             "startupshujaa": 6,
             "africa": 2
         },
-        "sentiment_summary": "",
-        "sentiment_mentions_summary": "",
-        "engagements_summary": "",
-        "volume_mentions_summary": "",
-        "trends_summary": "",
-        "volume_summary": "",
-        "trending_topics_summary": ""
+        "sentiment_summary": "88% positive sentiments focusing on leadership growth and mentorship, 9% neutral sentiments on technical shifts like AI's impact, and 3% minor neutral discussion threads.",
+        "volume_summary": "Mentions fluctuate around highlighting KASNEB leadership, advancing ICPAK action plans, women empowerment initiatives, AI-driven finance evolutions, and collaborative professional growth.",
+        "sentiment_mentions_summary": "Majority positive sentiments reflect themes of leadership, mentorship, empowerment, and impactful transitions within accounting and finance professions amid technological advancements.",
+        "engagements_summary": "High engagement levels from professionals participating in discussions on growth, innovation, and risk management in accounting, often focused on ICPAK's leadership and strategic initiatives.",
+        "volume_mentions_summary": "Mentions emphasize discussions hosted by Kalunda on professional development, her new position as KASNEB Chair, and her impact in shaping accounting practices globally.",
+        "trending_topics_summary": "Trending topics involve risk-taking strategies, women’s empowerment conferences, advancements in financial reporting, AI in accounting, and mentoring the next generation of finance professionals."
     },
     "twitter": {
         "volume_mentions": {
@@ -381,13 +379,12 @@
             "kenyajudiciary": 1,
             "migunamiguna": 1
         },
-        "sentiment_summary": "",
-        "sentiment_mentions_summary": "",
-        "engagements_summary": "",
-        "volume_mentions_summary": "",
-        "trends_summary": "",
-        "volume_summary": "",
-        "trending_topics_summary": ""
+        "sentiment_summary": "41% positive sentiments, 39% critical/emotional reactions on governance issues, and 20% neutral mentions tied to economic and judiciary discussions.",
+        "volume_summary": "Mentions range frequently around debates on housing, judiciary governance, political integrity, and evolving public leadership initiatives focused on reforms.",
+        "sentiment_mentions_summary": "Mixed sentiments emerge with critical engagements on housing levy debates and emotional reactions to governance, suggesting vigorous conversations about economy, politics, and societal challenges.",
+        "engagements_summary": "Engagement levels are diverse, with retweets and replies surrounding key issues like housing levies, judiciary integrity, political governance, and public leadership analysis.",
+        "volume_mentions_summary": "The volume data hints heavily at Kenya's socio-economic discussions, key governance roles, and evolving agendas involving public trust and leadership accountability.",
+        "trending_topics_summary": "Trending conversations revolve around CPA Kalunda’s policy insights, governance reflections on housing levies, political dynamics, and accountability narratives attracting wide public interest."
     },
     "tiktok": {
         "volume_mentions": {
@@ -657,13 +654,12 @@
             "alicewanjiku353": 1,
             "\u00f0\u009d\u0090\u201e\u00f0\u009d\u0090\u2014\u00f0\u009d\u0090\u20ac\u00f0\u009d\u0090\u201a\u00f0\u009d\u0090\u201c\u00f0\u009d\u0090\u2039\u00f0\u009d\u0090\u02dc": 1
         },
-        "sentiment_summary": "",
-        "sentiment_mentions_summary": "",
-        "engagements_summary": "",
-        "volume_mentions_summary": "",
-        "trends_summary": "",
-        "volume_summary": "",
-        "trending_topics_summary": ""
+        "sentiment_summary": "81% positive sentiments with themes of growth and mentorship, 12% neutral sentiments reflecting emotionally charged conversations, and 7% minor negative trends stemming from debated statements.",
+        "volume_summary": "Volume mentions highlight steady interest in motivational talks, SDA church teachings, mentorship sessions, and minor controversy-driven moments from public discussions.",
+        "sentiment_mentions_summary": "Positive sentiments dominate, with themes of inspiration, personal growth, mentorship, and leadership; scattered negative sentiments stem from topical controversies or provocative statements.",
+        "engagements_summary": "Significant engagement through video content on uplifting messages, career insights, lifestyle tips, and influential teachings, driving discussions among varied demographics.",
+        "volume_mentions_summary": "Volumes include varied mentions on personal reflections, community insights, motivational initiatives, and minor controversies surrounding certain policy-driven conversations.",
+        "trending_topics_summary": "Trending themes capture motivational clips, mentorship advice, SDA talks, lifestyle hacks, and family connection sermons, resonating across communities seeking inspiration or professional advice."
     },
     "facebook": {
         "volume_mentions": {
@@ -743,13 +739,12 @@
         "mentions": {
             "": 1
         },
-        "sentiment_summary": "",
-        "sentiment_mentions_summary": "",
-        "engagements_summary": "",
-        "volume_mentions_summary": "",
-        "trends_summary": "",
-        "volume_summary": "",
-        "trending_topics_summary": ""
+        "sentiment_summary": "76% positive sentiments reflecting leadership, 20% neutral sentiments related to events like memorials, and 4% minor neutral/critical mentions.",
+        "volume_summary": "Steady volume centered around professional achievements like ICPAK updates, East African finance recognition, leadership forums, mentorship programs, and academic initiatives.",
+        "sentiment_mentions_summary": "Predominantly positive sentiments highlight Elizabeth Kalunda’s achievements, leadership roles, and recognitions within finance and accounting, alongside some neutral mentions of events like memorials.",
+        "engagements_summary": "Strong engagement metrics, particularly reactions to achievements like her re-election as ICPAK Vice Chairman, showcasing a respected presence within professional and academic communities.",
+        "volume_mentions_summary": "Mentions center on her leadership in ICPAK, milestones in her career, and her impactful role as Deputy Vice Chancellor in finance sponsorships and events.",
+        "trending_topics_summary": "Trending topics include ICPAK leadership updates, her recognition in East Africa finance, collaborative platforms, mentorship initiatives, and involvement in high-profile professional events and seminars."
     },
     "account": {
         "name": "Elizabeth Kalunda",

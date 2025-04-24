@@ -5,6 +5,9 @@ import pandas as pd
 import uuid
 from app.core.files import subfolder_check, delete_file
 
+# load segmentation model and segment audio file
+seg = Segmenter('smn', True)
+
 def speech_segments(df):
     # Drop rows where the label is 'music' and duration > 10
     df_filtered = df[~((df['labels'] == 'music') & (df['duration'] > 10))]
@@ -33,14 +36,13 @@ def speech_segments(df):
 
     return grouped_df.to_dict(orient='records')
 
-def gender_music_segmentation(audio_file):
-    # load segmentation model and segment audio file
-    seg = Segmenter('smn', True)
-    segmentation = seg(audio_file)
+def gender_music_segmentation(audio_file):    
 
     # setup csv files
     subfolder_check(f"{os.getcwd()}/o2-files")
     csv_file = f"{os.getcwd()}/o2-files/{uuid.uuid4()}.csv"
+
+    segmentation = seg(audio_file)
 
     # Export results to CSV
     seg2csv(segmentation, csv_file)

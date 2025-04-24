@@ -67,6 +67,7 @@ class Activity(BaseModel):
     female: Optional[float] = 0.0
     music: Optional[float] = 0.0
     noEnergy: Optional[float] = 0.0
+    noise: Optional[float] = 0.0
 
 class AnalysisModel(BaseModel):
     id: Optional[str] = ""

@@ -15,9 +15,15 @@ from dotenv import load_dotenv
 from app.core.redis import redis_router as audio_router
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
-import httpx
+import requests
 import json
 load_dotenv()
+
+# Create a global executor for process-based parallelism
+executor = ProcessPoolExecutor()
+
+GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
+SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
 # Create a global executor for process-based parallelism
 executor = ProcessPoolExecutor()
@@ -35,16 +41,20 @@ class Upload(BaseModel):
 async def async_gender_music_segmentation(audio_path):
     if GPU_ACTIVATED and SEGMENTATION_GPU_URL:
         try:
-            async with httpx.AsyncClient() as client:
-                # Open the audio file for binary upload
-                with open(audio_path, "rb") as audio_file:
-                    files = {"file": (os.path.basename(audio_path), audio_file, "audio/mpeg")}
-                    response = await client.post(f"{SEGMENTATION_GPU_URL}/segment-audio", files=files)
-                    response.raise_for_status()
-                    response_data = response.json()
-                    return response_data["activity"], response_data["speech"]
-        except httpx.HTTPError as e:
-            print(f"HTTP error during GPU segmentation: {e}")
+            with open(audio_path, "rb") as audio_file:
+                files = {
+                    "file": (os.path.basename(audio_path), audio_file, "audio/mpeg")
+                }
+                print(f"Sending request to {SEGMENTATION_GPU_URL}/segment-audio with audio file: {audio_path}")
+                response = requests.post(f"{SEGMENTATION_GPU_URL}/segment-audio", files=files)
+                response.raise_for_status()  # Raise exception if HTTP status is an error
+                response_data = response.json()
+                return response_data["activity"], response_data["speech"]
+        except requests.RequestException as e:
+            print(f"Request error during GPU segmentation: {e}")
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
             raise
     else:
         loop = asyncio.get_event_loop()
@@ -94,7 +104,7 @@ async def handle_audio_segmentation(msg: str):
         start_time = time.time()
 
         # Use the process pool executor for CPU-heavy segmentation
-        activity_segments, speech_segments = await async_gender_music_segmentation(data.audio_path)
+        activity_segments, speech_segments = await async_gender_music_segmentation(data['audio_path'])
 
         # Calculate time taken
         end_time = time.time()
@@ -113,10 +123,11 @@ async def handle_audio_segmentation(msg: str):
 
         # Slice audio file based on speech segments
         speech_segment_files = await asyncio.to_thread(
-            slice_audio, speech_segments, data.audio_path
+            slice_audio, speech_segments, data["audio_path"]
         )
 
-        for segment in speech_segment_files:
+        data["segments"] = []
+        for segment in speech_segment_files:            
             data["segments"].append({
                 "start": segment["start"],
                 "stop": segment["stop"],
@@ -134,20 +145,22 @@ async def handle_audio_upload_gcp(msg: str):
     try:
         data = json.loads(msg)
 
+        timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S")
+
         # Start timing
         start_time = time.time()
 
-        for index, segment in enumerate(data.segments):
-            local_file_path = segment.audio_file
+        for index, segment in enumerate(data["segments"]):
+            local_file_path = segment["audio_file"]
             file_name = extract_file_name(local_file_path)
             file_size = calc_file_size(local_file_path)
 
             # Destination file path construction
-            recording_date = data.timestamp.date().isoformat()
-            dest_file_path = f"radio/{data.stream_name}/{recording_date}/{file_name}"
+            recording_date = timestamp.date().isoformat()
+            dest_file_path = f"radio/{data['stream_name']}/{recording_date}/{file_name}"
 
             # Upload to GCP (wrapped in asyncio.to_thread for non-blocking behavior)
-            await asyncio.to_thread(upload, data.gcp_bucket, local_file_path, dest_file_path)
+            await asyncio.to_thread(upload, data["gcp_bucket"], local_file_path, dest_file_path)
 
             # Delete local file
             await asyncio.to_thread(delete_file, local_file_path)

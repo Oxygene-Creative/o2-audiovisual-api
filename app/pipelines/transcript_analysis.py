@@ -9,19 +9,50 @@ from app.models.analytics import AnalysisModel, ShowMetadata, Topic, TopicWord
 from datetime import datetime
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
-from app.core.graphql import get_all_terms, get_tags
+from app.core.graphql import add_radio_stream_upload, add_tv_stream_upload, get_all_terms, get_tags
 from app.core.es import save
 import os
 from app.core.redis import redis_router as transcript_router
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
+from concurrent.futures import ProcessPoolExecutor
+import httpx
+import json
 from dotenv import load_dotenv
 load_dotenv()
+import requests
+
+# Create a global executor for process-based parallelism
+executor = ProcessPoolExecutor()
+
+GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
+TRANSCRIPTION_GPU_URL = os.getenv("TRANSCRIPTION_GPU_URL", "").strip()
+
+async def async_audio_transcription(audio_path):
+    if GPU_ACTIVATED and TRANSCRIPTION_GPU_URL:
+        try:
+            # Open the audio file for binary upload
+            with open(audio_path, "rb") as audio_file:
+                files = {
+                    "file": (os.path.basename(audio_path), audio_file, "audio/mpeg")
+                }
+                print(f"Sending request to {TRANSCRIPTION_GPU_URL}/transcribe with audio file: {audio_path}")
+                response = requests.post(f"{TRANSCRIPTION_GPU_URL}/transcribe", files=files)
+                response.raise_for_status()  # Raise exception if HTTP status is an error
+                response_data = response.json()
+                return response_data["transcription"]
+        except requests.RequestException as e:
+            print(f"Request error during GPU transcription: {e}")
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
+    else:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(executor, transcribe, audio_path)
 
 async def handle_audio_transcribe(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
         keywords = await asyncio.to_thread(get_all_terms)  # Fetch keywords asynchronously
 
         # Start timing
@@ -32,42 +63,31 @@ async def handle_audio_transcribe(msg: str):
 
         # Define an async function for processing a single segment
         async def process_segment(index, segment):
-            transcript = await asyncio.to_thread(transcribe, segment.audio_file)
+            # Async transcription using the process pool
+            transcript = await async_audio_transcription(segment["audio_file"])
             
             # Introduce a delay before calling the LLM-powered function
             await asyncio.sleep(0.5) 
+            raw_text = transcript.get("raw_text", "")
+            word_count = len(raw_text.split())
+            if raw_text.strip():
+                # Control access to the LLM with the semaphore
+                async with llm_semaphore:
+                    processed_transcript = await asyncio.to_thread(
+                        post_process_transcription, transcript["raw_text"], keywords
+                    )
 
-            # Control access to the LLM with the semaphore
-            async with llm_semaphore:
-                processed_transcript = await asyncio.to_thread(
-                    post_process_transcription, transcript["raw_text"], keywords
-                )
-
-            data.segments[index].raw_text = processed_transcript
-            data.segments[index].language = transcript["language"]
-            data.segments[index].language_score = transcript["language_score"]
+                data["segments"][index]["raw_text"] = processed_transcript
+                data["segments"][index]["language"] = transcript["language"]
+                data["segments"][index]["language_score"] = transcript["language_score"]
 
         # Create tasks for all segments
         tasks = [
-            process_segment(index, segment) for index, segment in enumerate(data.segments)
+            process_segment(index, segment) for index, segment in enumerate(data["segments"])
         ]
 
         # Run all tasks concurrently
         await asyncio.gather(*tasks)
-
-        # for index, segment in enumerate(data.segments):
-        #     # Transcribe audio
-        #     transcript = await asyncio.to_thread(transcribe, segment.audio_file)
-
-        #     # Process transcript
-        #     processed_transcript = await asyncio.to_thread(
-        #         post_process_transcription, transcript["raw_text"], keywords
-        #     )
-
-        #     # Update segment attributes
-        #     data.segments[index].raw_text = processed_transcript
-        #     data.segments[index].language = transcript["language"]
-        #     data.segments[index].language_score = transcript["language_score"]
 
         # End timing
         end_time = time.time()
@@ -75,41 +95,48 @@ async def handle_audio_transcribe(msg: str):
         print(f"Time taken to transcribe audio: {time_taken:.2f} seconds.")
 
         # Return updated data object
-        return data.model_dump_json()
+        return json.dumps(data)
 
     except Exception as e:
         print(f"Error during audio transcription: {e}")
-        await transcript_router.broker.publish(msg, "av:transcript_embeddings")
+        # await transcript_router.broker.publish(msg, "av:transcript_embeddings")
 
 async def handle_transcript_analysis(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        tag_name = "Radio" if data.type == "audio" else "Tv"
+        tag_name = "Radio" if data["type"] == "audio" else "Tv"
         categories = await asyncio.to_thread(get_tags, tag_name)
 
-        for index, segment in enumerate(data.segments):
+        for index, segment in enumerate(data["segments"]):
+            # Ensure `raw_text` exists and has enough words
+            raw_text = segment.get("raw_text", "").strip()
+            word_count = len(raw_text.split())  # Count the number of words
+
+            if not raw_text or word_count < 5:  # Skip text with fewer than 5 words
+                print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
+                continue
+
             # Clean transcript text
             clean_transcript = await asyncio.to_thread(
-                remove_timestamps_and_format, segment.raw_text
+                remove_timestamps_and_format, segment["raw_text"]
             )
 
             # Create embeddings
             embeddings = await asyncio.to_thread(embed_text, clean_transcript)
-            data.segments[index].embeddings = embeddings.tolist()
+            data["segments"][index]["embeddings"] = embeddings.tolist()
 
             # Sentiment analysis
             sentiment = await asyncio.to_thread(sentiment_analysis, clean_transcript)
-            data.segments[index].sentiment = sentiment
+            data["segments"][index]["sentiment"] = sentiment
 
             # Category analysis
-            category_matches = await asyncio.to_thread(
-                categorize_text, clean_transcript, categories
-            )
-            data.segments[index].tags = category_matches
+            category_matches = await categorize_text(clean_transcript, categories)
+            data["segments"][index]["tags"] = category_matches
 
         # End timing
         end_time = time.time()
@@ -119,29 +146,38 @@ async def handle_transcript_analysis(msg: str):
         )
 
         # Return updated data object
-        return data.model_dump_json()
+        return json.dumps(data)
 
     except Exception as e:
         print(f"Error during transcript analysis: {e}")
-        await transcript_router.broker.publish(msg, "av:transcript_sentiment")
+        # await transcript_router.broker.publish(msg, "av:transcript_sentiment")
 
 
 async def handle_transcript_llm(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        for index, segment in enumerate(data.segments):
+        for index, segment in enumerate(data["segments"]):
+            # Ensure `raw_text` exists and has enough words
+            raw_text = segment.get("raw_text", "").strip()
+            word_count = len(raw_text.split())  # Count the number of words
+
+            if not raw_text or word_count < 5:  # Skip text with fewer than 5 words
+                print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
+                continue
+
+            await asyncio.sleep(5) 
+
             llm_analysis = await asyncio.to_thread(
-                llm_transcript_analysis, segment.raw_text
+                llm_transcript_analysis, segment["raw_text"]
             )
 
-            # Update segment attributes
-            data.segments[index].ads = llm_analysis.ads or []
-            data.segments[index].show_metadata = llm_analysis.show_metadata or ShowMetadata()
-            data.segments[index].engagement = llm_analysis.engagement or []
+            llm_analysis_json = llm_analysis.model_dump_json()
+            llm_analysis_dict = json.loads(llm_analysis_json)
+            data["segments"][index].update(llm_analysis_dict)
 
         # End timing
         end_time = time.time()
@@ -151,46 +187,77 @@ async def handle_transcript_llm(msg: str):
         )
 
         # Publish based on type
-        if data.type == "audio":
+        if data["type"]  == "audio":
             await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_audio_gcp"
+                json.dumps(data), "av:upload_audio_gcp"
             )
-        elif data.type == "video":
+        elif data["type"] == "video":
             await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_video_gcp"
+                json.dumps(data), "av:upload_video_gcp"
             )
 
     except Exception as e:
         print(f"Error during LLM transcript analysis: {e}")
-        if data.type == "audio":
-            await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_audio_gcp"
-            )
-        elif data.type == "video":
-            await transcript_router.broker.publish(
-                data.model_dump_json(), "av:upload_video_gcp"
-            )
+        # if data["type"] == "audio":
+        #     await transcript_router.broker.publish(
+        #         json.dumps(data), "av:upload_audio_gcp"
+        #     )
+        # elif data["type"] == "video":
+        #     await transcript_router.broker.publish(
+        #         json.dumps(data), "av:upload_video_gcp"
+        #     ) 
     
 async def handle_save_analysis_es(msg: str):
     try:
-        data = AnalysisModel.model_validate_json(msg)
+        data = json.loads(msg)
 
         # Start timing
         start_time = time.time()
 
-        stream_type = "radio" if data.type == "audio" else "tv"
-        index_id = f"{stream_type}_{data.stream_id}"
+        stream_type = "radio" if data["type"] == "audio" else "tv"
+        index_id = f"{stream_type}_{data['stream_id']}"
 
-        # Create segment recordings
-        segment_recordings = SegmentRecording.create_segment_recordings_from_analysis_model(data)
-        recording = Recording.create_from_analysis_model(data)
-        recording_dict = recording.model_dump_json()
+        # Generate Segment Recordings
+        segment_recordings = SegmentRecording.create_segment_recordings_from_dict(data)
 
-        # Save recordings and segments to Elasticsearch
-        await asyncio.to_thread(save, "recordings", recording_dict)
         for segment in segment_recordings:
-            await asyncio.to_thread(save, index_id, segment.model_dump_json())
+            await asyncio.to_thread(save, index_id, json.dumps(segment))
 
+        recording = Recording.create_from_analysis_model(data)
+
+        # Concatenate all `gcp_path` values from the segments into a comma-separated list
+        file_paths = ",".join(segment["gcp_path"] for segment in data.get("segments", []) if segment.get("gcp_path"))
+
+        if recording.get("type") == "TV_STREAM":
+            add_tv_stream_upload(
+                tv_stream_id=recording.get("stream_id", ""),
+                file_path=file_paths,
+                file_name=recording.get("stream_name", ""),
+                file_size=recording.get("file_size", 0.0),
+                timestamp=recording.get("timestamp", ""),
+                male=recording.get("male", 0.0),
+                female=recording.get("female", 0.0),
+                music=recording.get("music", 0.0),
+                noise=recording.get("noise", 0.0),
+                noEnergy=recording.get("noEnergy", 0.0),
+                recording_id=recording.get("id", ""),
+                duration=recording.get("duration", 0.0),
+            )
+        elif recording.get("type") == "RADIO_STREAM":
+            add_radio_stream_upload(
+                radio_stream_id=recording.get("stream_id", ""),
+                file_path=file_paths,
+                file_name=recording.get("stream_name", ""),
+                file_size=recording.get("file_size", 0.0),
+                timestamp=recording.get("timestamp", ""),  
+                male=recording.get("male", 0.0),
+                female=recording.get("female", 0.0),
+                music=recording.get("music", 0.0),
+                noise=recording.get("noise", 0.0),
+                noEnergy=recording.get("noEnergy", 0.0),
+                recording_id=recording.get("id", ""),
+                duration=recording.get("duration", 0.0),
+            )
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time

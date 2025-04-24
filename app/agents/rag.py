@@ -12,7 +12,8 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 def get_es_retriever(indexes):
     vector_store = ElasticsearchStore(
-        es_url=os.environ['ES_URI'],
+        es_url=os.environ['ELASTIC_CLOUD_URL'],
+        es_api_key=os.environ['ELASTIC_API_KEY'],
         index_name=indexes,
         embedding=embeddings,
     )

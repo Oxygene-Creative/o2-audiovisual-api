@@ -4,9 +4,8 @@ import os
 
 # Initialize the Elasticsearch client
 es_client = Elasticsearch(
-    hosts=[os.environ['ES_URI']],
-    api_key=os.environ['ES_API_KEY']
-    # http_auth=(os.environ['ES_USERNAME'], os.environ['ES_PASSWORD']),
+    hosts=[os.getenv('ELASTIC_CLOUD_URL')],
+    api_key=os.getenv('ELASTIC_API_KEY')
 )
 
 def save(index: str, doc):
@@ -17,4 +16,6 @@ def save_bulk(actions):
     
 def search(index, query):
     results = es_client.search(index=index, body=query)
+
+
     return results

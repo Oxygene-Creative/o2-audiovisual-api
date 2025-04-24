@@ -14,6 +14,7 @@ from nltk.stem import WordNetLemmatizer
 from gensim import corpora
 from gensim.models import LdaModel
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import asyncio
 
 # Download NLTK resources
 nltk.download('punkt_tab')
@@ -46,7 +47,7 @@ def match_keywords(text: str, keywords: List[str]):
 
     return list(matched_keywords) if matched_keywords else []
 
-def categorize_text(text: str, categories: List[str], threshold=0.3):
+async def categorize_text(text: str, categories: List[str], threshold=0.3):
     # Check if text is empty, None, or whitespace
     if not text or text.isspace():
         return []
@@ -55,15 +56,16 @@ def categorize_text(text: str, categories: List[str], threshold=0.3):
     if not categories or not isinstance(categories, list):
         return []
     
-    results = classifier(text, categories, multi_label=True)
+    # results = classifier(text, categories, multi_label=True)
+    # Offload pipeline execution to a background thread to prevent event loop blocking
+    results = await asyncio.to_thread(classifier, text, categories, multi_label=True)
+
     tags = [
         {"label": label, "score": score} 
         for label, score in zip(results['labels'], results['scores'])
     ]
-    
-    tag_objects = [TagAnalysis(label=t['label'], score=t['score']) for t in tags]
-    
-    return tag_objects 
+
+    return tags 
 
 def preprocess_text(texts):
     stop_words = set(stopwords.words('english'))

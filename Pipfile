@@ -48,6 +48,8 @@ plotly = "*"
 pandas = "*"
 colour = "*"
 python-pptx = "*"
+langserve = {extras = ["server"], version = "*"}
+pyparsing = "*"
 
 [dev-packages]
 pytest = "*"
