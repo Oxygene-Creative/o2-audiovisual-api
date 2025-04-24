@@ -25,12 +25,6 @@ executor = ProcessPoolExecutor()
 GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
 SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
-# Create a global executor for process-based parallelism
-executor = ProcessPoolExecutor()
-
-GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
-SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
-
 class Upload(BaseModel):
     stream_id: str
     stream_name: str
