@@ -22,6 +22,12 @@ def fetch_data(query: str, variables: Any):
             headers=headers)
         response.raise_for_status()
         response_json = response.json()
+
+        # Check for errors in response
+        if "errors" in response_json:
+            error_message = response_json["errors"]
+            raise Exception(f"GraphQL error: {error_message}")
+
         return response_json['data']
     
     except requests.exceptions.RequestException as e:
@@ -41,7 +47,6 @@ def get_all_terms() -> List[str]:
         return response['findUniqueTerms']
     except Exception as e:
         print(f"Error fetching terms: {e}")  # Optional: log the error
-        return ["NCBA", "KCB", "Safaricom", "MPESA", "Lipa na mpesa"]
 
 def get_tags(stream_type: str) -> List[str]:
     query = """

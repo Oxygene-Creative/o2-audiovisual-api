@@ -64,10 +64,8 @@ async def categorize_text(text: str, categories: List[str], threshold=0.3):
         {"label": label, "score": score} 
         for label, score in zip(results['labels'], results['scores'])
     ]
-    
-    tag_objects = [TagAnalysis(label=t['label'], score=t['score']) for t in tags]
-    
-    return tag_objects 
+
+    return tags 
 
 def preprocess_text(texts):
     stop_words = set(stopwords.words('english'))

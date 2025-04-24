@@ -19,6 +19,7 @@ import httpx
 import json
 from dotenv import load_dotenv
 load_dotenv()
+import requests
 
 # Create a global executor for process-based parallelism
 executor = ProcessPoolExecutor()
@@ -29,19 +30,25 @@ TRANSCRIPTION_GPU_URL = os.getenv("TRANSCRIPTION_GPU_URL", "").strip()
 async def async_audio_transcription(audio_path):
     if GPU_ACTIVATED and TRANSCRIPTION_GPU_URL:
         try:
-            async with httpx.AsyncClient() as client:
-                # Open the audio file for binary upload
-                with open(audio_path, "rb") as audio_file:
-                    files = {"file": (os.path.basename(audio_path), audio_file, "audio/mpeg")}
-                    response = await client.post(f"{TRANSCRIPTION_GPU_URL}/transcribe", files=files)
-                    response.raise_for_status()
-                    response_data = response.json()
-                    return response_data["transcription"]
-        except httpx.HTTPError as e:
-            print(f"HTTP error during GPU segmentation: {e}")
+            # Open the audio file for binary upload
+            with open(audio_path, "rb") as audio_file:
+                files = {
+                    "file": (os.path.basename(audio_path), audio_file, "audio/mpeg")
+                }
+                print(f"Sending request to {TRANSCRIPTION_GPU_URL}/transcribe with audio file: {audio_path}")
+                response = requests.post(f"{TRANSCRIPTION_GPU_URL}/transcribe", files=files)
+                response.raise_for_status()  # Raise exception if HTTP status is an error
+                response_data = response.json()
+                return response_data["transcription"]
+        except requests.RequestException as e:
+            print(f"Request error during GPU transcription: {e}")
             raise
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(executor, transcribe, audio_path)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            raise
+    else:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(executor, transcribe, audio_path)
 
 async def handle_audio_transcribe(msg: str):
     try:
@@ -61,17 +68,18 @@ async def handle_audio_transcribe(msg: str):
             
             # Introduce a delay before calling the LLM-powered function
             await asyncio.sleep(0.5) 
+            raw_text = transcript.get("raw_text", "")
+            word_count = len(raw_text.split())
+            if raw_text.strip():
+                # Control access to the LLM with the semaphore
+                async with llm_semaphore:
+                    processed_transcript = await asyncio.to_thread(
+                        post_process_transcription, transcript["raw_text"], keywords
+                    )
 
-            # Control access to the LLM with the semaphore
-            async with llm_semaphore:
-                processed_transcript = await asyncio.to_thread(
-                    post_process_transcription, transcript["raw_text"], keywords
-                )
-
-            data["segments"][index]["raw_text"] = processed_transcript
-            data["segments"][index]["language"] = transcript["language"]
-            data["segments"][index]["language_score"] = transcript["language_score"]
-
+                data["segments"][index]["raw_text"] = processed_transcript
+                data["segments"][index]["language"] = transcript["language"]
+                data["segments"][index]["language_score"] = transcript["language_score"]
 
         # Create tasks for all segments
         tasks = [
@@ -80,20 +88,6 @@ async def handle_audio_transcribe(msg: str):
 
         # Run all tasks concurrently
         await asyncio.gather(*tasks)
-
-        # for index, segment in enumerate(data.segments):
-        #     # Transcribe audio
-        #     transcript = await asyncio.to_thread(transcribe, segment.audio_file)
-
-        #     # Process transcript
-        #     processed_transcript = await asyncio.to_thread(
-        #         post_process_transcription, transcript["raw_text"], keywords
-        #     )
-
-        #     # Update segment attributes
-        #     data.segments[index].raw_text = processed_transcript
-        #     data.segments[index].language = transcript["language"]
-        #     data.segments[index].language_score = transcript["language_score"]
 
         # End timing
         end_time = time.time()
@@ -105,10 +99,11 @@ async def handle_audio_transcribe(msg: str):
 
     except Exception as e:
         print(f"Error during audio transcription: {e}")
-        await transcript_router.broker.publish(msg, "av:transcript_embeddings")
+        # await transcript_router.broker.publish(msg, "av:transcript_embeddings")
 
 async def handle_transcript_analysis(msg: str):
     try:
+        
         data = json.loads(msg)
 
         # Start timing
@@ -118,6 +113,14 @@ async def handle_transcript_analysis(msg: str):
         categories = await asyncio.to_thread(get_tags, tag_name)
 
         for index, segment in enumerate(data["segments"]):
+            # Ensure `raw_text` exists and has enough words
+            raw_text = segment.get("raw_text", "").strip()
+            word_count = len(raw_text.split())  # Count the number of words
+
+            if not raw_text or word_count < 5:  # Skip text with fewer than 5 words
+                print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
+                continue
+
             # Clean transcript text
             clean_transcript = await asyncio.to_thread(
                 remove_timestamps_and_format, segment["raw_text"]
@@ -132,9 +135,7 @@ async def handle_transcript_analysis(msg: str):
             data["segments"][index]["sentiment"] = sentiment
 
             # Category analysis
-            category_matches = await asyncio.to_thread(
-                categorize_text, clean_transcript, categories
-            )
+            category_matches = await categorize_text(clean_transcript, categories)
             data["segments"][index]["tags"] = category_matches
 
         # End timing
@@ -149,7 +150,7 @@ async def handle_transcript_analysis(msg: str):
 
     except Exception as e:
         print(f"Error during transcript analysis: {e}")
-        await transcript_router.broker.publish(msg, "av:transcript_sentiment")
+        # await transcript_router.broker.publish(msg, "av:transcript_sentiment")
 
 
 async def handle_transcript_llm(msg: str):
@@ -160,14 +161,23 @@ async def handle_transcript_llm(msg: str):
         start_time = time.time()
 
         for index, segment in enumerate(data["segments"]):
+            # Ensure `raw_text` exists and has enough words
+            raw_text = segment.get("raw_text", "").strip()
+            word_count = len(raw_text.split())  # Count the number of words
+
+            if not raw_text or word_count < 5:  # Skip text with fewer than 5 words
+                print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
+                continue
+
+            await asyncio.sleep(5) 
+
             llm_analysis = await asyncio.to_thread(
                 llm_transcript_analysis, segment["raw_text"]
             )
 
-            # Update segment attributes
-            data["segments"][index]["ads"] = llm_analysis.get("ads", [])
-            data["segments"][index]["show_metadata"] = llm_analysis.get("show_metadata", ShowMetadata()).dict()
-            data["segments"][index]["engagement"] = llm_analysis.get("engagement", [])
+            llm_analysis_json = llm_analysis.model_dump_json()
+            llm_analysis_dict = json.loads(llm_analysis_json)
+            data["segments"][index].update(llm_analysis_dict)
 
         # End timing
         end_time = time.time()
@@ -188,14 +198,14 @@ async def handle_transcript_llm(msg: str):
 
     except Exception as e:
         print(f"Error during LLM transcript analysis: {e}")
-        if data["type"] == "audio":
-            await transcript_router.broker.publish(
-                json.dumps(data), "av:upload_audio_gcp"
-            )
-        elif data["type"] == "video":
-            await transcript_router.broker.publish(
-                json.dumps(data), "av:upload_video_gcp"
-            )
+        # if data["type"] == "audio":
+        #     await transcript_router.broker.publish(
+        #         json.dumps(data), "av:upload_audio_gcp"
+        #     )
+        # elif data["type"] == "video":
+        #     await transcript_router.broker.publish(
+        #         json.dumps(data), "av:upload_video_gcp"
+        #     ) 
     
 async def handle_save_analysis_es(msg: str):
     try:
@@ -207,47 +217,46 @@ async def handle_save_analysis_es(msg: str):
         stream_type = "radio" if data["type"] == "audio" else "tv"
         index_id = f"{stream_type}_{data['stream_id']}"
 
-        # Create segment recordings
+        # Generate Segment Recordings
         segment_recordings = SegmentRecording.create_segment_recordings_from_dict(data)
 
         for segment in segment_recordings:
-            segment_json = segment.model_dump()()
-            await asyncio.to_thread(save, index_id, json.dumps(segment_json))
+            await asyncio.to_thread(save, index_id, json.dumps(segment))
 
         recording = Recording.create_from_analysis_model(data)
 
         # Concatenate all `gcp_path` values from the segments into a comma-separated list
         file_paths = ",".join(segment["gcp_path"] for segment in data.get("segments", []) if segment.get("gcp_path"))
 
-        if recording.type == "TV_STREAM":
+        if recording.get("type") == "TV_STREAM":
             add_tv_stream_upload(
-                tv_stream_id=recording.stream_id,
+                tv_stream_id=recording.get("stream_id", ""),
                 file_path=file_paths,
-                file_name=recording.stream_name,
-                file_size=recording.file_size,
-                timestamp=recording.timestamp.isoformat(),
-                male=recording.male,
-                female=recording.female,
-                music=recording.music,
-                noise=recording.noise,
-                noEnergy=recording.noEnergy,
-                recording_id=recording.id,
-                duration=recording.duration
+                file_name=recording.get("stream_name", ""),
+                file_size=recording.get("file_size", 0.0),
+                timestamp=recording.get("timestamp", ""),
+                male=recording.get("male", 0.0),
+                female=recording.get("female", 0.0),
+                music=recording.get("music", 0.0),
+                noise=recording.get("noise", 0.0),
+                noEnergy=recording.get("noEnergy", 0.0),
+                recording_id=recording.get("id", ""),
+                duration=recording.get("duration", 0.0),
             )
-        elif recording.type == "RADIO_STREAM":
+        elif recording.get("type") == "RADIO_STREAM":
             add_radio_stream_upload(
-                radio_stream_id=recording.stream_id,
+                radio_stream_id=recording.get("stream_id", ""),
                 file_path=file_paths,
-                file_name=recording.stream_name,
-                file_size=recording.file_size,
-                timestamp=recording.timestamp.isoformat(),
-                male=recording.male,
-                female=recording.female,
-                music=recording.music,
-                noise=recording.noise,
-                noEnergy=recording.noEnergy,
-                recording_id=recording.id,
-                duration=recording.duration
+                file_name=recording.get("stream_name", ""),
+                file_size=recording.get("file_size", 0.0),
+                timestamp=recording.get("timestamp", ""),  
+                male=recording.get("male", 0.0),
+                female=recording.get("female", 0.0),
+                music=recording.get("music", 0.0),
+                noise=recording.get("noise", 0.0),
+                noEnergy=recording.get("noEnergy", 0.0),
+                recording_id=recording.get("id", ""),
+                duration=recording.get("duration", 0.0),
             )
         # End timing
         end_time = time.time()

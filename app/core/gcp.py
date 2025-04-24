@@ -44,7 +44,7 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
     
 def delete_blob(bucket_name, blob_name):
     """Deletes a blob from the bucket."""
-    storage_client = storage.Client()
+    storage_client = storage.Client(credentials = credentials, project=os.environ['GCP_PROJECT_ID'])
 
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
