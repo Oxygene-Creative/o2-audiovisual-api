@@ -4,6 +4,7 @@ from app.analyzers.emotion import analyze_emotions
 from app.analyzers.llm import llm_transcript_analysis
 from app.analyzers.nlp import categorize_text, match_keywords, topic_modelling
 from app.analyzers.sentiment import sentiment_analysis
+from app.analyzers.topics import analyze_topics
 from app.models.recording import Recording, SegmentRecording
 from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel, ShowMetadata, Topic, TopicWord
@@ -144,8 +145,8 @@ async def handle_transcript_analysis(msg: str):
             data["segments"][index]["emotions"] = emotions
 
             # Topic analysis
-            topics = await asyncio.to_thread(analyze_emotions, clean_transcript)
-            data["segments"][index]["emotions"] = emotions
+            topics = await asyncio.to_thread(analyze_topics, clean_transcript)
+            data["segments"][index]["topics"] = topics
 
         # End timing
         end_time = time.time()
