@@ -25,6 +25,8 @@ RUN pip install pipenv && pipenv install --system
 # Copy the app folder
 COPY ./app ./app
 
+COPY .env .
+
 RUN mkdir ./o2-files
 
 # Expose port 
