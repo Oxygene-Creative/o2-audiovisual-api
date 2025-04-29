@@ -143,6 +143,10 @@ async def handle_transcript_analysis(msg: str):
             emotions = await asyncio.to_thread(analyze_emotions, clean_transcript)
             data["segments"][index]["emotions"] = emotions
 
+            # Topic analysis
+            topics = await asyncio.to_thread(analyze_emotions, clean_transcript)
+            data["segments"][index]["emotions"] = emotions
+
         # End timing
         end_time = time.time()
         time_taken = end_time - start_time

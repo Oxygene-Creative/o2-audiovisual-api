@@ -1,5 +1,6 @@
 from typing import Dict, List
 from datetime import datetime, timedelta
+import uuid
 
 class SegmentRecording:
     @staticmethod
@@ -34,6 +35,7 @@ class SegmentRecording:
                 stream_type = "TV Station" if data.get("type") == "video" else "Radio Station"
                 
                 segment_record = {
+                    "doc_id": str(uuid.uuid4()),
                     "recording_id": data.get("id", ""),
                     "stream_id": data.get("stream_id", ""),
                     "source": { "name": data.get("stream_name", ""), "type": stream_type },
@@ -70,7 +72,7 @@ class SegmentRecording:
                         }
                         for engagement in segment.get("engagement", []) if isinstance(engagement, dict)
                     ],
-                    "gcp_blob": data.get("gcp_blob", ""),
+                    "gcp_bucket": data.get("gcp_bucket", ""),
                     "gcp_path": segment.get("gcp_path", ""),
                     "file_size": segment.get("file_size", 0.0),
                     "host": segment.get("show_metadata", {}).get("host", ""),
