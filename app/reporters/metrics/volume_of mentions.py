@@ -1,33 +1,13 @@
 from app.core.es import es_client
+from app.reporters.metrics.base_analysis import BaseAnalysisService
 
-class VolMentionsService:
-    def __init__(self, query_parser):
-        self.es = es_client
-        self.query_parser = query_parser  # Inject the query parser instance
 
+class VolMentionsService(BaseAnalysisService):
+    
     def analyze_mentions(self, index_name: str, query: str, start_date: str, end_date: str):
         
         try:
-            # Parse the search query using QueryParser
-            parsed_query = self.query_parser.parse_query(query)[0]  # Obtain the parsed query tree
-            es_query_raw_text = self.query_parser.build_es_query(parsed_query)  # Build raw_text query
-
-            # Combine the parsed query with the date range filter
-            es_query = {
-                "bool": {
-                    "must": [
-                        es_query_raw_text,
-                        {
-                            "range": {
-                                "timestamp": {
-                                    "gte": start_date,  
-                                    "lte": end_date
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
+            es_query = self.build_query(query, start_date, end_date)
 
             # Elasticsearch aggregations for metrics
             es_aggregations = {
@@ -48,6 +28,20 @@ class VolMentionsService:
                         "size": 10  # Top 10 mediums
                     }
                 },
+                "mentions_by_medium_daily": {
+                    "date_histogram": {
+                        "field": "timestamp",
+                        "calendar_interval": "day"
+                    },
+                    "aggs": {
+                        "mediums": {
+                            "terms": {
+                                "field": "source.name",
+                                "size": 10  # Top 10 mediums per day
+                            }
+                        }
+                    }
+                },
                 "highest_mentions_day": {
                     "max_bucket": {
                         "buckets_path": "mentions_per_day._count"
@@ -61,7 +55,7 @@ class VolMentionsService:
             }
 
             # Perform the search with aggregations
-            response = self.es.search(
+            response = es_client.search(
                 index=index_name,
                 body={
                     "query": es_query,
@@ -86,6 +80,19 @@ class VolMentionsService:
                         "count": bucket["doc_count"]
                     }
                     for bucket in response["aggregations"]["mentions_by_medium"]["buckets"]
+                ],
+                "mentions_by_medium_daily": [
+                    {
+                        "date": bucket["key_as_string"],
+                        "mediums": [
+                            {
+                                "medium": medium_bucket["key"],
+                                "count": medium_bucket["doc_count"]
+                            }
+                            for medium_bucket in bucket["mediums"]["buckets"]
+                        ]
+                    }
+                    for bucket in response["aggregations"]["mentions_by_medium_daily"]["buckets"]
                 ],
                 "highest_mentions_day": response["aggregations"]["highest_mentions_day"]["value"],
                 "average_mentions_per_day": response["aggregations"]["average_mentions_per_day"]["value"],

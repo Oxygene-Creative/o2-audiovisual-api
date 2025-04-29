@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.analyzers.embeddings import embed_text
+from app.analyzers.emotion import analyze_emotions
 from app.analyzers.llm import llm_transcript_analysis
 from app.analyzers.nlp import categorize_text, match_keywords, topic_modelling
 from app.analyzers.sentiment import sentiment_analysis
@@ -70,7 +71,7 @@ async def handle_audio_transcribe(msg: str):
             await asyncio.sleep(0.5) 
             raw_text = transcript.get("raw_text", "")
             word_count = len(raw_text.split())
-            if raw_text.strip():
+            if raw_text.strip() and word_count > 5:
                 # Control access to the LLM with the semaphore
                 async with llm_semaphore:
                     processed_transcript = await asyncio.to_thread(
@@ -137,6 +138,10 @@ async def handle_transcript_analysis(msg: str):
             # Category analysis
             category_matches = await categorize_text(clean_transcript, categories)
             data["segments"][index]["tags"] = category_matches
+
+            # Emotion analysis
+            emotions = await asyncio.to_thread(analyze_emotions, clean_transcript)
+            data["segments"][index]["emotions"] = emotions
 
         # End timing
         end_time = time.time()

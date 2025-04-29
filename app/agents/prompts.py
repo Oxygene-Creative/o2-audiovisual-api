@@ -84,3 +84,10 @@ Transcript:
 
 {format_instructions}
 """
+
+TOPIC_NAME_PROMPT = """
+Here are some keywords describing a topic: {keywords}."
+Assign a one-word or two-word label that represents an industry, domain, or concept.
+Use common and well-recognized categories.
+Use plain text only. Do not include any punctuation, quotes, or formatting.
+"""
