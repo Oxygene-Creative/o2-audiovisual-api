@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from app.analyzers.embeddings import embed_text
 from app.analyzers.emotion import analyze_emotions
 from app.analyzers.llm import llm_transcript_analysis
-from app.analyzers.nlp import categorize_text, match_keywords, topic_modelling
+from app.analyzers.nlp import categorize_text, match_keywords
 from app.analyzers.sentiment import sentiment_analysis
 from app.analyzers.topics import analyze_topics
 from app.models.recording import Recording, SegmentRecording

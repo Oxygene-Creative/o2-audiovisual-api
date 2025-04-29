@@ -73,13 +73,13 @@ async def handle_start_audio_analysis(upload: Upload):
         analysis_id = uuid.uuid4()
         analysis = {
             "id": str(analysis_id),
-            "stream_id": upload["stream_id"],
-            "stream_name": upload["stream_name"],
+            "stream_id": upload.stream_id,
+            "stream_name": upload.stream_name,
             "audio_path": audio_file_path,
             "type": "audio",
             "timestamp": timestamp.isoformat(),
-            "gcp_bucket": upload["bucket"],
-            "gcp_blob": upload["blob"],
+            "gcp_bucket": upload.bucket,
+            "gcp_blob": upload.blob,
         }
 
         # Publish analysis object
