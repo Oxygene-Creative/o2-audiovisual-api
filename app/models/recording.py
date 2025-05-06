@@ -75,8 +75,8 @@ class SegmentRecording:
                     "gcp_bucket": data.get("gcp_bucket", ""),
                     "gcp_path": segment.get("gcp_path", ""),
                     "file_size": segment.get("file_size", 0.0),
-                    "host": segment.get("show_metadata", {}).get("host", ""),
-                    "program_name": segment.get("show_metadata", {}).get("program_name", ""),
+                    "creator": segment.get("show_metadata", {}).get("host", ""),
+                    "title": segment.get("show_metadata", {}).get("program_name", ""),
                 }
 
                 segment_recordings.append(segment_record)
