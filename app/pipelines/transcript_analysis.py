@@ -8,7 +8,7 @@ from app.analyzers.topics import analyze_topics
 from app.models.recording import Recording, SegmentRecording
 from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel, ShowMetadata, Topic, TopicWord
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
 from app.core.graphql import add_radio_stream_upload, add_tv_stream_upload, get_all_terms, get_tags
@@ -22,7 +22,9 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 import requests
-from datetime import datetime
+
+# Define the EAT timezone as UTC+03:00
+EAT = timezone(timedelta(hours=3))
 
 # Create a global executor for process-based parallelism
 executor = ProcessPoolExecutor()
@@ -163,7 +165,6 @@ async def handle_transcript_analysis(msg: str):
         print(f"Error during transcript analysis: {e}")
         # await transcript_router.broker.publish(msg, "av:transcript_sentiment")
 
-
 async def handle_transcript_llm(msg: str):
     try:
         data = json.loads(msg)
@@ -242,11 +243,14 @@ async def handle_save_analysis_es(msg: str):
         timestamp = recording.get("timestamp", "")
         try:
             if timestamp:
-                timestamp = datetime.fromisoformat(timestamp).isoformat()
+                dt = datetime.fromisoformat(timestamp)
             else:
-                timestamp = datetime.now().isoformat()
+                dt = datetime.now(timezone.utc)
+            
+            timestamp = dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
         except ValueError:
-            timestamp = datetime.now().isoformat()
+            dt = datetime.now(EAT)
+            timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
 
         if recording.get("type") == "TV_STREAM":
             add_tv_stream_upload(
