@@ -247,10 +247,10 @@ async def handle_save_analysis_es(msg: str):
             else:
                 dt = datetime.now(timezone.utc)
             
-            timestamp = dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+            timestamp = dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         except ValueError:
             dt = datetime.now(EAT)
-            timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+            timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         if recording.get("type") == "TV_STREAM":
             add_tv_stream_upload(
