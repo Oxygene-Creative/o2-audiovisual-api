@@ -22,6 +22,7 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 import requests
+from datetime import datetime
 
 # Create a global executor for process-based parallelism
 executor = ProcessPoolExecutor()
@@ -238,13 +239,22 @@ async def handle_save_analysis_es(msg: str):
         # Concatenate all `gcp_path` values from the segments into a comma-separated list
         file_paths = ",".join(segment["gcp_path"] for segment in data.get("segments", []) if segment.get("gcp_path"))
 
+        timestamp = recording.get("timestamp", "")
+        try:
+            if timestamp:
+                timestamp = datetime.fromisoformat(timestamp).isoformat()
+            else:
+                timestamp = datetime.now().isoformat()
+        except ValueError:
+            timestamp = datetime.now().isoformat()
+
         if recording.get("type") == "TV_STREAM":
             add_tv_stream_upload(
                 tv_stream_id=recording.get("stream_id", ""),
                 file_path=file_paths,
                 file_name=recording.get("stream_name", ""),
                 file_size=recording.get("file_size", 0.0),
-                timestamp=recording.get("timestamp", ""),
+                timestamp=timestamp,
                 male=float(recording.get("male", 0.0)),
                 female=float(recording.get("female", 0.0)),
                 music=float(recording.get("music", 0.0)),
@@ -259,7 +269,7 @@ async def handle_save_analysis_es(msg: str):
                 file_path=file_paths,
                 file_name=recording.get("stream_name", ""),
                 file_size=recording.get("file_size", 0.0),
-                timestamp=recording.get("timestamp", ""),  
+                timestamp=timestamp,  
                 male=float(recording.get("male", 0.0)),
                 female=float(recording.get("female", 0.0)),
                 music=float(recording.get("music", 0.0)),
