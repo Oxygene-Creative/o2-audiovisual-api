@@ -104,20 +104,6 @@ def add_tv_stream_upload(
     mutation ($data: AddTvStreamUploadInput!) {
         addTvStreamUpload(data: $data) {
             id
-            tv_stream_id
-            file_path
-            file_name
-            file_size
-            timestamp
-            recording_id
-            duration
-            male
-            female
-            music
-            noise
-            noEnergy
-            created_at
-            updated_at
         }
     }
     """
@@ -165,20 +151,6 @@ def add_radio_stream_upload(
     mutation ($data: AddRadioStreamUploadInput!) {
         addRadioStreamUpload(data: $data) {
             id
-            radio_stream_id
-            file_path
-            file_name
-            file_size
-            timestamp
-            recording_id
-            duration
-            male
-            female
-            music
-            noise
-            noEnergy
-            created_at
-            updated_at
         }
     }
     """
