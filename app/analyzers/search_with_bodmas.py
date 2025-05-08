@@ -1,4 +1,4 @@
-from pyparsing import Word, alphanums, Forward, infixNotation, opAssoc, ParseResults
+from pyparsing import Word, alphanums, Forward, infixNotation, opAssoc, ParseResults, QuotedString
 from app.core.es import es_client
 from elasticsearch.exceptions import NotFoundError, ConnectionError
 
@@ -8,7 +8,7 @@ class QueryParser:
     def __init__(self):
         # Define grammar
         self.expr = Forward()
-        term = Word(alphanums)
+        term = Word(alphanums) | QuotedString('"')
         self.expr <<= infixNotation(
             term,
             [
