@@ -132,7 +132,6 @@ class Recording:
                 "file_size": total_file_size,
                 "duration": total_duration,
             }
-            print(recording)
             return recording
         except Exception as e:
             print(f"Error creating recording dictionary: {e}")
