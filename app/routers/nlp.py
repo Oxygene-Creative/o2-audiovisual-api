@@ -1,7 +1,8 @@
 from typing import List, Optional
 from app.analyzers.transcription import remove_timestamps_and_format
 from fastapi import APIRouter
-from app.analyzers.nlp import match_keywords, categorize_text, topic_modelling
+from app.analyzers.nlp import match_keywords, categorize_text
+from app.analyzers.topics import analyze_topics
 from app.analyzers.sentiment import sentiment_analysis
 from pydantic import BaseModel
 import json
@@ -42,6 +43,6 @@ def analyze_keywords( request: KeywordsRequest ):
 @nlp_router.post("/topics")
 def analyze_topics( request: TopicsRequest ):
     clean_transcript = remove_timestamps_and_format(request.text)
-    result = topic_modelling(clean_transcript, num_topics=request.num_topics)
+    result = analyze_topics(clean_transcript, num_topics=request.num_topics)
     return result
 

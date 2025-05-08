@@ -19,7 +19,8 @@ def fetch_data(query: str, variables: Any):
         response = requests.post(
             url=GRAPHQL_URI, 
             json={"query": query, "variables": variables },
-            headers=headers)
+            headers=headers,
+            verify=False)
         response.raise_for_status()
         response_json = response.json()
 
@@ -138,6 +139,9 @@ def add_tv_stream_upload(
     }
     try:
         response = fetch_data(query, variables)
+        if "errors" in response:
+            print(f"GraphQL errors in adding TV stream upload: {response['errors']}")
+            return None
         return response["addTvStreamUpload"]
     except Exception as e:
         print(f"Error adding TV stream upload: {e}")
@@ -196,6 +200,9 @@ def add_radio_stream_upload(
     }
     try:
         response = fetch_data(query, variables)
+        if "errors" in response:
+            print(f"GraphQL errors in adding radio stream upload: {response['errors']}")
+            return None
         return response["addRadioStreamUpload"]
     except Exception as e:
         print(f"Error adding Radio stream upload: {e}")

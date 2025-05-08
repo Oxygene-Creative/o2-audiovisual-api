@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.core.llm import llm
+from langchain_core.output_parsers import StrOutputParser
 
 embedding_model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight embedding model
 
@@ -53,9 +54,11 @@ def analyze_topics(text: str, chunk_size=300):
 
     topic_names = []
     for cluster, keywords in cluster_keywords.items():
-        keywords_str = ", ".join(sum(keywords, []))  
+        keywords_str = ", ".join(sum(keywords, [])) 
         prompt = prompt_template.format(keywords=keywords_str)
-        topic_name = llm.predict(prompt)  
+        ai_message  = llm.invoke(prompt)
+        topic_name = ai_message.content.strip()
+
         topic_names.append({
             "label": topic_name,
             "keywords": keywords_str
