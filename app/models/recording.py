@@ -20,7 +20,7 @@ class SegmentRecording:
             if not raw_text or word_count < 5: 
                 continue
             # Derive the absolute timestamp for the segment
-            timestamp = datetime.fromisoformat(data["timestamp"]) + timedelta(seconds=segment.get("start", 0.0))
+            # timestamp = datetime.fromisoformat(data["timestamp"]) + timedelta(seconds=segment.get("start", 0.0))
 
             # Safely handle 'timestamp' and calculate segment timestamp
             try:
