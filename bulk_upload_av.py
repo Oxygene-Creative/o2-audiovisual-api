@@ -24,10 +24,10 @@ storage_client = storage.Client(credentials = credentials, project=os.environ['G
 
 
 folder_to_station_map = [
+    {"folder": "radio/Classic 105", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},
+    {"folder": "radio/Capital FM", "station": {"id": "3571c245-ff27-4a8f-b096-1df857d78021", "radio_stream_name": "Capital FM"}},
     {"folder": "radio/Radio Citizen", "station": {"id": "075d8278-9977-40ba-a0c2-189b4bdd10fa", "radio_stream_name": "Radio Citizen"}},
     {"folder": "radio/Radio Jambo", "station": {"id": "72e7e42e-1450-42db-aa1d-990f3c8f915a", "radio_stream_name": "Radio Jambo"}},
-    {"folder": "radio/Capital FM", "station": {"id": "3571c245-ff27-4a8f-b096-1df857d78021", "radio_stream_name": "Capital FM"}},
-    {"folder": "radio/Classic 105", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},
     {"folder": "radio/Spice FM", "station": {"id": "204a6953-5e8a-4a8d-b60f-51fb97d0a566", "radio_stream_name": "Spice FM"}},
     {"folder": "radio/Ghetto Radio", "station": {"id": "ea2f4b20-b21d-410a-ab98-082fa5a05a6d", "radio_stream_name": "Ghetto Radio"}},
     {"folder": "radio/Classic FM", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         mp3_files = list_mp3_files_in_folder(bucket_name, folder_name)
 
         # Select up to 40 recordings (use slicing to limit)
-        selected_recordings = mp3_files[:72]
+        selected_recordings = mp3_files[:48]
 
         # Add the count of mp3 files to the total
         total_files_count += len(mp3_files)
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     print("Posting data to the API...")
     batch_size = 6
-    batch_timeout = 12 * 60
+    batch_timeout = 20 * 60
 
     for i in range(0, len(overall_recordings), batch_size):
         # Slice the overall recordings into batches of 6

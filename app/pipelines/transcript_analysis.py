@@ -163,7 +163,6 @@ async def handle_transcript_analysis(msg: str):
 
     except Exception as e:
         print(f"Error during transcript analysis: {e}")
-        # await transcript_router.broker.publish(msg, "av:transcript_sentiment")
 
 async def handle_transcript_llm(msg: str):
     try:
@@ -210,14 +209,6 @@ async def handle_transcript_llm(msg: str):
 
     except Exception as e:
         print(f"Error during LLM transcript analysis: {e}")
-        # if data["type"] == "audio":
-        #     await transcript_router.broker.publish(
-        #         json.dumps(data), "av:upload_audio_gcp"
-        #     )
-        # elif data["type"] == "video":
-        #     await transcript_router.broker.publish(
-        #         json.dumps(data), "av:upload_video_gcp"
-        #     ) 
     
 async def handle_save_analysis_es(msg: str):
     try:
