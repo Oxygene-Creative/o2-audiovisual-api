@@ -19,9 +19,7 @@ class SegmentRecording:
 
             if not raw_text or word_count < 5: 
                 continue
-            # Derive the absolute timestamp for the segment
-            # timestamp = datetime.fromisoformat(data["timestamp"]) + timedelta(seconds=segment.get("start", 0.0))
-
+            
             # Safely handle 'timestamp' and calculate segment timestamp
             try:
                 base_timestamp = datetime.fromisoformat(data.get("timestamp", datetime.now().isoformat()))
@@ -72,7 +70,7 @@ class SegmentRecording:
                         }
                         for engagement in segment.get("engagement", []) if isinstance(engagement, dict)
                     ],
-                    "gcp_bucket": data.get("gcp_bucket", ""),
+                    "gcp_bucket": data.get("gcp_bucket", "audiovisual-streams"),
                     "gcp_path": segment.get("gcp_path", ""),
                     "file_size": segment.get("file_size", 0.0),
                     "creator": segment.get("show_metadata", {}).get("host", ""),

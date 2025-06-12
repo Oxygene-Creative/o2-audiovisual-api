@@ -1,16 +1,8 @@
 import mediapipe as mp
 import os
-import torch
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from sentence_transformers import SentenceTransformer
+from app.analyzers.ai_api_client import APIClient
 
-# Check if a GPU is available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-embedding_model = SentenceTransformer(
-    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-    device = device.type)
-
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
 ImageEmbedder = mp.tasks.vision.ImageEmbedder
     
 def image_embedding_model_options():
@@ -27,20 +19,16 @@ def image_embedding_model_options():
 
     return options
 
-def split_and_embed_text(text: str):
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
-        chunk_overlap=20,
-        length_function=len,
-        is_separator_regex=False,
-    )
-    docs = text_splitter.split_text(text)
-    embeddings = embedding_model.encode(docs)
-    return embeddings
-
-def embed_text(text: str):
-    embeddings = embedding_model.encode(text)
-    return embeddings
+async def embed_text(text: str):
+    try:
+        client = APIClient(base_url=AI_API_URL)    
+        # Emotions example
+        embeddings_result = await client.get_embeddings(text=text)
+        return embeddings_result
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        await client.close()
 
 def embed_images(image_url: str):
     mp_image = mp.Image.create_from_file(image_url)

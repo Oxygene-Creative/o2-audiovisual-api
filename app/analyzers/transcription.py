@@ -1,45 +1,21 @@
-from faster_whisper import WhisperModel
-import torch
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 import re
 from app.core.llm import llm
+from app.analyzers.ai_api_client import APIClient
+import os
 
-# Check if a GPU is available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-compute_type = "float16" if device.type == "cuda" else "int8"
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
 
-model_size = "turbo"
-transcription_model = WhisperModel(
-    model_size,
-    device=device.type,
-    compute_type=compute_type
-)
-
-# Define function to remove non-ascii characters
-def remove_non_ascii(text):
-    return ''.join(i for i in text if ord(i) < 128).strip()
-
-def transcribe(audio_url: str):
-    segments, info = transcription_model.transcribe(audio_url, beam_size=5, vad_filter=True)
-
-    # Language information
-    transcription_info = {
-        "language": info.language,
-        "language_score": info.language_probability,
-        "raw_text": ""
-    }
-
-    formatted_lines = []
-
-    for segment in segments:
-        text = remove_non_ascii(segment.text)
-        formatted_line = f"[{segment.start:.1f} - {segment.end:.1f}] {text}"
-        formatted_lines.append(formatted_line)
-
-    transcription_info["raw_text"] = "\n ".join(formatted_lines)
-    # print(transcription_info["raw_text"])
-    return transcription_info
+async def transcribe(audio_url: str):
+    try:
+        client = APIClient(base_url=AI_API_URL)  
+        transcription_result = await client.transcribe_audio(audio_path=audio_url)
+        return transcription_result
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        await client.close() 
 
 def post_process_transcription(transcript: str, keywords: list[str]):
     system_template = """You are a helpful assistant that analyses radio and tv transcripts for brodcats in Africs.

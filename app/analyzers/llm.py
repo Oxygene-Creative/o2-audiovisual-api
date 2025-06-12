@@ -1,4 +1,4 @@
-from app.agents.prompts import ANALYSE_ADS_SHOWS_ENGAGEMENT_PROMPT
+from app.core.prompts import ANALYSE_ADS_SHOWS_ENGAGEMENT_PROMPT
 from app.core.llm import llm
 from langchain.output_parsers import PydanticOutputParser
 from app.models.analytics import LLMAnalysisModel

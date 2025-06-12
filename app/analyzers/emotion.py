@@ -1,39 +1,17 @@
-from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Union
-from transformers import pipeline
-from datetime import datetime
-from collections import Counter
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from app.analyzers.ai_api_client import APIClient
+import os
 
-router = APIRouter()
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
 
-# Initialize emotion classifier
-emotion_classifier = pipeline(
-    "text-classification", 
-    model="j-hartmann/emotion-english-distilroberta-base", 
-    return_all_scores=True
-)
-
-def analyze_emotions(text, chunk_size=300) -> Dict:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=20,
-        length_function=len,
-        is_separator_regex=False,
-    )
-    chunks = text_splitter.split_text(text)
-
-    emotion_scores = {}
-    for chunk in chunks:
-        predictions = emotion_classifier(chunk)[0]
-        for score in predictions:
-            emotion = score['label']
-            confidence = score['score']
-            if emotion not in emotion_scores:
-                emotion_scores[emotion] = 0.0
-            emotion_scores[emotion] += confidence  # Sum scores across chunks
-    
-    # Convert aggregated scores into a list of dicts
-    results = [{"label": emotion, "score": score} for emotion, score in emotion_scores.items()]
-    return results
+async def analyze_emotions(text) -> Dict:
+    try:
+        client = APIClient(base_url=AI_API_URL)    
+        # Emotions example
+        emotions_result = await client.get_emotions(text=text)
+        return emotions_result
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        await client.close()
     

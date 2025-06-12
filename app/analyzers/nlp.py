@@ -1,28 +1,19 @@
 from typing import List
-from transformers import pipeline
-from app.models.analytics import TagAnalysis
 from fuzzywuzzy import process
-from app.analyzers.embeddings import embed_text, embedding_model
-from app.core.llm import llm
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-import torch
 import re
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from gensim import corpora
-from gensim.models import LdaModel
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-import asyncio
+from app.analyzers.ai_api_client import APIClient
+import os
+
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
 
 # Download NLTK resources
 nltk.download('punkt_tab')
 nltk.download('wordnet')
 nltk.download('stopwords')
 stop_words = stopwords.words('english')
-
-classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 def match_keywords(text: str, keywords: List[str]):
     """
@@ -48,24 +39,14 @@ def match_keywords(text: str, keywords: List[str]):
     return list(matched_keywords) if matched_keywords else []
 
 async def categorize_text(text: str, categories: List[str], threshold=0.3):
-    # Check if text is empty, None, or whitespace
-    if not text or text.isspace():
-        return []
-
-    # Check if keywords is empty or None
-    if not categories or not isinstance(categories, list):
-        return []
-    
-    # results = classifier(text, categories, multi_label=True)
-    # Offload pipeline execution to a background thread to prevent event loop blocking
-    results = await asyncio.to_thread(classifier, text, categories, multi_label=True)
-
-    tags = [
-        {"label": label, "score": score} 
-        for label, score in zip(results['labels'], results['scores'])
-    ]
-
-    return tags 
+    try:
+        client = APIClient(base_url=AI_API_URL)  
+        categories_result = await client.get_categories(text=text, categories=categories, multi_label=True)
+        return categories_result
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        await client.close() 
 
 def preprocess_text(texts):
     stop_words = set(stopwords.words('english'))

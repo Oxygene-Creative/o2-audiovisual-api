@@ -1,67 +1,36 @@
-from app.agents.prompts import TOPIC_NAME_PROMPT
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans
+from app.core.prompts import TOPIC_NAME_PROMPT
 from langchain.prompts import PromptTemplate
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.core.llm import llm
 from langchain_core.output_parsers import StrOutputParser
+from app.analyzers.ai_api_client import APIClient
+import os
 
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight embedding model
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
 
-def get_top_keywords(documents, num_keywords=5):
-    vectorizer = TfidfVectorizer(stop_words='english')
-    X = vectorizer.fit_transform(documents)
-    feature_names = vectorizer.get_feature_names_out()
-    keywords_per_cluster = []
-    for i in range(X.shape[0]):
-        tfidf_scores = zip(feature_names, X[i, :].toarray()[0])
-        sorted_keywords = sorted(tfidf_scores, key=lambda x: x[1], reverse=True)[:num_keywords]
-        keywords_per_cluster.append([word for word, _ in sorted_keywords])
-    return keywords_per_cluster
+async def analyze_topics(text: str):
+    try:
+        client = APIClient(base_url=AI_API_URL)  
+        topics_result = await client.analyze_topics(text=text)
 
-def analyze_topics(text: str, chunk_size=300):
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=20,
-        length_function=len,
-        is_separator_regex=False,
-    )
-    texts = text_splitter.split_text(text)
-    embeddings = embedding_model.encode(texts)
+        prompt_template = PromptTemplate(
+            input_variables=["keywords"],
+            template=TOPIC_NAME_PROMPT
+        )
 
-    # Cluster Embeddings (KMeans for simplicity)
-    n_clusters = 3  # Choose number of clusters (topics)
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-    labels = kmeans.fit_predict(embeddings)
+        topic_names = []
 
-    # Group texts into clusters
-    clustered_texts = {}
-    for idx, label in enumerate(labels):
-        clustered_texts.setdefault(label, []).append(texts[idx])
+        for topic_keywords in topics_result:
+            prompt = prompt_template.format(keywords=topic_keywords)
+            ai_message  = llm.invoke(prompt)
+            topic_name = ai_message.content.strip()
 
-    # Extract Keywords per Cluster (Using TF-IDF)
-    cluster_keywords = {}
-    for cluster, texts_in_cluster in clustered_texts.items():
-        cluster_keywords[cluster] = get_top_keywords(texts_in_cluster)
-
-
-    prompt_template = PromptTemplate(
-        input_variables=["keywords"],
-        template=TOPIC_NAME_PROMPT
-    )
-
-    topic_names = []
-    for cluster, keywords in cluster_keywords.items():
-        keywords_str = ", ".join(sum(keywords, [])) 
-        prompt = prompt_template.format(keywords=keywords_str)
-        ai_message  = llm.invoke(prompt)
-        topic_name = ai_message.content.strip()
-
-        topic_names.append({
-            "label": topic_name,
-            "keywords": keywords_str
-        })
-
-    return topic_names
+            topic_names.append({
+                "label": topic_name,
+                "keywords": keywords_str
+            })
+        
+        return topic_names
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        await client.close()
