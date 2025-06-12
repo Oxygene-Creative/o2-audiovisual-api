@@ -120,45 +120,39 @@ async def handle_transcript_analysis(msg: str):
         # Semaphore to control concurrent execution
         semaphore = asyncio.Semaphore(5)  # Max 5 async tasks at a time
 
-        async def process_segment(index, segment):
-            async with semaphore:
-                try:
-                    raw_text = segment.get("raw_text", "").strip()
-                    word_count = len(raw_text.split())
+        for index, segment in enumerate(data["segments"]):
+            # Ensure `raw_text` exists and has enough words
+            raw_text = segment.get("raw_text", "").strip()
+            word_count = len(raw_text.split())  # Count the number of words
 
-                    # Skip segments with fewer than 5 words
-                    if not raw_text or word_count < 5:
-                        print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
-                        return
+            if not raw_text or word_count < 5:  # Skip text with fewer than 5 words
+                print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
+                continue
 
-                    # Clean transcript text
-                    clean_transcript = await asyncio.to_thread(remove_timestamps_and_format, raw_text)
+            # Clean transcript text
+            clean_transcript = await asyncio.to_thread(
+                remove_timestamps_and_format, segment["raw_text"]
+            )
 
-                    # Define asynchronous tasks for all analyses
-                    tasks = {
-                        "embeddings": asyncio.to_thread(embed_text, clean_transcript),
-                        "sentiment": asyncio.to_thread(sentiment_analysis, clean_transcript),
-                        "tags": categorize_text(clean_transcript, categories),
-                        "emotions": asyncio.to_thread(analyze_emotions, clean_transcript),
-                        "topics": asyncio.to_thread(analyze_topics, clean_transcript),
-                    }
+            # Create embeddings
+            embeddings = await asyncio.to_thread(embed_text, clean_transcript)
+            data["segments"][index]["embeddings"] = embeddings.tolist()
 
-                    # Run the tasks concurrently and gather results
-                    results = await asyncio.gather(*tasks.values())
+            # Sentiment analysis
+            sentiment = await asyncio.to_thread(sentiment_analysis, clean_transcript)
+            data["segments"][index]["sentiment"] = sentiment
 
-                    # Save results back to the segment
-                    segment["embeddings"] = results[0].tolist()  # Convert embeddings to list for JSON serialization
-                    segment["sentiment"] = results[1]
-                    segment["tags"] = results[2]
-                    segment["emotions"] = results[3]
-                    segment["topics"] = results[4]
+            # Category analysis
+            category_matches = await categorize_text(clean_transcript, categories)
+            data["segments"][index]["tags"] = category_matches
 
-                except Exception as segment_error:
-                    print(f"Error processing segment {index}: {segment_error}")
+            # Emotion analysis
+            emotions = await asyncio.to_thread(analyze_emotions, clean_transcript)
+            data["segments"][index]["emotions"] = emotions
 
-        # Create tasks for all segments
-        tasks = [process_segment(index, segment) for index, segment in enumerate(data["segments"])]
-        await asyncio.gather(*tasks)  # Run all segment tasks concurrently
+            # Topic analysis
+            topics = await asyncio.to_thread(analyze_topics, clean_transcript)
+            data["segments"][index]["topics"] = topics
 
         # End timing
         end_time = time.time()
