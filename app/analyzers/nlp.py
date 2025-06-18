@@ -7,7 +7,7 @@ from nltk.stem import WordNetLemmatizer
 from app.analyzers.ai_api_client import APIClient
 import os
 
-AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api2-350748994585.us-central1.run.app")
 
 # Download NLTK resources
 nltk.download('punkt_tab')

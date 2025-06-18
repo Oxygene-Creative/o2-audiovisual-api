@@ -136,18 +136,18 @@ async def handle_transcript_analysis(msg: str):
 
                     # Define asynchronous tasks for all analyses
                     tasks = {
-                        "embeddings": asyncio.to_thread(embed_text, clean_transcript),
-                        "sentiment": asyncio.to_thread(sentiment_analysis, clean_transcript),
-                        "tags": categorize_text(clean_transcript, categories),
-                        "emotions": asyncio.to_thread(analyze_emotions, clean_transcript),
-                        "topics": asyncio.to_thread(analyze_topics, clean_transcript),
+                        "embeddings": asyncio.create_task(embed_text(clean_transcript)),
+                        "sentiment": asyncio.create_task(sentiment_analysis(clean_transcript)),
+                        "tags": categorize_text(clean_transcript, categories),  # Assuming this remains synchronous
+                        "emotions": asyncio.create_task(analyze_emotions(clean_transcript)),
+                        "topics": asyncio.create_task(analyze_topics(clean_transcript)),
                     }
 
                     # Run the tasks concurrently and gather results
                     results = await asyncio.gather(*tasks.values())
 
                     # Save results back to the segment
-                    segment["embeddings"] = results[0].tolist()  # Convert embeddings to list for JSON serialization
+                    segment["embeddings"] = results[0]
                     segment["sentiment"] = results[1]
                     segment["tags"] = results[2]
                     segment["emotions"] = results[3]

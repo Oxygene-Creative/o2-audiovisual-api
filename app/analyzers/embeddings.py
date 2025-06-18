@@ -2,7 +2,7 @@ import mediapipe as mp
 import os
 from app.analyzers.ai_api_client import APIClient
 
-AI_API_URL = os.getenv("AI_API_URL", "https://ai-api-350748994585.us-central1.run.app")
+AI_API_URL = os.getenv("AI_API_URL", "https://ai-api2-350748994585.us-central1.run.app")
 ImageEmbedder = mp.tasks.vision.ImageEmbedder
     
 def image_embedding_model_options():
@@ -24,7 +24,7 @@ async def embed_text(text: str):
         client = APIClient(base_url=AI_API_URL)    
         # Emotions example
         embeddings_result = await client.get_embeddings(text=text)
-        return embeddings_result
+        return embeddings_result['embeddings']
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:

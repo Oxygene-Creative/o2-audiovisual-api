@@ -1,33 +1,38 @@
 import httpx
-import imghdr
 from typing import List, Optional
 
 class APIClient:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, timeout: float = 60.0, retries: int = 3):
         """
         Initialize the API client with the base URL.
         """
         self.base_url = base_url.rstrip("/")  # Ensure no trailing slash
-        self.client = httpx.AsyncClient()
+        self.timeout = httpx.Timeout(timeout)  # Set the request timeout
+        self.retries = retries
+        self.client = httpx.AsyncClient(timeout=self.timeout)
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> Optional[dict]:
         """
         A helper function to handle all types of API requests with proper error handling.
         """
-        try:
-            response = await self.client.request(method, f"{self.base_url}{endpoint}", **kwargs)
-            response.raise_for_status()  # Raise exception for HTTP errors (4xx, 5xx)
-            return response.json()
-        except httpx.RequestError as e:
-            print(f"Network error while making {method.upper()} request to {endpoint}: {e}")
-            return {"error": f"Network error: {str(e)}"}
-        except httpx.HTTPStatusError as e:
-            print(f"HTTP error while making {method.upper()} request to {endpoint}: {e}")
-            return {"error": f"HTTP {e.response.status_code}: {e.response.text}"}
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return {"error": f"Unexpected error: {str(e)}"}
-
+        for attempt in range(1, self.retries + 1):
+            try:
+                response = await self.client.request(method, f"{self.base_url}{endpoint}", **kwargs)
+                response.raise_for_status()  # Raise exception for HTTP errors (4xx, 5xx)
+                return response.json()
+            except httpx.RequestError as e:
+                print(f"Network error while making {method.upper()} request to {endpoint} (Attempt {attempt}/{self.retries}): {e}")
+                if attempt == self.retries:
+                    return {"error": f"Network error: {str(e)}"}
+            except httpx.HTTPStatusError as e:
+                print(f"HTTP error while making {method.upper()} request to {endpoint} (Attempt {attempt}/{self.retries}): {e}")
+                if attempt == self.retries:
+                    return {"error": f"HTTP {e.response.status_code}: {e.response.text}"}
+            except Exception as e:
+                print(f"Unexpected error (Attempt {attempt}/{self.retries}): {e}")
+                if attempt == self.retries:
+                    return {"error": f"Unexpected error: {str(e)}"}
+        
     async def get_categories(self, text: str, categories: List[str], multi_label: bool):
         """
         Call the /categories endpoint.
@@ -115,3 +120,4 @@ class APIClient:
         Close the HTTP client to release resources.
         """
         await self.client.aclose()
+
