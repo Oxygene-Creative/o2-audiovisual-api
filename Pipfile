@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-tensorflow = {version = "==2.14.0"}
 fastapi = "*"
 langchain = "*"
 langchain-google-genai = "*"
@@ -17,7 +16,6 @@ fuzzywuzzy = "*"
 python-levenshtein = "*"
 huggingface-hub = "*"
 mediapipe = "*"
-inaspeechsegmenter = "*"
 langchain-text-splitters = "*"
 moviepy = "*"
 zstandard = "*"
