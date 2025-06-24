@@ -22,6 +22,9 @@ pandas = "*"
 faststream = {extras = ["redis"], version = "*"}
 ffmpeg-python = "*"
 uvicorn = {extras = ["standard"], version = "*"}
+fuzzywuzzy = "*"
+python-levenshtein = "*"
+zstandard = "*"
 
 [dev-packages]
 pytest = "*"
