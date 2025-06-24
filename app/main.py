@@ -10,6 +10,7 @@ from app.pipelines.reporting import reporting_router
 from app.pipelines.video_analytics import video_router
 from app.pipelines.transcript_analysis import transcript_router
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers.pi_uploads import uploads_router
 
 load_dotenv()
 
@@ -40,6 +41,7 @@ app.include_router(reporting_router)
 # Include routers for modular endpoints
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(ads_router, prefix="/analysis", tags=["ads"])
+app.include_router(uploads, tags=["uploads"])
 
 @app.on_event("startup")
 async def startup_event():
