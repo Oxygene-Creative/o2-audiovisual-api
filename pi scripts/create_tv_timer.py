@@ -35,7 +35,7 @@ NEWS_SCHEDULE = [
     }
 ]
 
-def create_autorec(channel, name, title, start_time, stop_time, weekdays="1111111"):
+def create_autorec(channel, name, title, start_time, stop_time, weekdays=[1,2,3,4,5,6,7]):
     """Create an autorec entry"""
     
     url = f"http://{TVH_HOST}:{TVH_PORT}/api/dvr/autorec/create"
@@ -47,7 +47,7 @@ def create_autorec(channel, name, title, start_time, stop_time, weekdays="111111
         "enabled": 1,
         "start": start_time,
         "stop": stop_time, 
-        "weekdays": [1,2,3,4,5,6,7],
+        "weekdays": weekdays,
         "config_name": "oxygene"
     }
     

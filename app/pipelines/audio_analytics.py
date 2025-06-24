@@ -7,7 +7,7 @@ from app.core.files import calc_file_size, delete_file, extract_file_name, subfo
 from app.core.gcp import delete_blob, download_file, upload
 import os
 import time
-from app.analyzers.segmentation import gender_music_segmentation
+# from app.analyzers.segmentation import gender_music_segmentation
 from app.core.media_processing import slice_audio
 from pydantic import BaseModel
 import uuid
@@ -52,7 +52,7 @@ async def async_gender_music_segmentation(audio_path):
             raise
     else:
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(executor, gender_music_segmentation, audio_path)
+        # return await loop.run_in_executor(executor, gender_music_segmentation, audio_path)
 
 async def handle_start_audio_analysis(upload: Upload):
     try:
