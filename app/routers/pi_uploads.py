@@ -5,6 +5,7 @@ import tempfile
 import os
 from pathlib import Path
 from app.core.gcp import upload
+import asyncio
 
 uploads_router = APIRouter()
 
@@ -30,11 +31,12 @@ async def upload_videos_from_pi(file: UploadFile = File(...),  gcp_path: str = Q
             .run(capture_stdout=True, capture_stderr=True)
         )
         
-        return FileResponse(
-            output_path,
-            media_type='video/mp4',
-            filename=f"{Path(file.filename).stem}.mp4"
-        )
+        await asyncio.to_thread(upload, "audiovisual-streams", output_path, gcp_path)
+
+        return {
+            "success": true,
+            "gcp_path": gcp_path
+        }
         
     except ffmpeg.Error as e:
         raise HTTPException(status_code=500, detail=f"Conversion failed: {e}")
@@ -42,8 +44,6 @@ async def upload_videos_from_pi(file: UploadFile = File(...),  gcp_path: str = Q
     finally:
         if os.path.exists(temp_ts_path):
             os.unlink(temp_ts_path)
-        
-        upload("audiovisual-streams", output_path, gcp_path)
 
         if os.path.exists(output_path):
             os.unlink(output_path)
