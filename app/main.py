@@ -41,7 +41,7 @@ app.include_router(reporting_router)
 # Include routers for modular endpoints
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(ads_router, prefix="/analysis", tags=["ads"])
-app.include_router(uploads, tags=["uploads"])
+app.include_router(uploads_router, tags=["uploads"])
 
 @app.on_event("startup")
 async def startup_event():

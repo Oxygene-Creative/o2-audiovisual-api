@@ -25,6 +25,7 @@ uvicorn = {extras = ["standard"], version = "*"}
 fuzzywuzzy = "*"
 python-levenshtein = "*"
 zstandard = "*"
+python-multipart = "*"
 
 [dev-packages]
 pytest = "*"
