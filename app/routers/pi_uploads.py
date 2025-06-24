@@ -39,6 +39,8 @@ async def upload_videos_from_pi(file: UploadFile = File(...),  gcp_path: str =  
         }
         
     except ffmpeg.Error as e:
+        print("stdout:", e.stdout.decode('utf8', errors='ignore'))
+        print("stderr:", e.stderr.decode('utf8', errors='ignore'))
         raise HTTPException(status_code=500, detail=f"Conversion failed: {e}")
     
     finally:
