@@ -32,29 +32,6 @@ executor = ProcessPoolExecutor()
 GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
 TRANSCRIPTION_GPU_URL = os.getenv("TRANSCRIPTION_GPU_URL", "").strip()
 
-async def async_audio_transcription(audio_path):
-    if GPU_ACTIVATED and TRANSCRIPTION_GPU_URL:
-        try:
-            # Open the audio file for binary upload
-            with open(audio_path, "rb") as audio_file:
-                files = {
-                    "file": (os.path.basename(audio_path), audio_file, "audio/mpeg")
-                }
-                print(f"Sending request to {TRANSCRIPTION_GPU_URL}/transcribe with audio file: {audio_path}")
-                response = requests.post(f"{TRANSCRIPTION_GPU_URL}/transcribe", files=files)
-                response.raise_for_status()  # Raise exception if HTTP status is an error
-                response_data = response.json()
-                return response_data["transcription"]
-        except requests.RequestException as e:
-            print(f"Request error during GPU transcription: {e}")
-            raise
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            raise
-    else:
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(executor, transcribe, audio_path)
-
 async def handle_audio_transcribe(msg: str):
     try:
         data = json.loads(msg)
@@ -69,7 +46,7 @@ async def handle_audio_transcribe(msg: str):
         # Define an async function for processing a single segment
         async def process_segment(index, segment):
             # Async transcription using the process pool
-            transcript = await async_audio_transcription(segment["audio_file"])
+            transcript = await transcribe(segment["audio_file"])
             
             # Introduce a delay before calling the LLM-powered function
             await asyncio.sleep(0.5) 
