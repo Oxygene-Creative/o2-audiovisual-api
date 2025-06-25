@@ -2,7 +2,7 @@ import httpx
 from typing import List, Optional
 
 class APIClient:
-    def __init__(self, base_url: str, timeout: float = 60.0, retries: int = 3):
+    def __init__(self, base_url: str, timeout: float = 120.0, retries: int = 3):
         """
         Initialize the API client with the base URL.
         """
@@ -105,7 +105,7 @@ class APIClient:
             print(f"Error reading audio file {audio_path}: {e}")
             return {"error": f"Error reading audio file: {str(e)}"}
 
-    async def analyze_topics(self, text: str, num_keywords: int, topic_count: int):
+    async def analyze_topics(self, text: str, num_keywords: int = 6, topic_count: int = 3):
         """
         Call the /topics endpoint.
         """
