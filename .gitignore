@@ -66,3 +66,4 @@ logs/
 # If pytest records screenshots or other temporary output
 screenshots/
 output/
+sample/

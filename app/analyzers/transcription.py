@@ -11,8 +11,10 @@ async def transcribe(audio_url: str):
     try:
         client = APIClient(base_url=AI_API_URL)  
         transcription_result = await client.transcribe_audio(audio_path=audio_url)
-        print(transcription_result)
-        return transcription_result["transcription"]
+        
+        if transcription_result is not None:
+            return transcription_result["transcription"]
+        else: return { "raw_text": "" }
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
