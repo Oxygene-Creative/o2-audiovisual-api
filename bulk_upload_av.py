@@ -34,7 +34,6 @@ folder_to_station_map = [
     {"folder": "radio/capitalfm", "station": {"id": "3571c245-ff27-4a8f-b096-1df857d78021", "radio_stream_name": "Capital FM"}},  
     {"folder": "radio/classicfm", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},  
     {"folder": "radio/radiojambo", "station": {"id": "72e7e42e-1450-42db-aa1d-990f3c8f915a", "radio_stream_name": "Radio Jambo"}}, 
-    
 ]
 
 
@@ -97,7 +96,7 @@ if __name__ == "__main__":
         mp3_files = list_mp3_files_in_folder(bucket_name, folder_name)
 
         # Select up to 40 recordings (use slicing to limit)
-        selected_recordings = mp3_files[:48]
+        selected_recordings = mp3_files[:24]
 
         # Add the count of mp3 files to the total
         total_files_count += len(mp3_files)
