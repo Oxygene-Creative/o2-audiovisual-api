@@ -50,7 +50,7 @@ async def handle_audio_transcribe(msg: str):
             
             # Introduce a delay before calling the LLM-powered function
             await asyncio.sleep(0.5) 
-            raw_text = transcript.get("raw_text", "")
+            raw_text = transcript["raw_text"]
             word_count = len(raw_text.split())
             if raw_text.strip() and word_count > 5:
                 # Control access to the LLM with the semaphore
@@ -111,24 +111,20 @@ async def handle_transcript_analysis(msg: str):
                     # Clean transcript text
                     clean_transcript = await asyncio.to_thread(remove_timestamps_and_format, raw_text)
 
-                    # Define asynchronous tasks for all analyses
-                    tasks = {
-                        "embeddings": asyncio.create_task(embed_text(clean_transcript)),
-                        "sentiment": asyncio.create_task(sentiment_analysis(clean_transcript)),
-                        "tags": categorize_text(clean_transcript, categories),  # Assuming this remains synchronous
-                        "emotions": asyncio.create_task(analyze_emotions(clean_transcript)),
-                        "topics": asyncio.create_task(analyze_topics(clean_transcript)),
-                    }
-
-                    # Run the tasks concurrently and gather results
-                    results = await asyncio.gather(*tasks.values())
+                    tag_matches, topics_result, emotions, sentiment, embeddings  = await asyncio.gather(
+                        categorize_text(clean_transcript, categories),
+                        analyze_topics(clean_transcript),
+                        analyze_emotions(clean_transcript),
+                        sentiment_analysis(clean_transcript),
+                        embed_text(clean_transcript)
+                    )
 
                     # Save results back to the segment
-                    segment["embeddings"] = results[0]
-                    segment["sentiment"] = results[1]
-                    segment["tags"] = results[2]
-                    segment["emotions"] = results[3]
-                    segment["topics"] = results[4]
+                    segment["embeddings"] = embeddings
+                    segment["sentiment"] = sentiment
+                    segment["tags"] =tag_matches
+                    segment["emotions"] = emotions
+                    segment["topics"] = topics_result
 
                 except Exception as segment_error:
                     print(f"Error processing segment {index}: {segment_error}")

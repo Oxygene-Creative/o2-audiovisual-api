@@ -65,7 +65,7 @@ def slice_video(video_path, start, stop):
     video_clip = VideoFileClip(video_path)
 
     # Trim the video between start and stop times
-    sliced_clip = video_clip.subclip(start, stop)
+    sliced_clip = video_clip.subclipped(start, stop)
 
     # Write the sliced video to the output file
     subfolder_check(f"{os.getcwd()}/o2-files")
