@@ -14,13 +14,10 @@ async def transcribe(audio_url: str):
         
         if transcription_result is not None:
             return transcription_result["transcription"]
-<<<<<<< HEAD
-        else: return { "raw_text": "" }
-=======
+
         else: 
             return { "raw_text": "" }
-        
->>>>>>> e64104032a07d2d8460b10f15fe87ccb3ecf63f0
+   
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
