@@ -81,7 +81,7 @@ def list_mp3_files_in_folder(bucket_name, folder_name):
 
 
 if __name__ == "__main__":
-    api_url = "http://20.55.28.126:8000/analysis/audio"
+    api_url = "https://monitorapi.oxygenehosting.com/api/av/analysis/audio"
     bucket_name = "audiovisual-streams" 
 
     overall_recordings = []
