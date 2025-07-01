@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
 from difflib import get_close_matches
+import os
 
 load_dotenv()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -34,16 +35,14 @@ async def get_finished_recordings():
         sorted_entries = sorted(all_entries, key=lambda x: x.get("start", 0), reverse=True)
         return sorted_entries
     
-async def delete_recording(uuid):
-    timeout = httpx.Timeout(10800)
-    async with httpx.AsyncClient(timeout=timeout) as client:  # Create client locally
-        r = await client.post(
-            f"{TVH_URL}/api/dvr/entry/remove", 
-            json={"uuid": uuid},
-            auth=auth
-        )
-        r.raise_for_status()
-        print(f"Deleted recording {uuid}")
+async def delete_recording(file_path):
+    try:
+        os.remove(file_path)
+        print(f"Deleted file {file_path}")
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+    except Exception as e:
+        print(f"Error while deleting file {file_path}: {e}")
 
 async def upload_recording(
     file_path: str,
@@ -157,7 +156,7 @@ async def process_and_upload(streams: list, recording_path: str, uuid: str):
     )
 
     # Step 3: Remove recording
-    await delete_recording(uuid)
+    await delete_recording(recording_path)
 
 async def main():
     # Run the async function
