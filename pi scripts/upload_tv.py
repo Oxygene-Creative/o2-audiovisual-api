@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from difflib import get_close_matches
 import os
+import stat
 
 load_dotenv()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -37,6 +38,8 @@ async def get_finished_recordings():
     
 async def delete_recording(file_path):
     try:
+        # Change the permission of the file before deleting
+        os.chmod(file_path, stat.S_IWUSR | stat.S_IREAD)
         os.remove(file_path)
         print(f"Deleted file {file_path}")
     except FileNotFoundError:
@@ -164,7 +167,10 @@ async def main():
     streams = await get_tv_streams()
 
     for entry in entries:
-        await process_and_upload(streams, entry.get("filename"), entry.get("uuid"))
+        try:
+            await process_and_upload(streams, entry.get("filename"), entry.get("uuid"))
+        except:
+            print(f"Stream is not uploaded: {entry.get("filename")}")
         break
 
 if __name__ == "__main__":
