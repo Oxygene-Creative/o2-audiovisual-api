@@ -23,4 +23,5 @@ gcloud builds submit --region=us-west2 --tag us-west2-docker.pkg.dev/oxygene-mon
 ```
 
 ## Fix TvHeadend timers/autorec issue
-https://tvheadend.org/d/8995-cant-add-or-edit-autorecs-in-firefox-or-safari-why/2
+Install tampermonkey browser extension and add the `pi scripts/timer_fix.js` script
+
