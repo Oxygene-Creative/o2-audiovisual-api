@@ -77,9 +77,11 @@ WantedBy=timers.target
 sudo systemctl daemon-reload
 sudo systemctl start upload_tv.service
 sudo systemctl enable upload_tv.service
+sudo systemctl status upload_tv.service
 ```
 
 ### Check the logs
 ```bash
 journalctl -u upload_tv.service
+journalctl -u upload_tv.timer
 ```
