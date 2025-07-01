@@ -22,7 +22,8 @@ AUDIOVISUAL_URI = os.environ["AUDIOVISUAL_API_URI"]
 auth = DigestAuth(USERNAME, PASSWORD)
 
 async def get_finished_recordings():
-    async with httpx.AsyncClient() as client:  # Create client locally
+    timeout = httpx.Timeout(read=180)
+    async with httpx.AsyncClient(timeout=timeout) as client:  # Create client locally
         r = await client.get(
             f"{TVH_URL}/api/dvr/entry/grid_finished", 
             params={"start": 0, "limit": 9999},
@@ -34,7 +35,8 @@ async def get_finished_recordings():
         return sorted_entries
     
 async def delete_recording(uuid):
-    async with httpx.AsyncClient() as client:  # Create client locally
+    timeout = httpx.Timeout(read=180)
+    async with httpx.AsyncClient(timeout=timeout) as client:  # Create client locally
         r = await client.post(
             f"{TVH_URL}/api/dvr/entry/remove", 
             json={"uuid": uuid},
@@ -88,7 +90,9 @@ async def get_tv_streams():
         "x-api-key": GRAPHQL_API_KEY
     }
 
-    async with httpx.AsyncClient() as client:
+    timeout = httpx.Timeout(read=180)
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             r = await client.post(
                 GRAPHQL_URI,
