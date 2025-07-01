@@ -37,14 +37,22 @@ async def get_finished_recordings():
         return sorted_entries
 
 async def delete_recording(uuid):
-    timeout = httpx.Timeout(10800)
-    async with httpx.AsyncClient(timeout=timeout) as client: 
-        r = await client.post(
-            f"{TVH_URL}/api/dvr/entry/remove", 
-            json={"uuid": uuid},
-            auth=auth)
-        r.raise_for_status()
-        print(f"Deleted recording {uuid}")
+    timeout = httpx.Timeout(30)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(
+                f"{TVH_URL}/api/dvr/entry/remove", 
+                params={"uuid": uuid },
+                auth=auth
+            )
+            r.raise_for_status()
+            print(f"Deleted recording {uuid}")
+    except httpx.HTTPError as e:
+        print(f"Failed to delete recording {uuid}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        print("Execution completed for deleting the recording.")
 
 async def upload_recording(
     file_path: str,
@@ -173,7 +181,8 @@ async def main():
         break
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
+    asyncio.run(delete_recording("b3e0e90930804af3953e8b3549a2b4eb"))
 
 
 
