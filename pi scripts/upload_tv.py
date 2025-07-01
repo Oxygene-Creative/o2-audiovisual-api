@@ -178,11 +178,9 @@ async def main():
             await process_and_upload(streams, entry.get("filename"), entry.get("uuid"))
         except:
             print(f"Stream is not uploaded: {entry.get('uuid')}")
-        break
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    asyncio.run(delete_recording("b3e0e90930804af3953e8b3549a2b4eb"))
+    asyncio.run(main())
 
 
 
