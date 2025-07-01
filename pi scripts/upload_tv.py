@@ -170,7 +170,7 @@ async def main():
         try:
             await process_and_upload(streams, entry.get("filename"), entry.get("uuid"))
         except:
-            print(f"Stream is not uploaded: {entry.get("filename")}")
+            print(f"Stream is not uploaded: {entry.get('filename')}")
         break
 
 if __name__ == "__main__":
