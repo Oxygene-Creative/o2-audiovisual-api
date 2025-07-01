@@ -60,7 +60,10 @@ async def handle_video_upload(msg: str):
     try:
         data = json.loads(msg)
 
-        timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S")
+        try:
+            timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
 
         # Start timing
         start_time = time.time()

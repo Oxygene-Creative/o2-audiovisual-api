@@ -56,11 +56,12 @@ async def upload_videos_from_pi(
             blob=gcp_path,
             timestamp_str=timestamp  
         )
-        # analysis_id = await handle_start_video_analysis(upload=uploadFile)
+        
+        analysis_id = await handle_start_video_analysis(upload=uploadFile)
 
         return {
             "success": True,
-            # "analysis_id": analysis_id,
+            "analysis_id": analysis_id,
             "gcp_path": gcp_path
         }
         

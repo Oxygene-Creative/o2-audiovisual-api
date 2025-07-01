@@ -35,17 +35,16 @@ async def get_finished_recordings():
         all_entries = r.json().get("entries", [])
         sorted_entries = sorted(all_entries, key=lambda x: x.get("start", 0), reverse=True)
         return sorted_entries
-    
-async def delete_recording(file_path):
-    try:
-        # Change the permission of the file before deleting
-        os.chmod(file_path, stat.S_IWUSR | stat.S_IREAD)
-        os.remove(file_path)
-        print(f"Deleted file {file_path}")
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-    except Exception as e:
-        print(f"Error while deleting file {file_path}: {e}")
+
+async def delete_recording(uuid):
+    timeout = httpx.Timeout(10800)
+    async with httpx.AsyncClient(timeout=timeout) as client: 
+        r = await client.post(
+            f"{TVH_URL}/api/dvr/entry/remove", 
+            json={"uuid": uuid},
+            auth=auth)
+        r.raise_for_status()
+        print(f"Deleted recording {uuid}")
 
 async def upload_recording(
     file_path: str,
@@ -170,7 +169,7 @@ async def main():
         try:
             await process_and_upload(streams, entry.get("filename"), entry.get("uuid"))
         except:
-            print(f"Stream is not uploaded: {entry.get('filename')}")
+            print(f"Stream is not uploaded: {entry.get('uuid')}")
         break
 
 if __name__ == "__main__":
