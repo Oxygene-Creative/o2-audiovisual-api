@@ -50,8 +50,9 @@ async def upload_recording(
     timestamp: str
 ):
     file_name = Path(file_path).name
+    timeout = httpx.Timeout(read=1800)
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         with open(file_path, "rb") as f:
             files = {
                 "file": (file_name, f, "video/MP2T"),
