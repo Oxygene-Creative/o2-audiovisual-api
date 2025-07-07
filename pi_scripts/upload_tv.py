@@ -176,7 +176,8 @@ async def main():
     for entry in entries:
         try:
             await process_and_upload(streams, entry.get("filename"), entry.get("uuid"))
-        except:
+        except Exception as e:
+            print(e)
             print(f"Stream is not uploaded: {entry.get('uuid')}")
 
 if __name__ == "__main__":
