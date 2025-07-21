@@ -49,7 +49,7 @@ def get_all_terms() -> List[str]:
     except Exception as e:
         print(f"Error fetching terms: {e}")  # Optional: log the error
 
-def get_tags(stream_type: str) -> List[str]:
+async def get_tags(stream_type: str) -> List[str]:
     query = """
     query ($query: FindTagInput!){
         findTags(query: $query){
@@ -178,4 +178,31 @@ def add_radio_stream_upload(
         return response["addRadioStreamUpload"]
     except Exception as e:
         print(f"Error adding Radio stream upload: {e}")
+        return None
+    
+async def fetch_industries():
+    query = """
+    query ($query: FindIndustryInput!){
+    findIndustries(query: $query){
+        name
+        value
+    }
+    }
+    """
+    variables = { "query": {}}
+    try:
+        response = fetch_data(query, variables)
+        if "errors" in response:
+            print(f"GraphQL errors in fetching industries: {response['errors']}")
+            return None
+        data = response["findIndustries"]
+    
+        all_sub_sectors = []
+        for item in data:
+            sub_sectors = [s.strip() for s in item["value"].split(",")]
+            all_sub_sectors.extend(sub_sectors)
+
+        return all_sub_sectors
+    except Exception as e:
+        print(f"Error  in fetching industries: {e}")
         return None

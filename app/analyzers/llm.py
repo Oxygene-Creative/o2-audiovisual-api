@@ -4,7 +4,7 @@ from langchain.output_parsers import PydanticOutputParser
 from app.models.analytics import LLMAnalysisModel
 from langchain_core.prompts import PromptTemplate
 
-def llm_transcript_analysis(transcript: str) -> LLMAnalysisModel:
+async def llm_transcript_analysis(transcript: str) -> LLMAnalysisModel:
 
     # Create output parser
     parser = PydanticOutputParser(pydantic_object=LLMAnalysisModel)

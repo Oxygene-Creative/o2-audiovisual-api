@@ -23,7 +23,7 @@ async def transcribe(audio_url: str):
     finally:
         await client.close() 
 
-def post_process_transcription(transcript: str, keywords: list[str]):
+async def post_process_transcription(transcript: str, keywords: list[str]):
     system_template = """You are a helpful assistant that analyses radio and tv transcripts for brodcats in Africs.
       The transcripts can be a mixture of English and Kiswahili languages, some street slang like Sheng'
       Insert necessary punctuation such as periods, commas, capialization, symbols like percentage signs, and

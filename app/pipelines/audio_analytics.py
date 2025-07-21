@@ -33,27 +33,23 @@ class Upload(BaseModel):
     timestamp_str: Optional[str]
 
 async def async_gender_music_segmentation(audio_path):
-    if GPU_ACTIVATED and SEGMENTATION_GPU_URL:
-        try:
-            with open(audio_path, "rb") as audio_file:
-                files = {
-                    "file": (os.path.basename(audio_path), audio_file, "audio/mpeg")
-                }
-                print(f"Sending request to {SEGMENTATION_GPU_URL}/segment-audio with audio file: {audio_path}")
-                response = requests.post(f"{SEGMENTATION_GPU_URL}/segment-audio", files=files)
-                response.raise_for_status()  # Raise exception if HTTP status is an error
-                response_data = response.json()
-                return response_data["activity"], response_data["speech"]
-        except requests.RequestException as e:
-            print(f"Request error during GPU segmentation: {e}")
-            raise
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            raise
-    else:
-        loop = asyncio.get_event_loop()
-        # return await loop.run_in_executor(executor, gender_music_segmentation, audio_path)
-
+    try:
+        with open(audio_path, "rb") as audio_file:
+            files = {
+                "file": (os.path.basename(audio_path), audio_file, "audio/mpeg")
+            }
+            print(f"Sending request to {SEGMENTATION_GPU_URL}/segment-audio with audio file: {audio_path}")
+            response = requests.post(f"{SEGMENTATION_GPU_URL}/segment-audio", files=files)
+            response.raise_for_status()  # Raise exception if HTTP status is an error
+            response_data = response.json()
+            return response_data["activity"], response_data["speech"]
+    except requests.RequestException as e:
+        print(f"Request error during GPU segmentation: {e}")
+        raise
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise
+    
 async def handle_start_audio_analysis(upload: Upload):
     try:
         timestamp = (

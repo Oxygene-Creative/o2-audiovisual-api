@@ -11,7 +11,7 @@ from app.models.analytics import AnalysisModel, ShowMetadata, Topic, TopicWord
 from datetime import datetime, timezone, timedelta
 import time 
 from app.analyzers.transcription import remove_timestamps_and_format, transcribe, post_process_transcription
-from app.core.graphql import add_radio_stream_upload, add_tv_stream_upload, get_all_terms, get_tags
+from app.core.graphql import add_radio_stream_upload, add_tv_stream_upload, fetch_industries, get_all_terms, get_tags
 from app.core.es import save
 import os
 from app.core.redis import redis_router as transcript_router
@@ -88,6 +88,7 @@ async def handle_transcript_analysis(msg: str):
 
         tag_name = "Radio" if data["type"] == "audio" else "Tv"
         categories = await get_tags(tag_name)
+        industry_sectors = await fetch_industries()
 
         async def process_segment(index, segment):
             try:
@@ -100,14 +101,17 @@ async def handle_transcript_analysis(msg: str):
                     return
 
                 # Clean transcript text
-                clean_transcript = await remove_timestamps_and_format(raw_text)
+                clean_transcript = await asyncio.to_thread(
+                    remove_timestamps_and_format, segment["raw_text"]
+                )
 
-                tag_matches, topics_result, emotions, sentiment, embeddings  = await asyncio.gather(
+                tag_matches, topics_result, emotions, sentiment, embeddings, industries  = await asyncio.gather(
                     categorize_text(clean_transcript, categories),
                     analyze_topics(clean_transcript),
                     analyze_emotions(clean_transcript),
                     sentiment_analysis(clean_transcript),
-                    embed_text(clean_transcript)
+                    embed_text(clean_transcript),
+                    categorize_text(clean_transcript, industry_sectors)
                 )
 
                 # Save results back to the segment
@@ -116,6 +120,7 @@ async def handle_transcript_analysis(msg: str):
                 segment["tags"] =tag_matches
                 segment["emotions"] = emotions
                 segment["topics"] = topics_result
+                segment["industries"] = industries
 
             except Exception as segment_error:
                 print(f"Error processing segment {index}: {segment_error}")
@@ -194,7 +199,7 @@ async def handle_save_analysis_es(msg: str):
         segment_recordings = SegmentRecording.create_segment_recordings_from_dict(data)
 
         for segment in segment_recordings:
-            await save(index_id, json.dumps(segment))
+            await asyncio.to_thread(save, index_id, json.dumps(segment))
 
         recording = Recording.create_from_analysis_model(data)
 
