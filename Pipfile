@@ -18,7 +18,6 @@ elasticsearch = "*"
 huggingface-hub = "*"
 nltk = "*"
 pandas = "*"
-faststream = {extras = ["redis"], version = "*"}
 ffmpeg-python = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 fuzzywuzzy = "*"
@@ -27,6 +26,7 @@ zstandard = "*"
 python-multipart = "*"
 click = "*"
 exceptiongroup = "*"
+faststream = {extras = ["redis"], version = "*"}
 
 [dev-packages]
 pytest = "*"
