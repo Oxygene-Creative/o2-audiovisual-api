@@ -26,6 +26,7 @@ python-levenshtein = "*"
 zstandard = "*"
 python-multipart = "*"
 click = "*"
+exceptiongroup = "*"
 
 [dev-packages]
 pytest = "*"
