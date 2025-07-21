@@ -35,13 +35,10 @@ TRANSCRIPTION_GPU_URL = os.getenv("TRANSCRIPTION_GPU_URL", "").strip()
 async def handle_audio_transcribe(msg: str):
     try:
         data = json.loads(msg)
-        keywords = await asyncio.to_thread(get_all_terms)  # Fetch keywords asynchronously
+        keywords = await get_all_terms()
 
         # Start timing
-        start_time = time.time()
-
-        # Allow up to 2 concurrent calls to LLM
-        llm_semaphore = asyncio.Semaphore(2)  
+        start_time = time.time()  
 
         # Define an async function for processing a single segment
         async def process_segment(index, segment):
@@ -53,11 +50,9 @@ async def handle_audio_transcribe(msg: str):
             raw_text = transcript["raw_text"]
             word_count = len(raw_text.split())
             if raw_text.strip() and word_count > 5:
-                # Control access to the LLM with the semaphore
-                async with llm_semaphore:
-                    processed_transcript = await asyncio.to_thread(
-                        post_process_transcription, transcript["raw_text"], keywords
-                    )
+                processed_transcript = await post_process_transcription(
+                    transcript["raw_text"], keywords
+                )
 
                 data["segments"][index]["raw_text"] = processed_transcript
                 data["segments"][index]["language"] = transcript["language"]
@@ -92,42 +87,38 @@ async def handle_transcript_analysis(msg: str):
         start_time = time.time()
 
         tag_name = "Radio" if data["type"] == "audio" else "Tv"
-        categories = await asyncio.to_thread(get_tags, tag_name)
-
-        # Semaphore to control concurrent execution
-        semaphore = asyncio.Semaphore(5)  # Max 5 async tasks at a time
+        categories = await get_tags(tag_name)
 
         async def process_segment(index, segment):
-            async with semaphore:
-                try:
-                    raw_text = segment.get("raw_text", "").strip()
-                    word_count = len(raw_text.split())
+            try:
+                raw_text = segment.get("raw_text", "").strip()
+                word_count = len(raw_text.split())
 
-                    # Skip segments with fewer than 5 words
-                    if not raw_text or word_count < 5:
-                        print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
-                        return
+                # Skip segments with fewer than 5 words
+                if not raw_text or word_count < 5:
+                    print(f"Segment {index} skipped. Missing or too few words (word count: {word_count}).")
+                    return
 
-                    # Clean transcript text
-                    clean_transcript = await asyncio.to_thread(remove_timestamps_and_format, raw_text)
+                # Clean transcript text
+                clean_transcript = await remove_timestamps_and_format(raw_text)
 
-                    tag_matches, topics_result, emotions, sentiment, embeddings  = await asyncio.gather(
-                        categorize_text(clean_transcript, categories),
-                        analyze_topics(clean_transcript),
-                        analyze_emotions(clean_transcript),
-                        sentiment_analysis(clean_transcript),
-                        embed_text(clean_transcript)
-                    )
+                tag_matches, topics_result, emotions, sentiment, embeddings  = await asyncio.gather(
+                    categorize_text(clean_transcript, categories),
+                    analyze_topics(clean_transcript),
+                    analyze_emotions(clean_transcript),
+                    sentiment_analysis(clean_transcript),
+                    embed_text(clean_transcript)
+                )
 
-                    # Save results back to the segment
-                    segment["embeddings"] = embeddings
-                    segment["sentiment"] = sentiment
-                    segment["tags"] =tag_matches
-                    segment["emotions"] = emotions
-                    segment["topics"] = topics_result
+                # Save results back to the segment
+                segment["embeddings"] = embeddings
+                segment["sentiment"] = sentiment
+                segment["tags"] =tag_matches
+                segment["emotions"] = emotions
+                segment["topics"] = topics_result
 
-                except Exception as segment_error:
-                    print(f"Error processing segment {index}: {segment_error}")
+            except Exception as segment_error:
+                print(f"Error processing segment {index}: {segment_error}")
 
         # Create tasks for all segments
         tasks = [process_segment(index, segment) for index, segment in enumerate(data["segments"])]
@@ -164,10 +155,7 @@ async def handle_transcript_llm(msg: str):
 
             await asyncio.sleep(5) 
 
-            llm_analysis = await asyncio.to_thread(
-                llm_transcript_analysis, segment["raw_text"]
-            )
-
+            llm_analysis = await llm_transcript_analysis(segment["raw_text"])
             llm_analysis_json = llm_analysis.model_dump_json()
             llm_analysis_dict = json.loads(llm_analysis_json)
             data["segments"][index].update(llm_analysis_dict)
@@ -206,7 +194,7 @@ async def handle_save_analysis_es(msg: str):
         segment_recordings = SegmentRecording.create_segment_recordings_from_dict(data)
 
         for segment in segment_recordings:
-            await asyncio.to_thread(save, index_id, json.dumps(segment))
+            await save(index_id, json.dumps(segment))
 
         recording = Recording.create_from_analysis_model(data)
 
