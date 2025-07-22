@@ -27,6 +27,8 @@ python-multipart = "*"
 click = "*"
 exceptiongroup = "*"
 faststream = {extras = ["redis"], version = "*"}
+websockets = "*"
+redis = "*"
 
 [dev-packages]
 pytest = "*"

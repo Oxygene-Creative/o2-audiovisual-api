@@ -1,8 +1,4 @@
-from typing import Optional
-from fastapi import FastAPI
-from pydantic import BaseModel
-from faststream.redis import fastapi
-from app.models.analytics import AnalysisModel
+from app.pipelines.audio_analytics import handle_audio_segmentation
 from datetime import datetime
 from app.core.gcp import delete_blob, download_file, upload
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
@@ -10,51 +6,59 @@ import os
 from app.core.media_processing import extract_audio_from_video, slice_video
 import time 
 import uuid
-from app.core.redis import redis_router as video_router
+from app.core.redis import redis_router as video_router, video_queue_busy_lock
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import json
 
-class Upload(BaseModel):
-    stream_id: str
-    stream_name: str
-    bucket: str
-    blob: str
-    timestamp_str: Optional[str]
+async def handle_start_video_analysis(msg: str):
+    async with video_queue_busy_lock:
+        try:
+            # Start timing
+            start_time = time.time()
 
+            upload = json.loads(msg)
+            timestamp = (
+                datetime.strptime(upload.get("timestamp_str"), "%Y-%m-%dT%H:%M:%S")
+                if upload.get("timestamp_str")
+                else datetime.now()
+            )
 
-async def handle_start_video_analysis(upload: Upload):
-    try:
-        timestamp = datetime.strptime(upload.timestamp_str, "%Y-%m-%dT%H:%M:%S")
-    except (ValueError, AttributeError):
-        timestamp = datetime.now()
-    
-    # download video
-    file_name = extract_file_name(upload.blob)
-    subfolder_check(f"{os.getcwd()}/o2-files")
-    video_file_path = f"{os.getcwd()}/o2-files/{file_name}"
+            # download video
+            file_name = extract_file_name(upload.blob)
+            subfolder_check(f"{os.getcwd()}/o2-files")
+            video_file_path = f"{os.getcwd()}/o2-files/{file_name}"
 
-    # Use asyncio.to_thread to avoid blocking the event loop
-    await asyncio.to_thread(download_file, upload.bucket, upload.blob, video_file_path)
-    
-    # extract audio from video
-    audio_file_path = await asyncio.to_thread(extract_audio_from_video, video_file_path)
-    
-    analysis_id = uuid.uuid4()
-    analysis = {
-        "id": str(analysis_id),
-        "stream_id": upload.stream_id,
-        "stream_name": upload.stream_name,
-        "audio_path": audio_file_path,
-        "video_path": video_file_path,
-        "type": "video",
-        "timestamp": timestamp.isoformat(),
-        "gcp_bucket": upload.bucket,
-        "gcp_blob": upload.blob,
-    }
-    await video_router.broker.publish(json.dumps(analysis), "av:audio_seg")
-    return analysis_id
+             # Use asyncio.to_thread to avoid blocking the event loop
+            await asyncio.to_thread(download_file, upload.bucket, upload.blob, video_file_path)
+            
+            # extract audio from video
+            audio_file_path = await asyncio.to_thread(extract_audio_from_video, video_file_path)
 
+            analysis = {
+                "id": upload.get("id"),
+                "stream_id": upload.get("stream_id"),
+                "stream_name": upload.get("stream_name"),
+                "audio_path": audio_file_path,
+                "video_path": video_file_path,
+                "type": "video",
+                "timestamp": timestamp.isoformat(),
+                "gcp_bucket": upload.get("bucket"),
+                "gcp_blob": upload.get("blob"),
+            }
+
+            result = await handle_audio_segmentation(analysis)
+       
+            # Calculate time taken
+            end_time = time.time()
+            time_taken = end_time - start_time
+            print(f"Time taken for audio segmentation: {time_taken:.2f} seconds.")
+
+            return result
+        
+        except Exception as e:
+            print(f"Error during video analysis start: {e}")
+            raise
+       
 async def handle_video_upload(msg: str):
     
     try:
@@ -105,9 +109,10 @@ async def handle_video_upload(msg: str):
         print(f"Unexpected error: {e}")
         raise
 
-@video_router.post("/analysis/video")
-async def start_video_analysis(upload: Upload):
-    return await handle_start_video_analysis(upload)
+@video_router.subscriber("av:video_segmentation")
+@video_router.publisher("av:audio_transcribe")
+async def start_video_analysis(msg: str):
+    return await handle_start_video_analysis(msg)
     
 @video_router.subscriber("av:upload_video_gcp")
 @video_router.publisher("av:save_analysis_es")
