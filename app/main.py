@@ -14,15 +14,7 @@ from app.routers.pi_uploads import uploads_router
 
 load_dotenv()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # await redis_broker.connect()
-    await redis_router.broker.connect()
-    yield
-    # await redis_broker.close()
-    await redis_router.broker.close()
-    
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +35,13 @@ app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(ads_router, prefix="/analysis", tags=["ads"])
 app.include_router(uploads_router, tags=["uploads"])
 
-@app.on_event("startup")
-async def startup_event():
+@app.on_startup
+async def setup_redis():
+    await redis_router.broker.connect()
     setup_env()
+    # load_redis_client()
+
+@app.on_shutdown
+async def cleanup_redis():
+    await redis_router.broker.close()
+    # await close_redis_client()

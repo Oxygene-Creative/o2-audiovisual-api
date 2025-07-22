@@ -1,6 +1,3 @@
-from typing import Optional
-from fastapi import FastAPI
-from faststream.redis import fastapi
 from app.models.analytics import AnalysisModel, Segment, Activity
 from datetime import datetime
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
@@ -9,7 +6,6 @@ import os
 import time
 # from app.analyzers.segmentation import gender_music_segmentation
 from app.core.media_processing import slice_audio
-from pydantic import BaseModel
 import uuid
 from dotenv import load_dotenv
 from app.core.redis import redis_router as audio_router
@@ -25,12 +21,7 @@ executor = ProcessPoolExecutor()
 GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
 SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
-class Upload(BaseModel):
-    stream_id: str
-    stream_name: str
-    bucket: str
-    blob: str
-    timestamp_str: Optional[str]
+
 
 async def async_gender_music_segmentation(audio_path):
     try:
@@ -50,21 +41,21 @@ async def async_gender_music_segmentation(audio_path):
         print(f"An unexpected error occurred: {e}")
         raise
     
-async def handle_start_audio_analysis(upload: Upload):
+async def handle_start_audio_analysis(upload: dict):
     try:
         timestamp = (
-            datetime.strptime(upload.timestamp_str, "%Y-%m-%dT%H:%M:%S")
-            if upload.timestamp_str
+            datetime.strptime(upload.get("timestamp_str"), "%Y-%m-%dT%H:%M:%S")
+            if upload.get("timestamp_str")
             else datetime.now()
         )
 
         # download audio
-        file_name = extract_file_name(upload.blob)
+        file_name = extract_file_name(upload.get("blob"))
         subfolder_check(f"{os.getcwd()}/o2-files")
         audio_file_path = f"{os.getcwd()}/o2-files/{file_name}"
 
-        await asyncio.to_thread(download_file, upload.bucket, upload.blob, audio_file_path)
-        # download_file(upload.bucket, upload.blob, audio_file_path)
+        await asyncio.to_thread(download_file, upload.get("bucket"), upload.get("blob"), audio_file_path)
+        # download_file(upload.get("bucket"), upload.get("blob"), audio_file_path)
         
         analysis_id = uuid.uuid4()
         analysis = {
@@ -74,12 +65,10 @@ async def handle_start_audio_analysis(upload: Upload):
             "audio_path": audio_file_path,
             "type": "audio",
             "timestamp": timestamp.isoformat(),
-            "gcp_bucket": upload.bucket,
-            "gcp_blob": upload.blob,
+            "gcp_bucket": upload.get("bucket"),
+            "gcp_blob": upload.get("blob"),
         }
 
-        # Publish analysis object
-        await audio_router.broker.publish(json.dumps(analysis), "av:audio_seg")
         return analysis_id
         
     except Exception as e:
@@ -174,7 +163,8 @@ async def handle_audio_upload_gcp(msg: str):
         print(f"Error during audio upload to GCP: {e}")
         raise
 
-@audio_router.post("/analysis/audio")
+@audio_router.subscriber("av:audio_start")
+@audio_router.publisher("av:audio_seg")
 async def start_audio_analysis(upload: Upload):
     return await handle_start_audio_analysis(upload)
 
