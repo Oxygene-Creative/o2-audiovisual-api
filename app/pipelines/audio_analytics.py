@@ -8,7 +8,7 @@ import time
 from app.core.media_processing import slice_audio
 import uuid
 from dotenv import load_dotenv
-from app.core.redis import redis_router as audio_router
+from app.core.redis import redis_router as audio_router, audio_queue_busy_lock
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 import requests
@@ -20,8 +20,6 @@ executor = ProcessPoolExecutor()
 
 GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
 SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
-
-
 
 async def async_gender_music_segmentation(audio_path):
     try:
@@ -41,54 +39,55 @@ async def async_gender_music_segmentation(audio_path):
         print(f"An unexpected error occurred: {e}")
         raise
     
-async def handle_start_audio_analysis(upload: dict):
+async def handle_start_audio_analysis(msg: str):
+    async with audio_queue_busy_lock:
+        try:
+            # Start timing
+            start_time = time.time()
+
+            upload = json.loads(msg)
+            timestamp = (
+                datetime.strptime(upload.get("timestamp_str"), "%Y-%m-%dT%H:%M:%S")
+                if upload.get("timestamp_str")
+                else datetime.now()
+            )
+
+            # download audio
+            file_name = extract_file_name(upload.get("gcp_blob"))
+            subfolder_check(f"{os.getcwd()}/o2-files")
+            audio_file_path = f"{os.getcwd()}/o2-files/{file_name}"
+
+            await asyncio.to_thread(download_file, upload.get("gcp_bucket"), upload.get("gcp_blob"), audio_file_path)
+            # download_file(upload.get("bucket"), upload.get("blob"), audio_file_path)
+            
+            analysis = {
+                "id": upload.get("id"),
+                "stream_id": upload.get("stream_id"),
+                "stream_name": upload.get("stream_name"),
+                "audio_path": audio_file_path,
+                "type": "audio",
+                "timestamp": timestamp.isoformat(),
+                "gcp_bucket": upload.get("bucket"),
+                "gcp_blob": upload.get("blob"),
+            }
+
+            result = await handle_audio_segmentation(analysis)
+       
+            # Calculate time taken
+            end_time = time.time()
+            time_taken = end_time - start_time
+            print(f"Time taken for audio segmentation: {time_taken:.2f} seconds.")
+
+            return result
+            
+        except Exception as e:
+            print(f"Error during audio analysis start: {e}")
+            raise
+
+async def handle_audio_segmentation(data: dict):
     try:
-        timestamp = (
-            datetime.strptime(upload.get("timestamp_str"), "%Y-%m-%dT%H:%M:%S")
-            if upload.get("timestamp_str")
-            else datetime.now()
-        )
-
-        # download audio
-        file_name = extract_file_name(upload.get("blob"))
-        subfolder_check(f"{os.getcwd()}/o2-files")
-        audio_file_path = f"{os.getcwd()}/o2-files/{file_name}"
-
-        await asyncio.to_thread(download_file, upload.get("bucket"), upload.get("blob"), audio_file_path)
-        # download_file(upload.get("bucket"), upload.get("blob"), audio_file_path)
-        
-        analysis_id = uuid.uuid4()
-        analysis = {
-            "id": str(analysis_id),
-            "stream_id": upload.stream_id,
-            "stream_name": upload.stream_name,
-            "audio_path": audio_file_path,
-            "type": "audio",
-            "timestamp": timestamp.isoformat(),
-            "gcp_bucket": upload.get("bucket"),
-            "gcp_blob": upload.get("blob"),
-        }
-
-        return analysis_id
-        
-    except Exception as e:
-        print(f"Error during audio analysis start: {e}")
-        raise
-
-async def handle_audio_segmentation(msg: str):
-    try:
-        data = json.loads(msg)
-
-        # Start timing
-        start_time = time.time()
-
         # Use the process pool executor for CPU-heavy segmentation
         activity_segments, speech_segments = await async_gender_music_segmentation(data['audio_path'])
-
-        # Calculate time taken
-        end_time = time.time()
-        time_taken = end_time - start_time
-        print(f"Time taken for audio segmentation: {time_taken:.2f} seconds.")
 
         # Transform activity segments and add to analysis object
         activity = {item["labels"]: item["duration"] for item in activity_segments}
@@ -114,7 +113,7 @@ async def handle_audio_segmentation(msg: str):
                 "audio_file": segment["audio_file"],
             })
 
-        return json.dumps(data)
+        return data
 
     except Exception as e:
         print(f"Error during audio segmentation: {e}")
@@ -163,15 +162,10 @@ async def handle_audio_upload_gcp(msg: str):
         print(f"Error during audio upload to GCP: {e}")
         raise
 
-@audio_router.subscriber("av:audio_start")
-@audio_router.publisher("av:audio_seg")
-async def start_audio_analysis(upload: Upload):
-    return await handle_start_audio_analysis(upload)
-
-@audio_router.subscriber("av:audio_seg")
+@audio_router.subscriber("av:audio_segmentation")
 @audio_router.publisher("av:audio_transcribe")
-async def audio_seg(msg: str):
-    return await handle_audio_segmentation(msg)
+async def start_audio_analysis(msg: str):
+    return await handle_start_audio_analysis(msg)
 
 @audio_router.subscriber("av:upload_audio_gcp")
 @audio_router.publisher("av:save_analysis_es")
