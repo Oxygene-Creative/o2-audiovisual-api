@@ -45,8 +45,6 @@ async def handle_audio_transcribe(msg: str):
             # Async transcription using the process pool
             transcript = await transcribe(segment["audio_file"])
             
-            # Introduce a delay before calling the LLM-powered function
-            await asyncio.sleep(0.5) 
             raw_text = transcript["raw_text"]
             word_count = len(raw_text.split())
             if raw_text.strip() and word_count > 5:

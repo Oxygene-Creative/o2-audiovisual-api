@@ -44,6 +44,7 @@ def post_audio_analysis(api_url, stream_id, stream_name, bucket, blob, timestamp
         "stream_name": stream_name,
         "bucket": bucket,
         "blob": blob,
+        "media_type": "audio",
         "timestamp_str": timestamp_str
     }
 
@@ -81,7 +82,7 @@ def list_mp3_files_in_folder(bucket_name, folder_name):
 
 
 if __name__ == "__main__":
-    api_url = "http://localhost:8000/analysis/audio"
+    api_url = "http://localhost:8000/enqueue"
     bucket_name = "audiovisual-streams" 
 
     overall_recordings = []

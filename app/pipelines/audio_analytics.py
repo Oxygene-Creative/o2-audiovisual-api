@@ -78,7 +78,7 @@ async def handle_start_audio_analysis(msg: str):
             time_taken = end_time - start_time
             print(f"Time taken for audio segmentation: {time_taken:.2f} seconds.")
 
-            return result
+            return json.dumps(result)
             
         except Exception as e:
             print(f"Error during audio analysis start: {e}")

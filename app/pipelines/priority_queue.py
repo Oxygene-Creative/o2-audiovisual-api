@@ -23,23 +23,24 @@ async def enqueue_handler(upload: Upload):
     ).timestamp()
 
     upload = {
-        "id": uuid.uuid4(),
+        "id": str(uuid.uuid4()),
         "stream_id": upload.stream_id,
         "media_type": upload.media_type,
         "stream_name": upload.stream_name,
         "timestamp": upload.timestamp_str,
-        "gcp_bucket": upload.get("bucket"),
-        "gcp_blob": upload.get("blob"),
+        "gcp_bucket": upload.bucket,
+        "gcp_blob": upload.blob,
     }
 
     # Add to redis sorted list
     await redis_client.zadd("av:priority_queue", {json.dumps(upload): timestamp})
 
-    return upload["analysis_id"]
+    return upload["id"]
 
 
 async def queue_processor():
-     while True:
+    print("🔄 Queue processor started")
+    while True:
         if not audio_queue_busy_lock.locked() or not video_queue_busy_lock.locked():
             # retrieve the next item in the queue
             result = await  redis_client.zpopmax("av:priority_queue", count=1)

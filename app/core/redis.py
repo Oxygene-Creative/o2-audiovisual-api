@@ -7,7 +7,9 @@ from redis.asyncio import Redis
 REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
 redis_router = fastapi.RedisRouter(REDIS_URI)
 redis_broker = RedisBroker(REDIS_URI)
-redis_client = None
+redis_host = REDIS_URI.split("://")[-1]
+redis_domain, redis_port = redis_host.split(":")
+redis_client = Redis(host=redis_domain, port=redis_port, db=0, decode_responses=True)
 
 audio_queue_busy_lock = asyncio.Lock()
 video_queue_busy_lock = asyncio.Lock()
