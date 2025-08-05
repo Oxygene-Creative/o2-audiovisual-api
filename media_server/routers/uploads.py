@@ -1,10 +1,10 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 from fastapi.responses import FileResponse
-import ffmpeg
+from utils.media_processing import convert_video_format
 import tempfile
 import os
 from pathlib import Path
-from app.core.gcp import upload
+from utils.gcp import upload
 import asyncio
 from datetime import datetime
 
@@ -28,17 +28,8 @@ async def upload_videos_from_pi(
         temp_ts.write(content)
         temp_ts_path = temp_ts.name
     
-    output_path = temp_ts_path.replace('.ts', '.mp4')
-    
     try:
-        # Convert using ffmpeg-python
-        (
-            ffmpeg
-            .input(temp_ts_path)
-            .output(output_path, vcodec='libx264', acodec='aac', preset='fast')
-            .overwrite_output()
-            .run(capture_stdout=True, capture_stderr=True)
-        )
+        output_path = convert_video_format(temp_ts_path, "ts", "mp4")
         
         # Parse into datetime object
         dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M")
@@ -67,11 +58,9 @@ async def upload_videos_from_pi(
             "gcp_path": gcp_path
         }
         
-    except ffmpeg.Error as e:
-        print("stdout:", e.stdout.decode('utf8', errors='ignore'))
-        print("stderr:", e.stderr.decode('utf8', errors='ignore'))
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {e}")
-    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     finally:
         if os.path.exists(temp_ts_path):
             os.unlink(temp_ts_path)

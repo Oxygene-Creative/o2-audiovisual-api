@@ -2,7 +2,11 @@ import os
 from moviepy import VideoFileClip
 from pydub import AudioSegment
 from pathlib import Path
-from app.core.files import subfolder_check
+import ffmpeg
+
+def subfolder_check(subfolder_path: str):
+  if not os.path.exists(subfolder_path):
+        os.makedirs(subfolder_path)
 
 def extract_audio_from_video(video_path):
     # extract the file name
@@ -76,3 +80,29 @@ def slice_video(video_path, start, stop):
     sliced_clip.close()
 
     return output_file_path
+
+def convert_video_format(video_path: str, current_format: str, new_format: str):
+    if not video_path.endswith(f'.{current_format}'):
+        raise ValueError(f"Video path must end with .{current_format}")
+
+    output_path = video_path.replace(f'.{current_format}', f'.{new_format}')
+    
+    try:
+        # Convert using ffmpeg-python
+        (
+            ffmpeg
+            .input(video_path)
+            .output(output_path, vcodec='libx264', acodec='aac', preset='fast')
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+        
+        return output_path
+    
+    except ffmpeg.Error as e:
+        print("stdout:", e.stdout.decode('utf8', errors='ignore'))
+        print("stderr:", e.stderr.decode('utf8', errors='ignore'))
+        raise Exception(f"Conversion failed: {e}")
+    
+    except Exception as e:
+        raise Exception(f"Error during conversion: {e}")
