@@ -7,11 +7,25 @@ from pathlib import Path
 from utils.gcp import upload
 import asyncio
 from datetime import datetime
+import httpx
 
 uploads_router = APIRouter()
+AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxygenehosting.com/api/av")
 
 async def handle_start_video_analysis(upload: dict):
-    pass
+    try:        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{AUDIOVISUAL_API_URI}/", json=upload)
+            
+            # Check response status code
+            if response.status_code == 200:
+                # Parse JSON response if needed
+                return response.json().get("analysis_id")
+            else:
+                raise Exception(f"Failed to start video analysis: {response.status_code} - {response.text}")
+                
+    except httpx.RequestError as e:
+        raise Exception(f"Error communicating with video analysis endpoint: {str(e)}")
 
 @uploads_router.post("/uploads-from-pi")
 async def upload_videos_from_pi(
