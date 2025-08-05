@@ -8,6 +8,7 @@ from utils.gcp import upload
 import asyncio
 from datetime import datetime
 import httpx
+from fastapi import BackgroundTasks
 
 uploads_router = APIRouter()
 AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxygenehosting.com/api/av")
@@ -27,8 +28,53 @@ async def handle_start_video_analysis(upload: dict):
     except httpx.RequestError as e:
         raise Exception(f"Error communicating with video analysis endpoint: {str(e)}")
 
+def background_task_conversion_and_analysis(
+    temp_ts_path: str, 
+    stream_id: str, 
+    stream_name: str, 
+    timestamp: str
+):
+    try:
+        # Use the new function for conversion
+        output_path = convert_video_format(temp_ts_path, "ts", "mp4")
+        
+        # Parse into datetime object
+        dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M")
+        
+        # Format outputs
+        recording_date = dt.strftime("%Y-%m-%d")
+        datetime_str = dt.strftime("%Y%m%d_%H%M")
+        
+        gcp_path = f'tv/{stream_name}/{recording_date}/{stream_name}_{datetime_str}.mp4'
+
+        # Upload to GCP
+        upload("audiovisual-streams", output_path, gcp_path)
+
+        upload_file_info = {
+            "stream_id": stream_id,
+            "stream_name": stream_name,
+            "bucket": "audiovisual-streams",
+            "blob": gcp_path,
+            "timestamp_str": timestamp  
+        }
+
+        # Start video analysis
+        asyncio.run(handle_start_video_analysis(upload=upload_file_info))
+
+    except Exception as e:
+        print(f"Error in background task: {e}")
+
+    finally:
+        # Clean up files
+        if os.path.exists(temp_ts_path):
+            os.unlink(temp_ts_path)
+
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
 @uploads_router.post("/uploads-from-pi")
 async def upload_videos_from_pi(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     stream_id: str = Form(...),
     stream_name: str = Form(...),
@@ -42,43 +88,13 @@ async def upload_videos_from_pi(
         temp_ts.write(content)
         temp_ts_path = temp_ts.name
     
-    try:
-        output_path = convert_video_format(temp_ts_path, "ts", "mp4")
-        
-        # Parse into datetime object
-        dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M")
+    # Start background tasks
+    background_tasks.add_task(
+        background_task_conversion_and_analysis,
+        temp_ts_path, stream_id, stream_name, timestamp
+    )
 
-        # Format outputs
-        recording_date = dt.strftime("%Y-%m-%d")
-        datetime_str = dt.strftime("%Y%m%d_%H%M")
-
-        gcp_path = f'tv/{stream_name}/{recording_date}/{stream_name}_{datetime_str}.mp4'
-
-        await asyncio.to_thread(upload, "audiovisual-streams", output_path, gcp_path)
-
-        uploadFile = {
-            "stream_id": stream_id,
-            "stream_name": stream_name,
-            "bucket": "audiovisual-streams",
-            "blob": gcp_path,
-            "timestamp_str": timestamp  
-        }
-        
-        analysis_id = await handle_start_video_analysis(upload=uploadFile)
-
-        return {
-            "success": True,
-            "analysis_id": analysis_id,
-            "gcp_path": gcp_path
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    finally:
-        if os.path.exists(temp_ts_path):
-            os.unlink(temp_ts_path)
-
-        if os.path.exists(output_path):
-            os.unlink(output_path)
-        
+    return {
+        "success": True,
+        "message": "Upload and processing started in the background."
+    }
