@@ -152,11 +152,6 @@ async def process_and_upload(streams: list, recording_path: str, uuid: str):
     stream_id = matched_stream["id"]
     stream_name = matched_stream["tv_stream_name"]
 
-    print(stream_name)
-    print(date)
-    print(timestamp)
-    print(stream_id)
-
     # Step 2: Upload
     await upload_recording(
         file_path=recording_path,
