@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from routers.uploads import uploads_router
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers.pi_uploads import uploads_router
+from routers.uploads import uploads_router
 
 load_dotenv()
 
