@@ -4,22 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-fastapi = "*"
 langchain = "*"
 langchain-google-genai = "*"
 langchain-openai = "*"
 langchain-huggingface = "*"
 langchain-text-splitters = "*"
-google-auth = "*"
-google-cloud-storage = "*"
-pydub = "*"
-moviepy = "*"
 elasticsearch = "*"
 huggingface-hub = "*"
 nltk = "*"
 pandas = "*"
-ffmpeg-python = "*"
-uvicorn = {extras = ["standard"], version = "*"}
 fuzzywuzzy = "*"
 python-levenshtein = "*"
 zstandard = "*"
@@ -29,6 +22,14 @@ exceptiongroup = "*"
 faststream = {extras = ["redis"], version = "*"}
 websockets = "*"
 redis = "*"
+fastapi = "*"
+httpx = "*"
+pydub = "*"
+ffmpeg-python = "*"
+moviepy = "*"
+google-auth = "*"
+google-cloud-storage = "*"
+uvicorn = "*"
 
 [dev-packages]
 pytest = "*"
