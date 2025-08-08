@@ -10,13 +10,11 @@ import uuid
 from dotenv import load_dotenv
 from app.core.redis import redis_router as audio_router, audio_queue_busy_lock
 import asyncio
-from concurrent.futures import ProcessPoolExecutor
 import requests
 import json
 load_dotenv()
 
-# Create a global executor for process-based parallelism
-executor = ProcessPoolExecutor()
+os.environ["GRPC_POLL_STRATEGY"] = "epoll1"
 
 GPU_ACTIVATED = os.getenv("GPU_ACTIVATED", "false").lower() == "true"
 SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
@@ -46,6 +44,7 @@ async def handle_start_audio_analysis(msg: str):
             start_time = time.time()
 
             upload = json.loads(msg)
+
             timestamp = (
                 datetime.strptime(upload.get("timestamp_str"), "%Y-%m-%dT%H:%M:%S")
                 if upload.get("timestamp_str")
@@ -67,8 +66,8 @@ async def handle_start_audio_analysis(msg: str):
                 "audio_path": audio_file_path,
                 "type": "audio",
                 "timestamp": timestamp.isoformat(),
-                "gcp_bucket": upload.get("bucket"),
-                "gcp_blob": upload.get("blob"),
+                "gcp_bucket": upload.get("gcp_bucket"),
+                "gcp_blob": upload.get("gcp_blob"),
             }
 
             result = await handle_audio_segmentation(analysis)
@@ -100,9 +99,10 @@ async def handle_audio_segmentation(data: dict):
         }
 
         # Slice audio file based on speech segments
-        speech_segment_files = await asyncio.to_thread(
-            slice_audio, speech_segments, data["audio_path"]
-        )
+        # speech_segment_files = await asyncio.to_thread(
+        #     slice_audio, speech_segments, data["audio_path"]
+        # )
+        speech_segment_files = await slice_audio(speech_segments, data["audio_path"])
 
         data["segments"] = []
         for segment in speech_segment_files:            
@@ -122,8 +122,9 @@ async def handle_audio_segmentation(data: dict):
 async def handle_audio_upload_gcp(msg: str):
     try:
         data = json.loads(msg)
+        print(data)
 
-        timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S")
+        timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
 
         # Start timing
         start_time = time.time()
