@@ -10,7 +10,7 @@ async def _process_batch(messages):
 
 @db_broker.subscriber(stream=StreamSub(
         "audiovisual:db_stream",
-        group="av:db_group",
+        group="audiovisual:db_group",
         consumer="db_worker_1",
         batch=True,
         max_records=10,
@@ -23,7 +23,7 @@ async def process_db_worker_1(messages):
 
 @db_broker.subscriber(stream=StreamSub(
         "audiovisual:db_stream",
-        group="av:db_group",
+        group="audiovisual:db_group",
         consumer="db_worker_2",
         batch=True,
         max_records=10,
@@ -35,7 +35,7 @@ async def process_db_worker_2(messages):
 
 @db_broker.subscriber(stream=StreamSub(
         "audiovisual:db_stream",
-        group="av:db_group",
+        group="audiovisual:db_group",
         consumer="db_worker_3",
         batch=True,
         max_records=10,

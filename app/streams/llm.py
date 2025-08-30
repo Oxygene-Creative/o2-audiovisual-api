@@ -10,7 +10,7 @@ async def _process_batch(messages):
 
 @llm_broker.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
-        group="av:llm_group",
+        group="audiovisual:llm_group",
         consumer="llm_worker_1",
         batch=True,
         max_records=10,
@@ -23,7 +23,7 @@ async def process_llm_worker_1(messages):
 
 @llm_broker.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
-        group="av:llm_group",
+        group="audiovisual:llm_group",
         consumer="llm_worker_2",
         batch=True,
         max_records=10,
@@ -35,7 +35,7 @@ async def process_llm_worker_2(messages):
 
 @llm_broker.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
-        group="av:llm_group",
+        group="audiovisual:llm_group",
         consumer="llm_worker_3",
         batch=True,
         max_records=10,

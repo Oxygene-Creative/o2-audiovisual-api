@@ -7,10 +7,9 @@ async def _process_batch(messages):
         # Process each message
         print(f"Processing: {msg}")
 
-
 @vad_broker.subscriber(stream=StreamSub(
         "audiovisual:vad_stream",
-        group="av:vad_group",
+        group="audiovisual:vad_group",
         consumer="vad_worker_1",
         batch=True,
         max_records=10,
@@ -23,7 +22,7 @@ async def process_vad_worker_1(messages):
 
 @vad_broker.subscriber(stream=StreamSub(
         "audiovisual:vad_stream",
-        group="av:vad_group",
+        group="audiovisual:vad_group",
         consumer="vad_worker_2",
         batch=True,
         max_records=10,
@@ -35,7 +34,7 @@ async def process_vad_worker_2(messages):
 
 @vad_broker.subscriber(stream=StreamSub(
         "audiovisual:vad_stream",
-        group="av:vad_group",
+        group="audiovisual:vad_group",
         consumer="vad_worker_3",
         batch=True,
         max_records=10,

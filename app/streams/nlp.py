@@ -10,7 +10,7 @@ async def _process_batch(messages):
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
-        group="av:nlp_group",
+        group="audiovisual:nlp_group",
         consumer="nlp_worker_1",
         batch=True,
         max_records=10,
@@ -23,7 +23,7 @@ async def process_nlp_worker_1(messages):
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
-        group="av:nlp_group",
+        group="audiovisual:nlp_group",
         consumer="nlp_worker_2",
         batch=True,
         max_records=10,
@@ -35,7 +35,7 @@ async def process_nlp_worker_2(messages):
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
-        group="av:nlp_group",
+        group="audiovisual:nlp_group",
         consumer="nlp_worker_3",
         batch=True,
         max_records=10,
