@@ -1,12 +1,54 @@
+import asyncio
+import json
+import time
+from app.analyzers.llm import llm_transcript_analysis
 from app.core.redis import redis_router as llm_broker
-from faststream.redis import StreamSub
+from faststream.redis import StreamSub, Pipeline
+from faststream.redis.annotations import RedisMessage, Redis
+from app.core.es import fetch_stream_data, update_stream_data
 
-async def _process_batch(messages):
-    print(f"Processing batch of {len(messages)} messages")
-    for msg in messages:
-        # Process each message
-        print(f"Processing: {msg}")
+import logging
 
+# Configure the logger
+logging.basicConfig(
+    level=logging.INFO, 
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+# Create logger instance
+logger = logging.getLogger(__name__)
+
+async def _process_llm(data: list[dict]):
+    try:
+        # Start timing
+        start_time = time.time() 
+        data = fetch_stream_data(data)
+
+        # create tasks for threading
+        tasks = [
+            llm_transcript_analysis(item.get("_source", {}).get("raw_text", "")) 
+            for item in data
+        ]
+
+        # Run all tasks concurrently
+        results = await asyncio.gather(*tasks)
+
+        for idx, item in enumerate(results):
+            llm_analysis_json = item.model_dump_json()
+            llm_analysis_dict = json.loads(llm_analysis_json)
+            data[idx]["_updates"].update(llm_analysis_dict)
+
+            # End timing
+            end_time = time.time()
+            time_taken = end_time - start_time
+
+            logger.info(f"llm analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s")
+    
+        return data
+    
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during nlp analysis: {e}")
+        raise
 
 @llm_broker.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
@@ -17,8 +59,18 @@ async def _process_batch(messages):
         polling_interval=100,
     )
 )
-async def process_llm_worker_1(messages):
-    return
+async def process_llm_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        nlp_results = await _process_llm(data)
+        # update stream data in database 
+        results = await update_stream_data(
+            data=nlp_results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
 
 
 @llm_broker.subscriber(stream=StreamSub(

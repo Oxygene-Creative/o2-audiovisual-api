@@ -1,6 +1,7 @@
 import asyncio
 import time
 from app.analyzers.transcription import post_process_transcription, transcribe
+from app.core.gcp import delete_blob
 from app.core.redis import redis_router as asr_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
@@ -22,6 +23,15 @@ async def _process_asr(data: list[dict]):
         start_time = time.time() 
         data = fetch_stream_data(data)
 
+        batch_payloads = []
+        for item in data:
+            if item.get("_index", "").startswith == "tv":
+                # use video's sound track
+                soundtrack = item.get("_source", {}).get("gcp_blob").rsplit('.', 1)[0] + ".mp3"
+                batch_payloads.append(soundtrack)
+            else:
+                batch_payloads.append(item.get("_source", {}).get("gcp_blob"))
+
         batch_payloads = [item.get("_source", {}).get("gcp_blob", None) for item in data]
         response = await transcribe(gcs_blobs=batch_payloads)
 
@@ -33,14 +43,27 @@ async def _process_asr(data: list[dict]):
             word_count = len(raw_text.split())
             if raw_text.strip() and word_count > 5:
                 processed_transcript = await post_process_transcription(raw_text)
-                data[idx]["_updates"]["raw_text"] = processed_transcript
-                data[idx]["_updates"]["language"] = result.get("language","")
-                data[idx]["_updates"]["language_score"] = result.get("language_score",0)
+            else:
+                processed_transcript = raw_text
+
+            data[idx]["_updates"]["raw_text"] = processed_transcript
+            data[idx]["_updates"]["language"] = result.get("language","")
+            data[idx]["_updates"]["language_score"] = result.get("language_score",0.0)
 
             end_time = time.time()
             time_taken = end_time - start_time
 
             logger.info(f"asr analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s")
+
+        
+        # cleanup gcs, delete soundtrack of video
+        for item in data:
+            if item.get("_index", "").startswith == "tv":
+                await asyncio.to_thread(
+                    delete_blob, 
+                    item.get("_source").get("gcp_bucket"), 
+                    item.get("_source").get("gcp_blob")
+                )
 
         return data
 
