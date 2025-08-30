@@ -42,7 +42,7 @@ async def queue_processor():
      while True:
         if not audio_queue_busy_lock.locked() or not video_queue_busy_lock.locked():
             # retrieve the next item in the queue
-            result = await  redis_client.zpopmax("av:priority_queue", count=1)
+            result = await redis_client.zpopmax("av:priority_queue", count=1)
             
             if result:
                 data_json, score = result[0]

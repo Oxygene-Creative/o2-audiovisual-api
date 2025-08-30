@@ -1,7 +1,8 @@
 from app.core.redis import redis_router as vad_broker
 from faststream.redis import StreamSub
 
-async def _process_batch(messages):
+
+async def _process_vad(messages):
     print(f"Processing batch of {len(messages)} messages")
     for msg in messages:
         # Process each message
