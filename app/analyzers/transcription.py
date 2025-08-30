@@ -24,17 +24,18 @@ async def transcribe(audio_url: str):
         await client.close() 
 
 async def post_process_transcription(transcript: str, keywords: list[str]):
-    system_template = """You are a helpful assistant that analyses radio and tv transcripts for brodcats in Africs.
-      The transcripts can be a mixture of English and Kiswahili languages, some street slang like Sheng'
-      Insert necessary punctuation such as periods, commas, capialization, symbols like percentage signs, and
-      formatting numbers instead of numeric description in words where necessary.
-      Also if you come across words that match any of the words supplied in the list below, kindly format them appropriately
-      {keywords}
-      The timestamps are defined at the begining of each line using the formart [0 - 10]. Do not remove them
+    system_template = """You are a helpful assistant that post-processes transcripts of radio and TV broadcasts in Africa.
+    The transcripts can contain a mixture of multiple African languages, regional slang, and dialects.
+    Insert necessary punctuation such as periods, commas, capitalization, symbols like percentage signs, and
+    format numbers instead of numeric descriptions in words where necessary. Do not change the context or meaning
+    of the transcript in any way.
 
-      The transcript:
-      {transcript}
-      """
+    The timestamps are defined at the beginning of each line using the format [0 - 10]. Do not remove or alter them.
+
+    Output only the updated transcript without extra information:
+
+    {transcript}
+    """
 
     prompt = ChatPromptTemplate.from_messages(
         [("system", system_template), ("user", "{transcript}")]

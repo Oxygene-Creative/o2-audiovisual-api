@@ -4,7 +4,7 @@ from faststream.redis.annotations import RedisMessage, Redis
 import os
 import logging
 import httpx
-from app.core.es import fetch_mget, fetch_stream_data, save_bulk, update_stream_data
+from app.core.es import fetch_stream_data, update_stream_data
 
 
 # Configure the logger
