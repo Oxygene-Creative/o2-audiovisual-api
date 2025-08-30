@@ -7,16 +7,16 @@ import os
 
 AI_API_URL = os.getenv("AI_API_URL", "https://ai-api2-350748994585.us-central1.run.app")
 
-async def transcribe(audio_url: str):
+async def transcribe(gcs_blobs: list[str]):
     try:
-        client = APIClient(base_url=AI_API_URL)  
-        transcription_result = await client.transcribe_audio(audio_path=audio_url)
+        client = APIClient(base_url=AI_API_URL, timeout=600.0)  
+        result = await client.transcribe_audio(gcs_blobs=gcs_blobs)
         
-        if transcription_result is not None:
-            return transcription_result["transcription"]
+        if result is not None:
+            return result["transcription"]
 
         else: 
-            return { "raw_text": "" }
+            return []
    
     except Exception as e:
         print(f"An error occurred: {e}")

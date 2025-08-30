@@ -2,7 +2,7 @@ import httpx
 from typing import List, Optional
 
 class APIClient:
-    def __init__(self, base_url: str, timeout: float = 120.0, retries: int = 3):
+    def __init__(self, base_url: str, timeout: float = 300.0, retries: int = 3):
         """
         Initialize the API client with the base URL.
         """
@@ -83,27 +83,15 @@ class APIClient:
             json={"text": text},
         )
 
-    async def transcribe_audio(self, audio_path: str):
-        """
-        Call the /transcribe endpoint to transcribe speech from an audio file.
-
-        Validates whether the file exists before proceeding.
-        """
+    async def transcribe_audio(self, gcs_blobs: list[str]):
         try:
-            # Open and send the audio file
-            with open(audio_path, "rb") as file:
-                files = {"file": file}
-                return await self._make_request(
-                    method="POST",
-                    endpoint="/transcribe",
-                    files=files,
-                )
-        except FileNotFoundError:
-            print(f"Audio file not found: {audio_path}")
-            return {"error": f"Audio file not found: {audio_path}"}
+            return await self._make_request(
+                method="POST",
+                endpoint="/asr/batch",
+                json=gcs_blobs,
+            )
         except Exception as e:
-            print(f"Error reading audio file {audio_path}: {e}")
-            return {"error": f"Error reading audio file: {str(e)}"}
+            return {"error": f"Error transcribing audio files: {str(e)}"}
 
     async def analyze_topics(self, text: str, num_keywords: int = 6, topic_count: int = 3):
         """

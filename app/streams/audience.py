@@ -1,3 +1,4 @@
+import time
 from app.core.redis import redis_router as audience_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
@@ -20,6 +21,8 @@ SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
 async def _process_audience(data: list[dict]):
     try:
+        # Start timing
+        start_time = time.time() 
         data = fetch_stream_data(data)
         # extract gcp_blob paths from data
         payload = [item.get("_source", {}).get("gcp_blob", None) for item in data]
@@ -41,16 +44,19 @@ async def _process_audience(data: list[dict]):
                 { "label": "male", "score": activity.get("male", 0.0) },
                 { "label": "female", "score": activity.get("female", 0.0) }
             ]
-            logger.info(f"audience analysis for {data[idx]["_source"]["source"]["name"]}: {data[idx]["_updates"]["audience"]}")
+
+            end_time = time.time()
+            time_taken = end_time - start_time
+            logger.info(f"audience analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s")
 
         return data
 
     except httpx.RequestError as e:
-        logger.error(f"Request error during batch audience: {e}")
+        logger.error(f"Request error during batch audience analysis: {e}")
         raise
         
     except Exception as e:
-        logger.error(f"An unexpected error occurred during audience: {e}")
+        logger.error(f"An unexpected error occurred during audience analysis: {e}")
         raise
 
 @audience_broker.subscriber(stream=StreamSub(

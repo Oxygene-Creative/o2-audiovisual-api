@@ -3,7 +3,8 @@ import time
 from app.analyzers.transcription import post_process_transcription, transcribe
 from app.core.graphql import get_all_terms
 from app.core.redis import redis_router as asr_broker
-from faststream.redis import StreamSub
+from faststream.redis import StreamSub, Pipeline
+from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
 import logging
 
@@ -22,26 +23,30 @@ async def _process_asr(data: list[dict]):
         start_time = time.time() 
         data = fetch_stream_data(data)
 
-        # Define an async function for processing a single segment
-        async def process_segment(index, segment):
-            # Async transcription using the process pool
-            transcript = await transcribe(segment["audio_file"])
-            
-            # Introduce a delay before calling the LLM-powered function
-            await asyncio.sleep(0.5) 
-            raw_text = transcript["raw_text"]
+        batch_payloads = [item.get("_source", {}).get("gcp_blob", None) for item in data]
+        response = await transcribe(gcs_blobs=batch_payloads)
+
+        # transform voice activity
+        for idx, result in enumerate(response.json()):   
+            await asyncio.sleep(0.5)     
+
+            raw_text = result.get("raw_text","")
             word_count = len(raw_text.split())
             if raw_text.strip() and word_count > 5:
-                processed_transcript = await post_process_transcription(
-                    transcript["raw_text"]
-                )
+                processed_transcript = await post_process_transcription(raw_text)
+                data[idx]["_updates"]["raw_text"] = processed_transcript
+                data[idx]["_updates"]["language"] = result.get("language","")
+                data[idx]["_updates"]["language_score"] = result.get("language_score",0)
 
-                data[index]["raw_text"] = processed_transcript
-                data["segments"][index]["language"] = transcript["language"]
-                data["segments"][index]["language_score"] = transcript["language_score"]
+            end_time = time.time()
+            time_taken = end_time - start_time
+
+            logger.info(f"asr analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s")
+
+        return data
 
     except Exception as e:
-        logger.error(f"An unexpected error occurred during audience: {e}")
+        logger.error(f"An unexpected error occurred during asr analysis: {e}")
         raise
 
 
@@ -54,9 +59,27 @@ async def _process_asr(data: list[dict]):
         polling_interval=100,
     )
 )
-async def process_asr_worker_1(messages):
-    return
+async def process_asr_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        asr_results = await _process_asr(data)
+        # update stream data in database 
+        results = await update_stream_data(
+            data=asr_results, 
+            status={"complete": False, "step": "NLP" })
 
+        await msg.ack(redis)
+
+        # batch publish to next stage
+        for result in results:
+            await asr_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:nlp_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+    except Exception as e:
+        await msg.nack()
 
 @asr_broker.subscriber(stream=StreamSub(
         "audiovisual:asr_stream",
@@ -67,8 +90,27 @@ async def process_asr_worker_1(messages):
         polling_interval=100,
     )
 )
-async def process_asr_worker_2(messages):
-    return
+async def process_asr_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        asr_results = await _process_asr(data)
+        # update stream data in database 
+        results = await update_stream_data(
+            data=asr_results, 
+            status={"complete": False, "step": "NLP" })
+
+        await msg.ack(redis)
+
+        # batch publish to next stage
+        for result in results:
+            await asr_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:nlp_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+    except Exception as e:
+        await msg.nack()
 
 @asr_broker.subscriber(stream=StreamSub(
         "audiovisual:asr_stream",
@@ -79,5 +121,24 @@ async def process_asr_worker_2(messages):
         polling_interval=100,
     )
 )
-async def process_asr_worker_3(messages):
-    return
+async def process_asr_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        asr_results = await _process_asr(data)
+        # update stream data in database 
+        results = await update_stream_data(
+            data=asr_results, 
+            status={"complete": False, "step": "NLP" })
+
+        await msg.ack(redis)
+
+        # batch publish to next stage
+        for result in results:
+            await asr_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:nlp_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+    except Exception as e:
+        await msg.nack()
