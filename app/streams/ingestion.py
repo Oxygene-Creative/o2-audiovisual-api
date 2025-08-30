@@ -33,7 +33,7 @@ async def ingestion_handler(upload: Upload):
 
     data = {
         "doc_id": str(uuid.uuid4()),
-        "index": index,
+        "_index": index,
         "stream_type": upload.media_type,
         "source": {
             "type": source_type,

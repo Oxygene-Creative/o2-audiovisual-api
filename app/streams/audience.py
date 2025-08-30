@@ -4,6 +4,8 @@ from faststream.redis.annotations import RedisMessage, Redis
 import os
 import logging
 import httpx
+from app.core.es import fetch_mget, fetch_stream_data, save_bulk, update_stream_data
+
 
 # Configure the logger
 logging.basicConfig(
@@ -18,8 +20,9 @@ SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
 async def _process_audience(data: list[dict]):
     try:
+        data = fetch_stream_data(data)
         # extract gcp_blob paths from data
-        payload = [item.get("gcp_blob", None) for item in data]
+        payload = [item.get("_source", {}).get("gcp_blob", None) for item in data]
 
         logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for audience analysis")
         
@@ -34,11 +37,11 @@ async def _process_audience(data: list[dict]):
         # transform voice activity
         for idx, result in enumerate(response.json()):
             activity = {item["labels"]: item["duration"] for item in result.get("activity")}        
-            data[idx]["audience"] = [
+            data[idx]["_updates"]["audience"] = [
                 { "label": "male", "score": activity.get("male", 0.0) },
                 { "label": "female", "score": activity.get("female", 0.0) }
             ]
-            logger.info(f"audience analysis for {data[idx]["source"]["name"]}: {data[idx]["audience"]}")
+            logger.info(f"audience analysis for {data[idx]["_source"]["source"]["name"]}: {data[idx]["_updates"]["audience"]}")
 
         return data
 
@@ -61,13 +64,18 @@ async def _process_audience(data: list[dict]):
 )
 async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     try:
-        results = await _process_audience(data)
+        audience_results = await _process_audience(data)
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
         await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
             await audience_broker.publish(
-                result,
+                { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
             )
@@ -87,13 +95,18 @@ async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: 
 )
 async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     try:
-        results = await _process_audience(data)
+        audience_results = await _process_audience(data)
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
         await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
             await audience_broker.publish(
-                result,
+                { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
             )
@@ -113,13 +126,18 @@ async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: 
 )
 async def process_audience_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     try:
-        results = await _process_audience(data)
+        audience_results = await _process_audience(data)
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
         await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
             await audience_broker.publish(
-                result,
+                { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
             )

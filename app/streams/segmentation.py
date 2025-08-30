@@ -76,12 +76,12 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
         
         # Create elastic search data
         data.pop("stream_id")
-        index = data.pop("index", None)
+        index = data.pop("_index", None)
         data["duration"] = segment["duration"]
         data["gcp_blob"] = dest_file_path
         data["file_size"] = file_size
 
-        processed_segments.append({ "index": index, "data": data})
+        processed_segments.append({ "_index": index, "data": data})
     
     return processed_segments
     
@@ -133,11 +133,11 @@ async def _segment_media(data: list[dict]):
         logger.error(f"An unexpected error occurred during audience: {e}")
         raise
 
-async def _save_segments(segments: list):
+async def _save_segments(segments: list[dict]):
     actions = [
         {
             "_op_type": "index",
-            "_index": segment.get("index"),
+            "_index": segment.get("_index"),
             "_id": str(uuid.uuid4()),
             "doc": segment.get("data")
         }
@@ -166,7 +166,7 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
-                { "index": result.get("_index"), "id": result.get("_id") },
+                { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:audience_stream",
                 pipeline=pipe,
             )
@@ -174,7 +174,6 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
         await pipe.execute() 
     except Exception as e:
         await msg.nack()
-
 
 @segmentation_broker.subscriber(stream=StreamSub(
         "audiovisual:segmentation_stream",
@@ -195,7 +194,7 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
-                { "index": result.get("_index"), "id": result.get("_id") },
+                { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:audience_stream",
                 pipeline=pipe,
             )
@@ -223,7 +222,7 @@ async def process_segmentation_worker_3(data: list[dict], msg: RedisMessage, red
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
-                { "index": result.get("_index"), "id": result.get("_id") },
+                { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:audience_stream",
                 pipeline=pipe,
             )
