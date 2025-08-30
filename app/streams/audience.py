@@ -21,7 +21,7 @@ async def _process_audience(data: list[dict]):
         # extract gcp_blob paths from data
         payload = [item.get("gcp_blob", None) for item in data]
 
-        logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/audience/batch for voice activity detection")
+        logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for audience analysis")
         
         # Make async POST request using httpx
         async with httpx.AsyncClient() as client:
@@ -32,10 +32,11 @@ async def _process_audience(data: list[dict]):
         response.raise_for_status()
         
         # transform voice activity
-        for idx, result in enumerate(response.json()):            
+        for idx, result in enumerate(response.json()):
+            activity = {item["labels"]: item["duration"] for item in result.get("activity")}        
             data[idx]["audience"] = [
-                { "label": "male", "score": result.get("male", 0.0) },
-                { "label": "female", "score": result.get("female", 0.0) }
+                { "label": "male", "score": activity.get("male", 0.0) },
+                { "label": "female", "score": activity.get("female", 0.0) }
             ]
             logger.info(f"audience analysis for {data[idx]["source"]["name"]}: {data[idx]["audience"]}")
 

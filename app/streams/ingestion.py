@@ -1,3 +1,4 @@
+import uuid
 from pydantic import BaseModel
 import json
 from typing import Optional
@@ -31,7 +32,9 @@ async def ingestion_handler(upload: Upload):
         index = None
 
     data = {
+        "doc_id": str(uuid.uuid4()),
         "index": index,
+        "stream_type": upload.media_type,
         "source": {
             "type": source_type,
             "name": upload.stream_name
@@ -48,7 +51,7 @@ async def ingestion_handler(upload: Upload):
     # Add to redis sorted list
     await redis_client.zadd(
         "audiovisual:priority_queue", 
-        {json.dumps(data): timestamp.timestamp()})
+        {data: timestamp.timestamp()})
 
     return True
 

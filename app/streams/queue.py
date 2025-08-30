@@ -10,11 +10,10 @@ async def queue_processor():
             
             if result:
                 data_json, score = result[0]
-                result_json = json.loads(data_json)
 
                 # post to media analysis
                 await queue_router.broker.publish(
-                    json.dumps(result_json), "audiovisual:audience_stream"
+                    data_json, "audiovisual:audience_stream"
                 )
                     
         else:
