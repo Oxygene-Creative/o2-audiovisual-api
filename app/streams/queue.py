@@ -12,16 +12,11 @@ async def queue_processor():
                 data_json, score = result[0]
                 result_json = json.loads(data_json)
 
-                if result_json.get("media_type", "").lower() == "video":
-                    # post to video analysis
-                    await queue_router.broker.publish(
-                        json.dumps(result_json), "audiovisual:video_processing_stream"
-                    )
-                elif result_json.get("media_type", "").lower() == "audio":
-                    # post to audio analysis
-                    await queue_router.broker.publish(
-                        json.dumps(result_json), "audiovisual:vad_stream"
-                    )
+                # post to media analysis
+                await queue_router.broker.publish(
+                    json.dumps(result_json), "audiovisual:audience_stream"
+                )
+                    
         else:
-            print("🔁 AV Queue Still busy...")
+            print("🔁 AudioVisual Queue Still busy...")
         await asyncio.sleep(0.5)
