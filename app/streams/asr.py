@@ -1,7 +1,6 @@
 import asyncio
 import time
 from app.analyzers.transcription import post_process_transcription, transcribe
-from app.core.graphql import get_all_terms
 from app.core.redis import redis_router as asr_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
@@ -26,8 +25,8 @@ async def _process_asr(data: list[dict]):
         batch_payloads = [item.get("_source", {}).get("gcp_blob", None) for item in data]
         response = await transcribe(gcs_blobs=batch_payloads)
 
-        # transform voice activity
-        for idx, result in enumerate(response.json()):   
+        # populate updates
+        for idx, result in enumerate(response):   
             await asyncio.sleep(0.5)     
 
             raw_text = result.get("raw_text","")
@@ -48,7 +47,6 @@ async def _process_asr(data: list[dict]):
     except Exception as e:
         logger.error(f"An unexpected error occurred during asr analysis: {e}")
         raise
-
 
 @asr_broker.subscriber(stream=StreamSub(
         "audiovisual:asr_stream",

@@ -39,7 +39,7 @@ class APIClient:
         """
         return await self._make_request(
             method="POST",
-            endpoint="/categories",
+            endpoint="/categories/batch",
             json={"text": text, "categories": categories, "multi_label": multi_label},
         )
 
