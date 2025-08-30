@@ -23,7 +23,7 @@ async def transcribe(audio_url: str):
     finally:
         await client.close() 
 
-async def post_process_transcription(transcript: str, keywords: list[str]):
+async def post_process_transcription(transcript: str):
     system_template = """You are a helpful assistant that post-processes transcripts of radio and TV broadcasts in Africa.
     The transcripts can contain a mixture of multiple African languages, regional slang, and dialects.
     Insert necessary punctuation such as periods, commas, capitalization, symbols like percentage signs, and
@@ -42,7 +42,7 @@ async def post_process_transcription(transcript: str, keywords: list[str]):
     )
 
     chain = prompt | llm | StrOutputParser()
-    processed_transcript = chain.invoke({ "keywords": ", ".join(keywords), "transcript": transcript })
+    processed_transcript = chain.invoke({ "transcript": transcript })
 
     return processed_transcript.strip()
 
