@@ -43,14 +43,14 @@ class APIClient:
             json=data,
         )
 
-    async def get_embeddings(self, text: str):
+    async def get_embeddings(self, data: list[str]):
         """
         Call the /embeddings/text endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/embeddings/text",
-            json={"text": text},
+            endpoint="/embeddings/text/batch",
+            json=data,
         )
 
     async def get_emotions(self, data: list):

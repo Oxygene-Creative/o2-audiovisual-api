@@ -62,12 +62,12 @@ async def _process_nlp(data: list[dict]):
                 })
 
         tags, topics, emotions, sentiments, embeddings, industries  = await asyncio.gather(
-            categorize_text(batch_tag_payloads),
-            analyze_topics(batch_payloads),
-            analyze_emotions(batch_payloads),
-            sentiment_analysis(batch_payloads),
-            embed_text(batch_payloads),
-            categorize_text(batch_industry_payloads)
+            categorize_text(data=batch_tag_payloads),
+            analyze_topics(data=batch_payloads),
+            analyze_emotions(data=batch_payloads),
+            sentiment_analysis(data=batch_payloads),
+            embed_text(data=batch_payloads),
+            categorize_text(data=batch_industry_payloads)
         )
 
         # populate updates
