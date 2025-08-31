@@ -45,17 +45,20 @@ async def _process_nlp(data: list[dict]):
         for item in data:
             batch_industry_payloads.append({ 
                 "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
-                "categories":  industry_sectors
+                "categories":  industry_sectors,
+                "multi_label": True
             })
             if item.get("_index", "").startsWith("radio"):
                 batch_tag_payloads.append({ 
                     "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
-                    "categories":  radio_categories
+                    "categories":  radio_categories,
+                    "multi_label": True
                 })
             elif item.get("_index", "").startsWith("tv"):
                 batch_tag_payloads.append({ 
                     "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
-                    "categories":  tv_categories
+                    "categories":  tv_categories,
+                    "multi_label": True
                 })
 
         tags, topics, emotions, sentiments, embeddings, industries  = await asyncio.gather(

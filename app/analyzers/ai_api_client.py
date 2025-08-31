@@ -33,14 +33,14 @@ class APIClient:
                 if attempt == self.retries:
                     return {"error": f"Unexpected error: {str(e)}"}
         
-    async def get_categories(self, text: str, categories: List[str], multi_label: bool):
+    async def get_categories(self, data: list):
         """
-        Call the /categories endpoint.
+        Call the /categories/batch endpoint.
         """
         return await self._make_request(
             method="POST",
             endpoint="/categories/batch",
-            json={"text": text, "categories": categories, "multi_label": multi_label},
+            json=data,
         )
 
     async def get_embeddings(self, text: str):

@@ -38,10 +38,10 @@ def match_keywords(text: str, keywords: List[str]):
 
     return list(matched_keywords) if matched_keywords else []
 
-async def categorize_text(text: str, categories: List[str], threshold=0.3):
+async def categorize_text(data: List):
     try:
         client = APIClient(base_url=AI_API_URL)  
-        categories_result = await client.get_categories(text=text, categories=categories, multi_label=True)
+        categories_result = await client.get_categories(data=data)
         return categories_result
     except Exception as e:
         print(f"An error occurred: {e}")
