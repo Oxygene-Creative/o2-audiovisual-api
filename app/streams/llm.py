@@ -37,6 +37,8 @@ async def _process_llm(data: list[dict]):
             llm_analysis_json = item.model_dump_json()
             llm_analysis_dict = json.loads(llm_analysis_json)
             data[idx]["_updates"].update(llm_analysis_dict)
+            data[idx]["_updates"]["creator"] = llm_analysis_dict.get("show_metadata", {}).get("host", "")
+            data[idx]["_updates"]["title"] = llm_analysis_dict.get("show_metadata", {}).get("program_name", "")
 
             # End timing
             end_time = time.time()
