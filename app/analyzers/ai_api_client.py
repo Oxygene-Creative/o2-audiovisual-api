@@ -93,14 +93,14 @@ class APIClient:
         except Exception as e:
             return {"error": f"Error transcribing audio files: {str(e)}"}
 
-    async def analyze_topics(self, text: str, num_keywords: int = 6, topic_count: int = 3):
+    async def analyze_topics(self, data: list):
         """
         Call the /topics endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/topics",
-            json={"text": text, "num_keywords": num_keywords, "topic_count": topic_count},
+            endpoint="/topics/batch",
+            json=data,
         )
 
     async def close(self):
