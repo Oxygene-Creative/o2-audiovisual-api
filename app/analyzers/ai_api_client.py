@@ -53,14 +53,14 @@ class APIClient:
             json={"text": text},
         )
 
-    async def get_emotions(self, text: str):
+    async def get_emotions(self, data: list):
         """
         Call the /emotions endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/emotions",
-            json={"text": text},
+            endpoint="/emotions/batch",
+            json=data,
         )
 
     async def detect_sarcasm(self, text: str):
@@ -73,14 +73,14 @@ class APIClient:
             json={"text": text},
         )
 
-    async def analyze_sentiment(self, text: str):
+    async def analyze_sentiment(self, data: list):
         """
         Call the /sentiment endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/sentiment",
-            json={"text": text},
+            endpoint="/sentiment/batch",
+            json=data,
         )
 
     async def transcribe_audio(self, gcs_blobs: list[str]):
