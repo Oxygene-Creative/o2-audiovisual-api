@@ -2,8 +2,11 @@ import uuid
 from pydantic import BaseModel
 import json
 from typing import Optional
-from app.core.redis import redis_router as queue_router, redis_client
+from app.core.redis import redis_client
 from datetime import datetime
+from fastapi import APIRouter
+
+ingestion_router = APIRouter()
 
 class Upload(BaseModel):
     stream_id: str
@@ -13,7 +16,7 @@ class Upload(BaseModel):
     blob: str
     timestamp_str: Optional[str]
 
-@queue_router.post("/ingestion")
+@ingestion_router.post("/ingestion")
 async def ingestion_handler(upload: Upload):
     timestamp = (
         datetime.strptime(upload.timestamp_str, "%Y-%m-%dT%H:%M:%S")

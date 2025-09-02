@@ -7,7 +7,7 @@ from app.analyzers.sentiment import sentiment_analysis
 from app.analyzers.topics import analyze_topics
 from app.analyzers.transcription import remove_timestamps_and_format
 from app.core.graphql import fetch_industries, get_tags
-from app.core.redis import redis_router as nlp_router
+from app.core.redis import redis_broker as nlp_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
@@ -82,7 +82,7 @@ async def _process_nlp(data: list[dict]):
             end_time = time.time()
             time_taken = end_time - start_time
 
-            logger.info(f"nlp analysis for {item["_source"]["source"]["name"]} completed in {time_taken}s")
+            logger.info(f'nlp analysis for {item["_source"]["source"]["name"]} completed in {time_taken}s')
 
         return data
     
@@ -90,7 +90,7 @@ async def _process_nlp(data: list[dict]):
         logger.error(f"An unexpected error occurred during nlp analysis: {e}")
         raise
 
-@nlp_router.subscriber(stream=StreamSub(
+@nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
         group="audiovisual:nlp_group",
         consumer="nlp_worker_1",
@@ -111,7 +111,7 @@ async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
 
         # batch publish to next stage
         for result in results:
-            await nlp_router.broker.publish(
+            await nlp_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:llm_stream",
                 pipeline=pipe,
@@ -121,7 +121,7 @@ async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@nlp_router.subscriber(stream=StreamSub(
+@nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
         group="audiovisual:nlp_group",
         consumer="nlp_worker_2",
@@ -142,7 +142,7 @@ async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
 
         # batch publish to next stage
         for result in results:
-            await nlp_router.broker.publish(
+            await nlp_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:llm_stream",
                 pipeline=pipe,
@@ -152,7 +152,7 @@ async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@nlp_router.subscriber(stream=StreamSub(
+@nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
         group="audiovisual:nlp_group",
         consumer="nlp_worker_3",
@@ -173,7 +173,7 @@ async def process_nlp_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
 
         # batch publish to next stage
         for result in results:
-            await nlp_router.broker.publish(
+            await nlp_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:llm_stream",
                 pipeline=pipe,

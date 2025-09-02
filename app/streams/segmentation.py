@@ -4,7 +4,7 @@ from app.core.es import save_bulk
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
 from app.core.gcp import delete_blob, download_file, upload
 from app.core.media_processing import extract_audio_from_video, slice_audio
-from app.core.redis import redis_router as segmentation_router
+from app.core.redis import redis_broker as segmentation_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 import logging
@@ -55,7 +55,7 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
         dest_file_path = (
             f"tv/{data.get('source').get('name')}/{recording_date}/{file_name}" 
             if stream_type.lower() == "video" 
-            else f"radio/{data.get("source").get('name')}/{recording_date}/{file_name}"          
+            else f"radio/{data.get('source').get('name')}/{recording_date}/{file_name}"          
         )
         # Upload to GCP
         await asyncio.to_thread(upload, data.get("gcp_bucket"), local_file_path, dest_file_path)
@@ -64,7 +64,7 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
             # Extract sound track of video segment and upload to GCS
             soundtrack_file_path = await asyncio.to_thread(extract_audio_from_video, asset_file_path)
             soundtrack_file_name = extract_file_name(soundtrack_file_path)
-            soundtrack_dest_file_path = f"tv/{data.get("source").get('name')}/{recording_date}/{soundtrack_file_name}"          
+            soundtrack_dest_file_path = f"tv/{data.get('source').get('name')}/{recording_date}/{soundtrack_file_name}"          
             await asyncio.to_thread(upload, data.get("gcp_bucket"), soundtrack_file_path, soundtrack_dest_file_path)
             await asyncio.to_thread(delete_file, soundtrack_file_path)
 
@@ -121,7 +121,7 @@ async def _segment_media(data: list[dict]):
             )
             
             results.extend(processed_segments)
-            logger.info(f"segment analysis for {data[idx]["source"]["name"]}: {processed_segments}")
+            logger.info(f'segment analysis for {data[idx]["source"]["name"]}: {processed_segments}')
 
         return results
 
@@ -147,7 +147,7 @@ async def _save_segments(segments: list[dict]):
 
     return actions
 
-@segmentation_router.subscriber(stream=StreamSub(
+@segmentation_broker.subscriber(stream=StreamSub(
         "audiovisual:segmentation_stream",
         group="audiovisual:segmentation_group",
         consumer="segmentation_worker_1",
@@ -165,7 +165,7 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
 
         # batch publish to next stage
         for result in results:
-            await segmentation_router.broker.publish(
+            await segmentation_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:audience_stream",
                 pipeline=pipe,
@@ -175,7 +175,7 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
     except Exception as e:
         await msg.nack()
 
-@segmentation_router.subscriber(stream=StreamSub(
+@segmentation_broker.subscriber(stream=StreamSub(
         "audiovisual:segmentation_stream",
         group="audiovisual:segmentation_group",
         consumer="segmentation_worker_2",
@@ -193,7 +193,7 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
 
         # batch publish to next stage
         for result in results:
-            await segmentation_router.broker.publish(
+            await segmentation_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:audience_stream",
                 pipeline=pipe,
@@ -203,7 +203,7 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
     except Exception as e:
         await msg.nack()
 
-@segmentation_router.subscriber(stream=StreamSub(
+@segmentation_broker.subscriber(stream=StreamSub(
         "audiovisual:segmentation_stream",
         group="audiovisual:segmentation_group",
         consumer="segmentation_worker_3",
@@ -221,7 +221,7 @@ async def process_segmentation_worker_3(data: list[dict], msg: RedisMessage, red
 
         # batch publish to next stage
         for result in results:
-            await segmentation_router.broker.publish(
+            await segmentation_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:audience_stream",
                 pipeline=pipe,

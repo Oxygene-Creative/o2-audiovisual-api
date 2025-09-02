@@ -2,6 +2,8 @@ from faststream.redis import RedisBroker, fastapi
 import os
 import asyncio
 from redis.asyncio import Redis
+from redis.asyncio.client import Pipeline
+from fastapi import Depends
 
 # Create shared broker instance
 REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
@@ -24,4 +26,11 @@ async def close_redis_client():
     if redis_client is not None:
         await redis_client.close()
         redis_client = None
+
+async def get_redis() -> Redis:
+    return Redis.from_url(REDIS_URI)
+
+async def get_pipe(redis: Redis = Depends(get_redis)) -> Pipeline:
+    return redis.pipeline()
+
     
