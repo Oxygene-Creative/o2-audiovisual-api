@@ -19,11 +19,11 @@ AI_API_URL = os.getenv("AI_API_URL", "https://ai-api2-350748994585.us-central1.r
 
 #     return options
 
-async def embed_text(text: str):
+async def embed_text(data: list[str]):
     try:
         client = APIClient(base_url=AI_API_URL)    
         # Emotions example
-        embeddings_result = await client.get_embeddings(text=text)
+        embeddings_result = await client.get_embeddings(data=data)
         return embeddings_result['embeddings']
     except Exception as e:
         print(f"An error occurred: {e}")

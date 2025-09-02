@@ -7,39 +7,43 @@ import os
 
 AI_API_URL = os.getenv("AI_API_URL", "https://ai-api2-350748994585.us-central1.run.app")
 
-async def transcribe(audio_url: str):
+async def transcribe(gcs_blobs: list[str]):
     try:
-        client = APIClient(base_url=AI_API_URL)  
-        transcription_result = await client.transcribe_audio(audio_path=audio_url)
+        client = APIClient(base_url=AI_API_URL, timeout=600.0)  
+        result = await client.transcribe_audio(gcs_blobs=gcs_blobs)
         
-        if transcription_result is not None:
-            return transcription_result["transcription"]
+        if result is not None:
+            return result["transcription"]
 
         else: 
-            return { "raw_text": "" }
+            return []
    
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
         await client.close() 
 
-async def post_process_transcription(transcript: str, keywords: list[str]):
-    system_template = """You are a helpful assistant that analyses radio and tv transcripts for brodcats in Africs.
-      The transcripts can be a mixture of English and Kiswahili languages, some street slang like Sheng'
-      Insert necessary punctuation such as periods, commas, capialization, symbols like percentage signs, and
-      formatting numbers instead of numeric description in words where necessary.
-      The timestamps are defined at the begining of each line using the formart [0 - 10]. Do not remove them
 
-      The transcript:
-      {transcript}
-      """
+async def post_process_transcription(transcript: str):
+    system_template = """You are a helpful assistant that post-processes transcripts of radio and TV broadcasts in Africa.
+    The transcripts can contain a mixture of multiple African languages, regional slang, and dialects.
+    Insert necessary punctuation such as periods, commas, capitalization, symbols like percentage signs, and
+    format numbers instead of numeric descriptions in words where necessary. Do not change the context or meaning
+    of the transcript in any way. 
+    
+    The timestamps are defined at the beginning of each line using the format [0 - 10]. Do not remove or alter them.
+
+    Output only the updated transcript without extra information:
+
+    {transcript}
+    """
 
     prompt = ChatPromptTemplate.from_messages(
         [("system", system_template), ("user", "{transcript}")]
     )
 
     chain = prompt | llm | StrOutputParser()
-    processed_transcript = chain.invoke({ "keywords": ", ".join(keywords), "transcript": transcript })
+    processed_transcript = chain.invoke({ "transcript": transcript })
 
     return processed_transcript.strip()
 

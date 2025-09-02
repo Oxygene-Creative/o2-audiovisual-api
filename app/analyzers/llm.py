@@ -5,6 +5,9 @@ from app.models.analytics import LLMAnalysisModel
 from langchain_core.prompts import PromptTemplate
 
 async def llm_transcript_analysis(transcript: str) -> LLMAnalysisModel:
+    word_count = len(transcript.split())
+    if not transcript or word_count < 5:
+        return None
 
     # Create output parser
     parser = PydanticOutputParser(pydantic_object=LLMAnalysisModel)

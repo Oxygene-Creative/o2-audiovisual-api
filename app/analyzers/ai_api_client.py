@@ -2,7 +2,7 @@ import httpx
 from typing import List, Optional
 
 class APIClient:
-    def __init__(self, base_url: str, timeout: float = 120.0, retries: int = 3):
+    def __init__(self, base_url: str, timeout: float = 300.0, retries: int = 3):
         """
         Initialize the API client with the base URL.
         """
@@ -33,34 +33,34 @@ class APIClient:
                 if attempt == self.retries:
                     return {"error": f"Unexpected error: {str(e)}"}
         
-    async def get_categories(self, text: str, categories: List[str], multi_label: bool):
+    async def get_categories(self, data: list):
         """
-        Call the /categories endpoint.
+        Call the /categories/batch endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/categories",
-            json={"text": text, "categories": categories, "multi_label": multi_label},
+            endpoint="/categories/batch",
+            json=data,
         )
 
-    async def get_embeddings(self, text: str):
+    async def get_embeddings(self, data: list[str]):
         """
         Call the /embeddings/text endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/embeddings/text",
-            json={"text": text},
+            endpoint="/embeddings/text/batch",
+            json=data,
         )
 
-    async def get_emotions(self, text: str):
+    async def get_emotions(self, data: list):
         """
         Call the /emotions endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/emotions",
-            json={"text": text},
+            endpoint="/emotions/batch",
+            json=data,
         )
 
     async def detect_sarcasm(self, text: str):
@@ -73,46 +73,34 @@ class APIClient:
             json={"text": text},
         )
 
-    async def analyze_sentiment(self, text: str):
+    async def analyze_sentiment(self, data: list):
         """
         Call the /sentiment endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/sentiment",
-            json={"text": text},
+            endpoint="/sentiment/batch",
+            json=data,
         )
 
-    async def transcribe_audio(self, audio_path: str):
-        """
-        Call the /transcribe endpoint to transcribe speech from an audio file.
-
-        Validates whether the file exists before proceeding.
-        """
+    async def transcribe_audio(self, gcs_blobs: list[str]):
         try:
-            # Open and send the audio file
-            with open(audio_path, "rb") as file:
-                files = {"file": file}
-                return await self._make_request(
-                    method="POST",
-                    endpoint="/transcribe",
-                    files=files,
-                )
-        except FileNotFoundError:
-            print(f"Audio file not found: {audio_path}")
-            return {"error": f"Audio file not found: {audio_path}"}
+            return await self._make_request(
+                method="POST",
+                endpoint="/asr/batch",
+                json=gcs_blobs,
+            )
         except Exception as e:
-            print(f"Error reading audio file {audio_path}: {e}")
-            return {"error": f"Error reading audio file: {str(e)}"}
+            return {"error": f"Error transcribing audio files: {str(e)}"}
 
-    async def analyze_topics(self, text: str, num_keywords: int = 6, topic_count: int = 3):
+    async def analyze_topics(self, data: list):
         """
         Call the /topics endpoint.
         """
         return await self._make_request(
             method="POST",
-            endpoint="/topics",
-            json={"text": text, "num_keywords": num_keywords, "topic_count": topic_count},
+            endpoint="/topics/batch",
+            json=data,
         )
 
     async def close(self):
