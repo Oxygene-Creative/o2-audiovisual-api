@@ -4,7 +4,7 @@ from pydub import AudioSegment
 from pathlib import Path
 from app.core.files import subfolder_check
 
-def extract_audio_from_video(video_path):
+async def extract_audio_from_video(video_path):
     # extract the file name
     audio_file_name = Path(video_path).stem
     
@@ -54,12 +54,12 @@ async def slice_audio(speech_segments, audio_path):
             "start": segment["start"], 
             "stop": segment["stop"],
             "duration": segment["duration"],
-            "audio_file": extract_file_path })
+            "file_path": extract_file_path })
         
     return extracted_files
 
 
-def slice_video(video_path, start, stop):
+async def slice_video(video_path, start, stop):
     output_file_name = f"{Path(video_path).stem}_{start}_{stop}.mp4"
     # Load the video file
     video_clip = VideoFileClip(video_path)
@@ -76,4 +76,9 @@ def slice_video(video_path, start, stop):
     video_clip.close()
     sliced_clip.close()
 
-    return output_file_path
+    return {
+        "start": start,
+        "stop": stop,
+        "duration": stop - start,
+        "file_path": output_file_path
+    }

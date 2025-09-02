@@ -3,13 +3,15 @@ import uuid
 from app.core.es import save_bulk
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
 from app.core.gcp import delete_blob, download_file, upload
-from app.core.media_processing import extract_audio_from_video, slice_audio
+from app.core.media_processing import extract_audio_from_video, slice_audio, slice_video
 from app.core.redis import redis_broker as segmentation_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 import logging
 import httpx
 import os
+from datetime import datetime
+import time
 
 # Configure the logger
 logging.basicConfig(
@@ -35,23 +37,26 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
     stream_type = data.pop("stream_type", None)
     if stream_type.lower() == "audio":
         # Slice audio file based on speech segments
-        speech_segment_files = await asyncio.to_thread(
-            slice_audio, segments, asset_file_path
-        )
+        speech_segment_files = await slice_audio(segments, asset_file_path)
+
     elif stream_type.lower() == "video":
         # Slice video file based on speech segments
-        speech_segment_files = await asyncio.to_thread(
-            slice_audio, segments, asset_file_path
-        )
+        video_tasks = []
+        for segment in segments:
+            # slice video segment
+            video_tasks.push(slice_video(asset_file_path, segment['start'], segment['stop']))
+            
+        speech_segment_files = asyncio.gather(*video_tasks)
 
     # Upload segment files to gcp and create data dict
     for segment in speech_segment_files:  
-        local_file_path = segment["audio_file"]
+        local_file_path = segment["file_path"]
         file_name = extract_file_name(local_file_path)
         file_size = calc_file_size(local_file_path)
         
         # Destination file path construction
-        recording_date = data.get("timestamp")
+        recording_date = datetime.fromisoformat(data.get("timestamp")).strftime("%Y-%m-%d")
+
         dest_file_path = (
             f"tv/{data.get('source').get('name')}/{recording_date}/{file_name}" 
             if stream_type.lower() == "video" 
@@ -62,53 +67,57 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
         
         if stream_type == "video":
             # Extract sound track of video segment and upload to GCS
-            soundtrack_file_path = await asyncio.to_thread(extract_audio_from_video, asset_file_path)
+            soundtrack_file_path = await extract_audio_from_video(asset_file_path)
             soundtrack_file_name = extract_file_name(soundtrack_file_path)
             soundtrack_dest_file_path = f"tv/{data.get('source').get('name')}/{recording_date}/{soundtrack_file_name}"          
             await asyncio.to_thread(upload, data.get("gcp_bucket"), soundtrack_file_path, soundtrack_dest_file_path)
             await asyncio.to_thread(delete_file, soundtrack_file_path)
 
-        # Delete master file
+        # Delete sliced file
         await asyncio.to_thread(delete_file, local_file_path)
-        
-        # Delete master blob
+        # Delete master files
         await asyncio.to_thread(delete_blob, data.get("gcp_bucket"), data.get("gcp_blob"))
         
         # Create elastic search data
-        data.pop("stream_id")
-        index = data.pop("_index", None)
         data["duration"] = segment["duration"]
         data["gcp_blob"] = dest_file_path
         data["file_size"] = file_size
 
-        processed_segments.append({ "_index": index, "data": data})
+        processed_segments.append({ "_index": data.get('_index'), "data": data})
+    
+    
+    await asyncio.to_thread(delete_file, asset_file_path)
     
     return processed_segments
     
 async def _segment_media(data: list[dict]):
     try:
+        # Start timing
+        start_time = time.time() 
         # extract gcp_blob paths from data
         payload = [
-            item.get("gcp_blob")
+            { "bucket": item.get("gcp_bucket"), "blob": item.get("gcp_blob") }
             if item.get("stream_type", "").lower() == "audio"
-            else replace_mp4_with_mp3(item.get("gcp_blob"))
+            else { "bucket": item.get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("gcp_blob")) }
             for item in data
         ]
 
         logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for speech and music segmentation")
         
         # Make async POST request using httpx
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=600) as client:
             response = await client.post(
                 f"{SEGMENTATION_GPU_URL}/vad/batch",
                 json=payload
             )        
         response.raise_for_status()
-
         subfolder_check(f"{os.getcwd()}/o2-files")
         results = []
 
         for idx, result in enumerate(response.json()):
+            if not result.get("success", False):
+                continue
+            
             # download master file
             file_name = extract_file_name(data[idx].get("gcp_blob"))
             asset_file_path = f"{os.getcwd()}/o2-files/{file_name}"
@@ -120,17 +129,19 @@ async def _segment_media(data: list[dict]):
                 asset_file_path=asset_file_path
             )
             
+            end_time = time.time()
+            time_taken = end_time - start_time
             results.extend(processed_segments)
-            logger.info(f'segment analysis for {data[idx]["source"]["name"]}: {processed_segments}')
+            logger.info(f'segment analysis for {data[idx]["source"]["name"]} done in {time_taken}s')
 
         return results
 
     except httpx.RequestError as e:
-        logger.error(f"Request error during batch audience: {e}")
+        logger.error(f"Request error during batch segmentation: {e}")
         raise
         
     except Exception as e:
-        logger.error(f"An unexpected error occurred during audience: {e}")
+        logger.error(f"An unexpected error occurred during segmentation: {e}")
         raise
 
 async def _save_segments(segments: list[dict]):
@@ -144,6 +155,8 @@ async def _save_segments(segments: list[dict]):
         for segment in segments
     ]
     save_bulk(actions)
+
+    # Create Recording in Graphql
 
     return actions
 
@@ -161,8 +174,6 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
         segments = await _segment_media(data=data)
         results = await _save_segments(segments=segments)
 
-        await msg.ack(redis)
-
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
@@ -172,7 +183,11 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
             )
 
         await pipe.execute() 
+        # acknowledge message
+        await msg.ack(redis)
     except Exception as e:
+        print("nack call")
+        print(e)
         await msg.nack()
 
 @segmentation_broker.subscriber(stream=StreamSub(
@@ -189,8 +204,6 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
         segments = await _segment_media(data=data)
         results = await _save_segments(segments=segments)
 
-        await msg.ack(redis)
-
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
@@ -200,7 +213,11 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
             )
 
         await pipe.execute() 
+        # acknowledge message
+        await msg.ack(redis)
     except Exception as e:
+        print(e)
+        print("nack call")
         await msg.nack()
 
 @segmentation_broker.subscriber(stream=StreamSub(
@@ -217,8 +234,6 @@ async def process_segmentation_worker_3(data: list[dict], msg: RedisMessage, red
         segments = await _segment_media(data=data)
         results = await _save_segments(segments=segments)
 
-        await msg.ack(redis)
-
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
@@ -228,5 +243,14 @@ async def process_segmentation_worker_3(data: list[dict], msg: RedisMessage, red
             )
 
         await pipe.execute() 
+        # payload = [ { "_index": result.get("_index"), "_id": result.get("_id") } for result in results ]
+        # post to media analysis
+        # await segmentation_broker.publish(
+        #     payload, stream="audiovisual:audience_stream"
+        # )
+        # acknowledge message
+        await msg.ack(redis)
     except Exception as e:
+        print("nack call")
+        print(e)
         await msg.nack()

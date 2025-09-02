@@ -1,5 +1,5 @@
 import json
-from app.core.redis import redis_router as queue_router, audio_queue_busy_lock, video_queue_busy_lock, redis_client
+from app.core.redis import redis_broker as queue_broker, audio_queue_busy_lock, video_queue_busy_lock, redis_client
 import asyncio
 
 async def queue_processor():
@@ -10,10 +10,11 @@ async def queue_processor():
             
             if result:
                 data_json, score = result[0]
+                result_json = json.loads(data_json)
 
                 # post to media analysis
-                await queue_router.broker.publish(
-                    data_json, "audiovisual:audience_stream"
+                await queue_broker.publish(
+                    result_json, stream="audiovisual:segmentation_stream"
                 )
                     
         else:

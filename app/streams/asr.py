@@ -78,9 +78,9 @@ async def _process_asr(data: list[dict]):
         "audiovisual:asr_stream",
         group="audiovisual:asr_group",
         consumer="asr_worker_1",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
+        # batch=True,
+        # max_records=10,
+        # polling_interval=100,
     )
 )
 async def process_asr_worker_1(data: list[dict], msg: RedisMessage, redis: Redis = Depends(get_redis), pipe: Pipeline = Depends(get_pipe),):
@@ -109,9 +109,9 @@ async def process_asr_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
         "audiovisual:asr_stream",
         group="audiovisual:asr_group",
         consumer="asr_worker_2",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
+        # batch=True,
+        # max_records=10,
+        # polling_interval=100,
     )
 )
 async def process_asr_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
@@ -140,9 +140,9 @@ async def process_asr_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
         "audiovisual:asr_stream",
         group="audiovisual:asr_group",
         consumer="asr_worker_3",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
+        # batch=True,
+        # max_records=10,
+        # polling_interval=100,
     )
 )
 async def process_asr_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):

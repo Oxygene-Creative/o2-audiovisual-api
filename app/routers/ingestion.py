@@ -43,8 +43,8 @@ async def ingestion_handler(upload: Upload):
             "name": upload.stream_name
         },
         "timestamp": timestamp.isoformat(),
-        "gcp_bucket": upload.get("bucket"),
-        "gcp_blob": upload.get("blob"),
+        "gcp_bucket": upload.bucket,
+        "gcp_blob": upload.blob,
         "status": {
             "complete": False,
             "step": "INGESTION"
@@ -54,7 +54,15 @@ async def ingestion_handler(upload: Upload):
     # Add to redis sorted list
     await redis_client.zadd(
         "audiovisual:priority_queue", 
-        {data: timestamp.timestamp()})
+        {json.dumps(data): timestamp.timestamp()})
 
-    return True
+    return data
 
+@ingestion_router.post("/reingestion")
+async def reingestion_handler():
+    # find docs that status is not complete
+
+    # post to the appropriate stream
+
+    # return list of items posted to stream
+    pass

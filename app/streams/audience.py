@@ -1,5 +1,6 @@
 import time
 from app.core.redis import redis_broker as audience_broker
+from app.streams.segmentation import replace_mp4_with_mp3
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 import os
@@ -22,10 +23,15 @@ SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 async def _process_audience(data: list[dict]):
     try:
         # Start timing
-        start_time = time.time() 
+        start_time = time.time()
         data = await fetch_stream_data(data)
         # extract gcp_blob paths from data
-        payload = [item.get("_source", {}).get("gcp_blob", None) for item in data]
+        payload = [
+            { "bucket": item.get("_source", {}).get("gcp_bucket"), "blob": item.get("_source", {}).get("gcp_blob") }
+            if item.get("_index", "").startswith() == "radio_"
+            else { "bucket": item.get("_source", {}).get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("_source", {}).get("gcp_blob")) }
+            for item in data
+        ]
 
         logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for audience analysis")
         
