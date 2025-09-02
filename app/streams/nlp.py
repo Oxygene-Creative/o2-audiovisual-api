@@ -27,7 +27,7 @@ async def _process_nlp(data: list[dict]):
     try:
         # Start timing
         start_time = time.time() 
-        data = fetch_stream_data(data)
+        data = await fetch_stream_data(data)
 
         tv_categories = await get_tags("Tv")
         radio_categories = await get_tags("Radio")
