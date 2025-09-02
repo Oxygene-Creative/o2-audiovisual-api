@@ -2,7 +2,7 @@ import asyncio
 import json
 import time
 from app.analyzers.llm import llm_transcript_analysis
-from app.core.redis import redis_router as llm_broker
+from app.core.redis import redis_router as llm_router
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
@@ -22,7 +22,7 @@ async def _process_llm(data: list[dict]):
     try:
         # Start timing
         start_time = time.time() 
-        data = fetch_stream_data(data)
+        data = await fetch_stream_data(data)
 
         # create tasks for threading
         tasks = [
@@ -52,7 +52,7 @@ async def _process_llm(data: list[dict]):
         logger.error(f"An unexpected error occurred during nlp analysis: {e}")
         raise
 
-@llm_broker.subscriber(stream=StreamSub(
+@llm_router.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
         group="audiovisual:llm_group",
         consumer="llm_worker_1",
@@ -75,7 +75,7 @@ async def process_llm_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@llm_broker.subscriber(stream=StreamSub(
+@llm_router.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
         group="audiovisual:llm_group",
         consumer="llm_worker_2",
@@ -98,7 +98,7 @@ async def process_llm_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@llm_broker.subscriber(stream=StreamSub(
+@llm_router.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
         group="audiovisual:llm_group",
         consumer="llm_worker_3",
