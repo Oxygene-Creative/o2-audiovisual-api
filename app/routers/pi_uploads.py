@@ -7,7 +7,7 @@ from pathlib import Path
 from app.core.gcp import upload
 import asyncio
 from datetime import datetime
-from app.pipelines.video_analytics import Upload, handle_start_video_analysis
+from app.pipelines.video_analytics import handle_start_video_analysis
 
 uploads_router = APIRouter()
 
@@ -49,19 +49,19 @@ async def upload_videos_from_pi(
 
         await asyncio.to_thread(upload, "audiovisual-streams", output_path, gcp_path)
 
-        uploadFile = Upload(
-            stream_id=stream_id,
-            stream_name=stream_name,
-            bucket="audiovisual-streams",
-            blob=gcp_path,
-            timestamp_str=timestamp  
-        )
+        # uploadFile = Upload(
+        #     stream_id=stream_id,
+        #     stream_name=stream_name,
+        #     bucket="audiovisual-streams",
+        #     blob=gcp_path,
+        #     timestamp_str=timestamp  
+        # )
         
-        analysis_id = await handle_start_video_analysis(upload=uploadFile)
+        # analysis_id = await handle_start_video_analysis(upload=uploadFile)
 
         return {
             "success": True,
-            "analysis_id": analysis_id,
+            # "analysis_id": analysis_id,
             "gcp_path": gcp_path
         }
         

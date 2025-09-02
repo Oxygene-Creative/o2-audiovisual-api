@@ -36,7 +36,7 @@ def fetch_data(query: str, variables: Any):
         print(f"Request failed: {e}")
         return None
 
-def get_all_terms() -> List[str]:
+async def get_all_terms():
     query = """
     query {
         findUniqueTerms

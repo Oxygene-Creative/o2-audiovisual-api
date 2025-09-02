@@ -25,7 +25,7 @@ def extract_audio_from_video(video_path):
 
     return audio_path
 
-def slice_audio(speech_segments, audio_path):
+async def slice_audio(speech_segments, audio_path):
     # Get the audio file name from the path
     audio_file_name = Path(audio_path).stem
 

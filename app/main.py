@@ -12,8 +12,10 @@ from app.pipelines.video_analytics import video_router
 from app.pipelines.transcript_analysis import transcript_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.pi_uploads import uploads_router
+import os
 
 load_dotenv()
+os.environ["GRPC_FORK_SUPPORT_ENABLED"] = "0"
 
 app = FastAPI()
 
@@ -36,14 +38,14 @@ app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(ads_router, prefix="/analysis", tags=["ads"])
 app.include_router(uploads_router, tags=["uploads"])
 
-@app.on_startup
+@app.on_event("startup")
 async def start_app():
     await redis_router.broker.connect()
     setup_env()
-    load_redis_client()
+    # Start the background worker task
     asyncio.create_task(queue_processor())
 
-@app.on_shutdown
+@app.on_event("shutdown")
 async def shutdown_app():
     await redis_router.broker.close()
     await close_redis_client()

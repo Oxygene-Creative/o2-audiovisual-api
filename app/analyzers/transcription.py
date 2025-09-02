@@ -23,13 +23,14 @@ async def transcribe(gcs_blobs: list[str]):
     finally:
         await client.close() 
 
+
 async def post_process_transcription(transcript: str):
     system_template = """You are a helpful assistant that post-processes transcripts of radio and TV broadcasts in Africa.
     The transcripts can contain a mixture of multiple African languages, regional slang, and dialects.
     Insert necessary punctuation such as periods, commas, capitalization, symbols like percentage signs, and
     format numbers instead of numeric descriptions in words where necessary. Do not change the context or meaning
-    of the transcript in any way.
-
+    of the transcript in any way. 
+    
     The timestamps are defined at the beginning of each line using the format [0 - 10]. Do not remove or alter them.
 
     Output only the updated transcript without extra information:
