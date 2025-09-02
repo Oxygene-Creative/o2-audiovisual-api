@@ -25,23 +25,28 @@ async def fetch_stream_data(data: list[dict]):
             "_index": doc["_index"],
             "_id": doc["_id"],
             "_source": doc["_source"] if doc["found"] else None,
+            "_updates": {}
         }
         for doc in response["docs"]
     ]
     return results
 
 async def update_stream_data(data: list[dict], status: dict):
-    actions = []
+    try:
+        actions = []
 
-    for doc in data:
-        doc["_updates"]["status"] = status
-        actions.append({
-            "_op_type": "update",
-            "_index": doc.get("_index"),
-            "_id": doc.get("_id"),
-            "doc": doc.get("_updates", {})
-        })
+        for doc in data:
+            action = {
+                "_op_type": "update",
+                "_index": doc.get("_index"),
+                "_id": doc.get("_id"),
+                "doc": status
+            }
+            action["doc"].update(doc.get("_updates", {}))
+            actions.append(action)
 
-    save_bulk(actions)
+        save_bulk(actions)
 
-    return actions
+        return actions
+    except Exception as e:
+        print(f"Updating es error: {e}")

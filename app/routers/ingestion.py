@@ -2,9 +2,11 @@ import uuid
 from pydantic import BaseModel
 import json
 from typing import Optional
+from app.core.es import search
 from app.core.redis import redis_client
 from datetime import datetime
 from fastapi import APIRouter
+from app.core.redis import redis_broker as _broker
 
 ingestion_router = APIRouter()
 
@@ -61,8 +63,31 @@ async def ingestion_handler(upload: Upload):
 @ingestion_router.post("/reingestion")
 async def reingestion_handler():
     # find docs that status is not complete
+    query = {
+        "query": {
+            "term": {
+                "status.complete": False
+            }
+        }
+    }
+    response= search(index="radio_*,tv_*", query=query)
 
     # post to the appropriate stream
+    hits = response["hits"]["hits"]
+    for hit in hits:
+        step = hit.get("_source", {}).get("status", {}).get("step", "")
+
+        # if step == "AUDIENCE" or step == "INGESTION":
+        #     await _broker.publish(
+        #         { "_index": hit["_index"], "_id": hit["_id" ]}, 
+        #         stream="audiovisual:audience_stream"
+        #     )
+
+        if step == "AUDIENCE":
+            await _broker.publish(
+                { "_index": hit["_index"], "_id": hit["_id" ]}, 
+                stream="audiovisual:asr_stream"
+            )
 
     # return list of items posted to stream
-    pass
+    return hits

@@ -28,7 +28,7 @@ async def _process_audience(data: list[dict]):
         # extract gcp_blob paths from data
         payload = [
             { "bucket": item.get("_source", {}).get("gcp_bucket"), "blob": item.get("_source", {}).get("gcp_blob") }
-            if item.get("_index", "").startswith() == "radio_"
+            if item.get("_index", "").startswith("radio_")
             else { "bucket": item.get("_source", {}).get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("_source", {}).get("gcp_blob")) }
             for item in data
         ]
@@ -36,7 +36,7 @@ async def _process_audience(data: list[dict]):
         logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for audience analysis")
         
         # Make async POST request using httpx
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=600) as client:
             response = await client.post(
                 f"{SEGMENTATION_GPU_URL}/vad/batch",
                 json=payload
@@ -45,7 +45,8 @@ async def _process_audience(data: list[dict]):
         
         # transform voice activity
         for idx, result in enumerate(response.json()):
-            activity = {item["labels"]: item["duration"] for item in result.get("activity")}        
+            activity = {item["labels"]: item["duration"] for item in result.get("activity")}   
+
             data[idx]["_updates"]["audience"] = [
                 { "label": "male", "score": activity.get("male", 0.0) },
                 { "label": "female", "score": activity.get("female", 0.0) }
@@ -77,12 +78,11 @@ async def _process_audience(data: list[dict]):
 async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     try:
         audience_results = await _process_audience(data)
+        
         # update stream data in database and 
         results = await update_stream_data(
             data=audience_results, 
             status={"complete": False, "step": "ASR" })
-
-        await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
@@ -91,8 +91,9 @@ async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: 
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
             )
-
         await pipe.execute() 
+
+        await msg.ack(redis)
     except Exception as e:
         await msg.nack()
 
@@ -108,12 +109,11 @@ async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: 
 async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     try:
         audience_results = await _process_audience(data)
+
         # update stream data in database and 
         results = await update_stream_data(
             data=audience_results, 
             status={"complete": False, "step": "ASR" })
-
-        await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
@@ -124,6 +124,8 @@ async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: 
             )
 
         await pipe.execute() 
+
+        await msg.ack(redis)
     except Exception as e:
         await msg.nack()
 
@@ -139,12 +141,11 @@ async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: 
 async def process_audience_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     try:
         audience_results = await _process_audience(data)
+
         # update stream data in database and 
         results = await update_stream_data(
             data=audience_results, 
             status={"complete": False, "step": "ASR" })
-
-        await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
@@ -155,5 +156,7 @@ async def process_audience_worker_3(data: list[dict], msg: RedisMessage, redis: 
             )
 
         await pipe.execute() 
+
+        await msg.ack(redis)
     except Exception as e:
         await msg.nack()

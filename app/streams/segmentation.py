@@ -33,6 +33,7 @@ def replace_mp4_with_mp3(blob_path: str) -> str:
 
 async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> list:
     processed_segments = []
+    print(data)
     
     stream_type = data.pop("stream_type", None)
     if stream_type.lower() == "audio":
@@ -41,29 +42,29 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
 
     elif stream_type.lower() == "video":
         # Slice video file based on speech segments
-        video_tasks = []
-        for segment in segments:
-            # slice video segment
-            video_tasks.push(slice_video(asset_file_path, segment['start'], segment['stop']))
-            
+        video_tasks = [
+            slice_video(asset_file_path, segment['start'], segment['stop']) for segment in segments
+        ]    
         speech_segment_files = asyncio.gather(*video_tasks)
 
     # Upload segment files to gcp and create data dict
-    for segment in speech_segment_files:  
+    for ix, segment in enumerate(speech_segment_files): 
+        # create local copy
+        segment_data = data.copy()
         local_file_path = segment["file_path"]
         file_name = extract_file_name(local_file_path)
         file_size = calc_file_size(local_file_path)
         
         # Destination file path construction
-        recording_date = datetime.fromisoformat(data.get("timestamp")).strftime("%Y-%m-%d")
+        recording_date = datetime.fromisoformat(segment_data.get("timestamp")).strftime("%Y-%m-%d")
 
         dest_file_path = (
-            f"tv/{data.get('source').get('name')}/{recording_date}/{file_name}" 
+            f"tv/{segment_data.get('source').get('name')}/{recording_date}/{file_name}" 
             if stream_type.lower() == "video" 
-            else f"radio/{data.get('source').get('name')}/{recording_date}/{file_name}"          
+            else f"radio/{segment_data.get('source').get('name')}/{recording_date}/{file_name}"          
         )
         # Upload to GCP
-        await asyncio.to_thread(upload, data.get("gcp_bucket"), local_file_path, dest_file_path)
+        await asyncio.to_thread(upload, segment_data.get("gcp_bucket"), local_file_path, dest_file_path)
         
         if stream_type == "video":
             # Extract sound track of video segment and upload to GCS
@@ -75,17 +76,16 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
 
         # Delete sliced file
         await asyncio.to_thread(delete_file, local_file_path)
-        # Delete master files
-        await asyncio.to_thread(delete_blob, data.get("gcp_bucket"), data.get("gcp_blob"))
         
         # Create elastic search data
-        data["duration"] = segment["duration"]
-        data["gcp_blob"] = dest_file_path
-        data["file_size"] = file_size
+        segment_data["duration"] = segment["duration"]
+        segment_data["gcp_blob"] = dest_file_path
+        segment_data["file_size"] = file_size
 
-        processed_segments.append({ "_index": data.get('_index'), "data": data})
+        processed_segments.append({ "_index": segment_data.get('_index'), "data": segment_data })
     
-    
+    # Delete master files
+    await asyncio.to_thread(delete_blob, data.get("gcp_bucket"), data.get("gcp_blob"))
     await asyncio.to_thread(delete_file, asset_file_path)
     
     return processed_segments
@@ -117,6 +117,12 @@ async def _segment_media(data: list[dict]):
         for idx, result in enumerate(response.json()):
             if not result.get("success", False):
                 continue
+
+            # only speech stuff
+            activity = {item["labels"]: item["duration"] for item in result.get("activity")}
+            if activity.get("male") in [0, None] and activity.get("female") == [0, None]:
+                print("skipping segment")
+                continue
             
             # download master file
             file_name = extract_file_name(data[idx].get("gcp_blob"))
@@ -145,15 +151,18 @@ async def _segment_media(data: list[dict]):
         raise
 
 async def _save_segments(segments: list[dict]):
-    actions = [
-        {
+    actions = []
+    for segment in segments:
+        action = {
             "_op_type": "index",
             "_index": segment.get("_index"),
             "_id": str(uuid.uuid4()),
-            "doc": segment.get("data")
-        }
-        for segment in segments
-    ]
+        } 
+        
+        action.update(segment.get("data"))
+        action.update({ "status": { "step": "AUDIENCE", "complete": False }})
+        actions.append(action)
+        
     save_bulk(actions)
 
     # Create Recording in Graphql
@@ -243,11 +252,7 @@ async def process_segmentation_worker_3(data: list[dict], msg: RedisMessage, red
             )
 
         await pipe.execute() 
-        # payload = [ { "_index": result.get("_index"), "_id": result.get("_id") } for result in results ]
-        # post to media analysis
-        # await segmentation_broker.publish(
-        #     payload, stream="audiovisual:audience_stream"
-        # )
+        
         # acknowledge message
         await msg.ack(redis)
     except Exception as e:
