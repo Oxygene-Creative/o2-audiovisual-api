@@ -2,7 +2,7 @@ import asyncio
 import time
 from app.analyzers.transcription import post_process_transcription, transcribe
 from app.core.gcp import delete_blob
-from app.core.redis import redis_router as asr_broker
+from app.core.redis import redis_router as asr_router
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
@@ -21,7 +21,7 @@ async def _process_asr(data: list[dict]):
     try:
         # Start timing
         start_time = time.time() 
-        data = fetch_stream_data(data)
+        data = await fetch_stream_data(data)
 
         batch_payloads = []
         for item in data:
@@ -71,7 +71,7 @@ async def _process_asr(data: list[dict]):
         logger.error(f"An unexpected error occurred during asr analysis: {e}")
         raise
 
-@asr_broker.subscriber(stream=StreamSub(
+@asr_router.subscriber(stream=StreamSub(
         "audiovisual:asr_stream",
         group="audiovisual:asr_group",
         consumer="asr_worker_1",
@@ -92,7 +92,7 @@ async def process_asr_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
 
         # batch publish to next stage
         for result in results:
-            await asr_broker.publish(
+            await asr_router.broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:nlp_stream",
                 pipeline=pipe,
@@ -102,7 +102,7 @@ async def process_asr_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
+@asr_router.subscriber(stream=StreamSub(
         "audiovisual:asr_stream",
         group="audiovisual:asr_group",
         consumer="asr_worker_2",
@@ -123,7 +123,7 @@ async def process_asr_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
 
         # batch publish to next stage
         for result in results:
-            await asr_broker.publish(
+            await asr_router.broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:nlp_stream",
                 pipeline=pipe,
@@ -133,7 +133,7 @@ async def process_asr_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
+@asr_router.subscriber(stream=StreamSub(
         "audiovisual:asr_stream",
         group="audiovisual:asr_group",
         consumer="asr_worker_3",
@@ -154,7 +154,7 @@ async def process_asr_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
 
         # batch publish to next stage
         for result in results:
-            await asr_broker.publish(
+            await asr_router.broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:nlp_stream",
                 pipeline=pipe,

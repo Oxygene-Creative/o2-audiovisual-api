@@ -32,8 +32,8 @@ google-cloud-storage = "*"
 uvicorn = "*"
 
 [dev-packages]
-pytest = "*"
 pytest-mock = "*"
+pytest = "*"
 pytest-asyncio = "*"
 
 [requires]

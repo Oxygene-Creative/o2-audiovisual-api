@@ -63,17 +63,17 @@ async def _process_llm(data: list[dict]):
 )
 async def process_llm_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     try:
-        nlp_results = await _process_llm(data)
+        results = await _process_llm(data)
+
         # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
+        await update_stream_data(
+            data=results, 
             status={"complete": True, "step": None })
 
         await msg.ack(redis)
  
     except Exception as e:
         await msg.nack()
-
 
 @llm_broker.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
@@ -84,8 +84,19 @@ async def process_llm_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
         polling_interval=100,
     )
 )
-async def process_llm_worker_2(messages):
-    return
+async def process_llm_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
 
 @llm_broker.subscriber(stream=StreamSub(
         "audiovisual:llm_stream",
@@ -96,5 +107,16 @@ async def process_llm_worker_2(messages):
         polling_interval=100,
     )
 )
-async def process_llm_worker_3(messages):
-    return
+async def process_llm_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
