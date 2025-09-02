@@ -1,5 +1,5 @@
 import time
-from app.core.redis import redis_router as audience_broker
+from app.core.redis import redis_router as audience_router
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 import os
@@ -23,7 +23,7 @@ async def _process_audience(data: list[dict]):
     try:
         # Start timing
         start_time = time.time() 
-        data = fetch_stream_data(data)
+        data = await fetch_stream_data(data)
         # extract gcp_blob paths from data
         payload = [item.get("_source", {}).get("gcp_blob", None) for item in data]
 
@@ -59,7 +59,7 @@ async def _process_audience(data: list[dict]):
         logger.error(f"An unexpected error occurred during audience analysis: {e}")
         raise
 
-@audience_broker.subscriber(stream=StreamSub(
+@audience_router.subscriber(stream=StreamSub(
         "audiovisual:audience_stream",
         group="audiovisual:audience_group",
         consumer="audience_worker_1",
@@ -80,7 +80,7 @@ async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: 
 
         # batch publish to next stage
         for result in results:
-            await audience_broker.publish(
+            await audience_router.broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
@@ -90,7 +90,7 @@ async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: 
     except Exception as e:
         await msg.nack()
 
-@audience_broker.subscriber(stream=StreamSub(
+@audience_router.subscriber(stream=StreamSub(
         "audiovisual:audience_stream",
         group="audiovisual:audience_group",
         consumer="audience_worker_2",
@@ -111,7 +111,7 @@ async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: 
 
         # batch publish to next stage
         for result in results:
-            await audience_broker.publish(
+            await audience_router.broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
@@ -121,7 +121,7 @@ async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: 
     except Exception as e:
         await msg.nack()
 
-@audience_broker.subscriber(stream=StreamSub(
+@audience_router.subscriber(stream=StreamSub(
         "audiovisual:audience_stream",
         group="audiovisual:audience_group",
         consumer="audience_worker_3",
@@ -142,7 +142,7 @@ async def process_audience_worker_3(data: list[dict], msg: RedisMessage, redis: 
 
         # batch publish to next stage
         for result in results:
-            await audience_broker.publish(
+            await audience_router.broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
                 stream="audiovisual:asr_stream",
                 pipeline=pipe,
