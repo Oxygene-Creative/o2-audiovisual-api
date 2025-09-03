@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
 
 def replace_mp4_with_mp3(blob_path: str) -> str:
-    if blob_path.endswith(".mp4"):
+    if blob_path and blob_path.endswith(".mp4"):
         # Replace the extension
         return blob_path.rsplit(".", 1)[0] + ".mp3"
     else:
@@ -33,7 +33,6 @@ def replace_mp4_with_mp3(blob_path: str) -> str:
 
 async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> list:
     processed_segments = []
-    print(data)
     
     stream_type = data.pop("stream_type", None)
     if stream_type.lower() == "audio":
@@ -92,16 +91,18 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
     
 async def _segment_media(data: list[dict]):
     try:
-        print(data)
         # Start timing
         start_time = time.time() 
         # extract gcp_blob paths from data
-        payload = [
-            { "bucket": item.get("gcp_bucket"), "blob": item.get("gcp_blob") }
-            if item.get("stream_type", "").lower() == "audio"
-            else { "bucket": item.get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("gcp_blob")) }
-            for item in data
-        ]
+        payload = []
+        for item in data:
+            if item.get("stream_type", "").lower() == "audio":
+                payload.append({ "bucket": item.get("gcp_bucket"), "blob": item.get("gcp_blob") })
+                continue 
+
+            if item.get("stream_type", "").lower() == "video":
+                payload.append({ "bucket": item.get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("gcp_blob")) })
+        
 
         logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for speech and music segmentation")
         

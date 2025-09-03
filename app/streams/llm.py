@@ -34,6 +34,10 @@ async def _process_llm(data: list[dict]):
         results = await asyncio.gather(*tasks)
 
         for idx, item in enumerate(results):
+
+            if item is None:
+                continue
+            
             llm_analysis_json = item.model_dump_json()
             llm_analysis_dict = json.loads(llm_analysis_json)
             data[idx]["_updates"].update(llm_analysis_dict)

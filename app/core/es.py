@@ -50,3 +50,6 @@ async def update_stream_data(data: list[dict], status: dict):
         return actions
     except Exception as e:
         print(f"Updating es error: {e}")
+
+async def delete_by_query(index, query):
+    es_client.delete_by_query(index=index, body=query)
