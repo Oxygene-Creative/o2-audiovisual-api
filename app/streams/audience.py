@@ -160,3 +160,321 @@ async def process_audience_worker_3(data: list[dict], msg: RedisMessage, redis: 
         await msg.ack(redis)
     except Exception as e:
         await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_4",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_4(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+        
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_5",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_5(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_6",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_6(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_7",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_7(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+        
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_8",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_8(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_9",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_9(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_10",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_10(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_11",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_11(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+        
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_12",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+@audience_broker.subscriber(stream=StreamSub(
+        "audiovisual:audience_stream",
+        group="audiovisual:audience_group",
+        consumer="audience_worker_12",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_audience_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        audience_results = await _process_audience(data)
+
+        # update stream data in database and 
+        results = await update_stream_data(
+            data=audience_results, 
+            status={"complete": False, "step": "ASR" })
+
+        # batch publish to next stage
+        for result in results:
+            await audience_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:asr_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+

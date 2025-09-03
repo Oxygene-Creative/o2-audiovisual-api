@@ -124,3 +124,210 @@ async def process_llm_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
  
     except Exception as e:
         await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_4",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_4(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_5",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_5(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_6",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_6(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_7",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_7(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_8",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_8(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_9",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_9(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_10",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_10(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_11",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_11(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
+
+@llm_broker.subscriber(stream=StreamSub(
+        "audiovisual:llm_stream",
+        group="audiovisual:llm_group",
+        consumer="llm_worker_12",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_llm_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    try:
+        results = await _process_llm(data)
+
+        # update stream data in database 
+        await update_stream_data(
+            data=results, 
+            status={"complete": True, "step": None })
+
+        await msg.ack(redis)
+ 
+    except Exception as e:
+        await msg.nack()
