@@ -40,7 +40,7 @@ async def update_stream_data(data: list[dict], status: dict):
                 "_op_type": "update",
                 "_index": doc.get("_index"),
                 "_id": doc.get("_id"),
-                "doc": status
+                "doc": { "status": status }
             }
             action["doc"].update(doc.get("_updates", {}))
             actions.append(action)

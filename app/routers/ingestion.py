@@ -77,35 +77,35 @@ async def reingestion_handler():
     for hit in hits:
         step = hit.get("_source", {}).get("status", {}).get("step", "")
 
-        if step == "INGESTION":
-            await _broker.publish(
-                { "_index": hit["_index"], "_id": hit["_id" ]}, 
-                stream="audiovisual:segmentation_stream"
-            )
+        # if step == "INGESTION":
+        #     await _broker.publish(
+        #         { "_index": hit["_index"], "_id": hit["_id" ]}, 
+        #         stream="audiovisual:segmentation_stream"
+        #     )
 
-        elif step == "AUDIENCE":
-            await _broker.publish(
-                { "_index": hit["_index"], "_id": hit["_id" ]}, 
-                stream="audiovisual:audience_stream"
-            )
+        # elif step == "AUDIENCE":
+        #     await _broker.publish(
+        #         { "_index": hit["_index"], "_id": hit["_id" ]}, 
+        #         stream="audiovisual:audience_stream"
+        #     )
 
-        elif step == "ASR":
-            await _broker.publish(
-                { "_index": hit["_index"], "_id": hit["_id" ]}, 
-                stream="audiovisual:asr_stream"
-            )
+        # elif step == "ASR":
+        #     await _broker.publish(
+        #         { "_index": hit["_index"], "_id": hit["_id" ]}, 
+        #         stream="audiovisual:asr_stream"
+        #     )
 
-        elif step == "NLP":
-            await _broker.publish(
-                { "_index": hit["_index"], "_id": hit["_id" ]}, 
-                stream="audiovisual:nlp_stream"
-            )
+        # elif step == "NLP":
+        #     await _broker.publish(
+        #         { "_index": hit["_index"], "_id": hit["_id" ]}, 
+        #         stream="audiovisual:nlp_stream"
+        #     )
 
-        elif step == "LLM":
-            await _broker.publish(
-                { "_index": hit["_index"], "_id": hit["_id" ]}, 
-                stream="audiovisual:llm_stream"
-            )
+        # elif step == "LLM":
+        #     await _broker.publish(
+        #         { "_index": hit["_index"], "_id": hit["_id" ]}, 
+        #         stream="audiovisual:llm_stream"
+        #     )
 
 
 

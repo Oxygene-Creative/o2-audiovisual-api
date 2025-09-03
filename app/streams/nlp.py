@@ -32,7 +32,6 @@ async def _process_nlp(data: list[dict]):
         tv_categories = await get_tags("Tv")
         radio_categories = await get_tags("Radio")
         industry_sectors = await fetch_industries()
-        print(industry_sectors)
 
         batch_payloads = [
             remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")) 
@@ -82,12 +81,12 @@ async def _process_nlp(data: list[dict]):
 
         # populate updates
         for idx, item in enumerate(data): 
-            item["_updates"]["tags"]= tags[idx]
-            item["_updates"]["embeddings"]= embeddings[idx]
-            item["_updates"]["sentiment"]= sentiments[idx]
-            item["_updates"]["emotions"]= emotions[idx]
-            item["_updates"]["topics"]= topics[idx]
-            item["_updates"]["industries"]= industries[idx]
+            item["_updates"]["tags"]= tags[idx] if idx < len(tags) else []
+            item["_updates"]["embeddings"]= embeddings[idx] if idx < len(embeddings) else []
+            item["_updates"]["sentiment"]= sentiments[idx] if idx < len(sentiments) else ""
+            item["_updates"]["emotions"]= emotions[idx] if idx < len(emotions) else []
+            item["_updates"]["topics"]= topics[idx] if idx < len(topics) else []
+            item["_updates"]["industries"]= industries[idx] if idx < len(industries) else []
 
             end_time = time.time()
             time_taken = end_time - start_time
