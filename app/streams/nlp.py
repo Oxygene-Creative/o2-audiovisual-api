@@ -42,7 +42,7 @@ async def _process_nlp(data: list[dict]):
         batch_industry_payloads = []
 
         # payloads for category analysis
-        for item in data:
+        for idx, item in enumerate(data):
             batch_industry_payloads.append({ 
                 "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
                 "categories":  industry_sectors,
@@ -107,8 +107,6 @@ async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
             data=nlp_results, 
             status={"complete": False, "step": "LLM" })
 
-        await msg.ack(redis)
-
         # batch publish to next stage
         for result in results:
             await nlp_broker.publish(
@@ -118,6 +116,8 @@ async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
             )
 
         await pipe.execute() 
+
+        await msg.ack(redis)
     except Exception as e:
         await msg.nack()
 
@@ -138,8 +138,6 @@ async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
             data=nlp_results, 
             status={"complete": False, "step": "LLM" })
 
-        await msg.ack(redis)
-
         # batch publish to next stage
         for result in results:
             await nlp_broker.publish(
@@ -149,6 +147,8 @@ async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
             )
 
         await pipe.execute() 
+
+        await msg.ack(redis)
     except Exception as e:
         await msg.nack()
 
@@ -169,8 +169,6 @@ async def process_nlp_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
             data=nlp_results, 
             status={"complete": False, "step": "LLM" })
 
-        await msg.ack(redis)
-
         # batch publish to next stage
         for result in results:
             await nlp_broker.publish(
@@ -180,5 +178,7 @@ async def process_nlp_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
             )
 
         await pipe.execute() 
+
+        await msg.ack(redis)
     except Exception as e:
         await msg.nack()
