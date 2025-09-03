@@ -49,7 +49,7 @@ async def _process_llm(data: list[dict]):
         return data
     
     except Exception as e:
-        logger.error(f"An unexpected error occurred during nlp analysis: {e}")
+        logger.error(f"An unexpected error occurred during llm analysis: {e}")
         raise
 
 @llm_broker.subscriber(stream=StreamSub(

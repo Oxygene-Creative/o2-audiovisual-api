@@ -32,6 +32,7 @@ async def _process_nlp(data: list[dict]):
         tv_categories = await get_tags("Tv")
         radio_categories = await get_tags("Radio")
         industry_sectors = await fetch_industries()
+        print(industry_sectors)
 
         batch_payloads = [
             remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")) 
@@ -40,6 +41,7 @@ async def _process_nlp(data: list[dict]):
 
         batch_tag_payloads = []
         batch_industry_payloads = []
+        batch_topic_payloads = []
 
         # payloads for category analysis
         for idx, item in enumerate(data):
@@ -48,13 +50,21 @@ async def _process_nlp(data: list[dict]):
                 "categories":  industry_sectors,
                 "multi_label": True
             })
-            if item.get("_index", "").startsWith("radio"):
+
+            batch_topic_payloads.append({
+                "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
+                "num_keywords": 6,
+                "topic_count": 5,
+            })
+
+            if item.get("_index", "").startswith("radio"):
                 batch_tag_payloads.append({ 
                     "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
                     "categories":  radio_categories,
                     "multi_label": True
                 })
-            elif item.get("_index", "").startsWith("tv"):
+
+            elif item.get("_index", "").startswith("tv"):
                 batch_tag_payloads.append({ 
                     "text": remove_timestamps_and_format(item.get("_source", {}).get("raw_text", "")),
                     "categories":  tv_categories,
@@ -63,7 +73,7 @@ async def _process_nlp(data: list[dict]):
 
         tags, topics, emotions, sentiments, embeddings, industries  = await asyncio.gather(
             categorize_text(data=batch_tag_payloads),
-            analyze_topics(data=batch_payloads),
+            analyze_topics(data=batch_topic_payloads),
             analyze_emotions(data=batch_payloads),
             sentiment_analysis(data=batch_payloads),
             embed_text(data=batch_payloads),
