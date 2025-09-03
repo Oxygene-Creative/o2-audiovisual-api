@@ -29,42 +29,47 @@ async def _process_asr(data: list[dict]):
         for item in data:
             if item.get("_index", "").startswith == "tv":
                 # use video's sound track
-                soundtrack = item.get("_source", {}).get("gcp_blob").rsplit('.', 1)[0] + ".mp3"
-                batch_payloads.append(soundtrack)
+                batch_payloads.append({ 
+                    "bucket": item.get("_source", {}).get("gcp_bucket", None), 
+                    "blob": item.get("_source", {}).get("gcp_blob").rsplit('.', 1)[0] + ".mp3"
+                })
             else:
-                batch_payloads.append(item.get("_source", {}).get("gcp_blob"))
-
-        batch_payloads = [item.get("_source", {}).get("gcp_blob", None) for item in data]
-        response = await transcribe(gcs_blobs=batch_payloads)
+                batch_payloads.append({ 
+                    "bucket": item.get("_source", {}).get("gcp_bucket", None), 
+                    "blob": item.get("_source", {}).get("gcp_blob", None)
+                })
+        response = await transcribe(data=batch_payloads)
 
         # populate updates
         for idx, result in enumerate(response):   
-            await asyncio.sleep(0.5)     
+            if not result.get("success"):
+                data[idx]["_updates"]["raw_text"] = ""
+                data[idx]["_updates"]["language"] = ""
+                data[idx]["_updates"]["language_score"] = 0.0
+                continue
 
-            raw_text = result.get("raw_text","")
-            word_count = len(raw_text.split())
-            if raw_text.strip() and word_count > 5:
-                processed_transcript = await post_process_transcription(raw_text)
+            raw_text = result.get("transcription").get("raw_text","")
+            if len(raw_text.split()) > 10:
+                processed_transcript = await post_process_transcription(raw_text.split())
             else:
                 processed_transcript = raw_text
 
             data[idx]["_updates"]["raw_text"] = processed_transcript
-            data[idx]["_updates"]["language"] = result.get("language","")
-            data[idx]["_updates"]["language_score"] = result.get("language_score",0.0)
+            data[idx]["_updates"]["language"] = result.get("transcription").get("language","")
+            data[idx]["_updates"]["language_score"] = result.get("transcription").get("language_score",0.0)
 
             end_time = time.time()
             time_taken = end_time - start_time
 
             logger.info(f'asr analysis for {data[idx]["_source"].get("source", {}).get("name")} completed in {time_taken}s')
 
-        
-        # cleanup gcs, delete soundtrack of video
+        # cleanup gcs: delete soundtrack of video
         for item in data:
             if item.get("_index", "").startswith == "tv":
                 await asyncio.to_thread(
                     delete_blob, 
                     item.get("_source").get("gcp_bucket"), 
-                    item.get("_source").get("gcp_blob")
+                    item.get("_source", {}).get("gcp_blob").rsplit('.', 1)[0] + ".mp3"
                 )
 
         return data

@@ -83,12 +83,12 @@ class APIClient:
             json=data,
         )
 
-    async def transcribe_audio(self, gcs_blobs: list[str]):
+    async def transcribe_audio(self, data: list[dict]):
         try:
             return await self._make_request(
                 method="POST",
                 endpoint="/asr/batch",
-                json=gcs_blobs,
+                json=data,
             )
         except Exception as e:
             return {"error": f"Error transcribing audio files: {str(e)}"}

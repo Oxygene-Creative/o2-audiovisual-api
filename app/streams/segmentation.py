@@ -92,6 +92,7 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
     
 async def _segment_media(data: list[dict]):
     try:
+        print(data)
         # Start timing
         start_time = time.time() 
         # extract gcp_blob paths from data

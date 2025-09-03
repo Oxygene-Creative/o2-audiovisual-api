@@ -14,7 +14,7 @@ load_dotenv()
 
 # Initialize language model
 primary_llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     temperature=0,
     max_tokens=None,
     timeout=None,
