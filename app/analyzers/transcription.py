@@ -9,7 +9,7 @@ AI_API_URL = os.getenv("AI_API_URL", "https://ai-api2-350748994585.us-central1.r
 
 async def transcribe(data: list[dict]):
     try:
-        client = APIClient(base_url=AI_API_URL, timeout=600.0)  
+        client = APIClient(base_url=AI_API_URL, timeout=1200.0)  
         result = await client.transcribe_audio(data=data)
         
         if result is not None:

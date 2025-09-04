@@ -76,7 +76,7 @@ def list_mp3_files_in_folder(bucket_name, folder_name):
     ]
 
     # Sort files in reverse order based on their timestamp
-    mp3_files.sort(key=lambda x: x.split("_")[-2] + "_" + x.split("_")[-1].replace(".mp3", ""), reverse=True)
+    mp3_files.sort(key=lambda x: x.split("_")[-2] + "_" + x.split("_")[-1].replace(".mp3", ""), reverse=False)
 
     return mp3_files
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         mp3_files = list_mp3_files_in_folder(bucket_name, folder_name)
 
         # Select up to 40 recordings (use slicing to limit)
-        selected_recordings = mp3_files[:400]
+        selected_recordings = mp3_files[:72]
 
         # Add the count of mp3 files to the total
         total_files_count += len(mp3_files)
@@ -109,8 +109,8 @@ if __name__ == "__main__":
     print(f"Total mp3 files in root directories across all folders: {total_files_count}")
 
     print("Posting data to the API...")
-    batch_size = 120
-    batch_timeout = 5 * 60
+    batch_size = 18
+    batch_timeout = 15 * 60
 
     for i in range(0, len(overall_recordings), batch_size):
         # Slice the overall recordings into batches of 6
@@ -141,7 +141,6 @@ if __name__ == "__main__":
             # Log API response
             if response:
                 print(f"Successfully posted: {blob}")
-                print(f"Response: {response}")
             else:
                 print(f"Failed to post: {blob}")
 

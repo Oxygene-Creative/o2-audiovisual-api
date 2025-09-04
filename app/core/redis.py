@@ -15,6 +15,7 @@ redis_client = Redis(host=redis_domain, port=redis_port, db=0, decode_responses=
 
 audio_queue_busy_lock = asyncio.Lock()
 video_queue_busy_lock = asyncio.Lock()
+queue_busy_lock = asyncio.Lock()
 
 def load_redis_client():
     global redis_client

@@ -1,10 +1,10 @@
 import json
-from app.core.redis import redis_broker as queue_broker, audio_queue_busy_lock, video_queue_busy_lock, redis_client
+from app.core.redis import redis_broker as queue_broker, queue_busy_lock, redis_client
 import asyncio
 
 async def queue_processor():
      while True:
-        if not audio_queue_busy_lock.locked() or not video_queue_busy_lock.locked():
+        if not queue_busy_lock.locked():
             # retrieve the next item in the queue
             result = await redis_client.zpopmax("audiovisual:priority_queue", count=1)
             

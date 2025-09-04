@@ -264,188 +264,188 @@ async def process_asr_worker_6(data: list[dict], msg: RedisMessage, redis: Redis
     except Exception as e:
         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
-        "audiovisual:asr_stream",
-        group="audiovisual:asr_group",
-        consumer="asr_worker_7",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_asr_worker_7(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        asr_results = await _process_asr(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=asr_results, 
-            status={"complete": False, "step": "NLP" })
+# @asr_broker.subscriber(stream=StreamSub(
+#         "audiovisual:asr_stream",
+#         group="audiovisual:asr_group",
+#         consumer="asr_worker_7",
+#         batch=True,
+#         max_records=10,
+#         polling_interval=100,
+#     )
+# )
+# async def process_asr_worker_7(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+#     try:
+#         asr_results = await _process_asr(data)
+#         # update stream data in database 
+#         results = await update_stream_data(
+#             data=asr_results, 
+#             status={"complete": False, "step": "NLP" })
 
-        await msg.ack(redis)
+#         await msg.ack(redis)
 
-        # batch publish to next stage
-        for result in results:
-            await asr_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:nlp_stream",
-                pipeline=pipe,
-            )
+#         # batch publish to next stage
+#         for result in results:
+#             await asr_broker.publish(
+#                 { "_index": result.get("_index"), "_id": result.get("_id") },
+#                 stream="audiovisual:nlp_stream",
+#                 pipeline=pipe,
+#             )
 
-        await pipe.execute() 
-    except Exception as e:
-        await msg.nack()
+#         await pipe.execute() 
+#     except Exception as e:
+#         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
-        "audiovisual:asr_stream",
-        group="audiovisual:asr_group",
-        consumer="asr_worker_8",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_asr_worker_8(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        asr_results = await _process_asr(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=asr_results, 
-            status={"complete": False, "step": "NLP" })
+# @asr_broker.subscriber(stream=StreamSub(
+#         "audiovisual:asr_stream",
+#         group="audiovisual:asr_group",
+#         consumer="asr_worker_8",
+#         batch=True,
+#         max_records=10,
+#         polling_interval=100,
+#     )
+# )
+# async def process_asr_worker_8(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+#     try:
+#         asr_results = await _process_asr(data)
+#         # update stream data in database 
+#         results = await update_stream_data(
+#             data=asr_results, 
+#             status={"complete": False, "step": "NLP" })
 
-        await msg.ack(redis)
+#         await msg.ack(redis)
 
-        # batch publish to next stage
-        for result in results:
-            await asr_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:nlp_stream",
-                pipeline=pipe,
-            )
+#         # batch publish to next stage
+#         for result in results:
+#             await asr_broker.publish(
+#                 { "_index": result.get("_index"), "_id": result.get("_id") },
+#                 stream="audiovisual:nlp_stream",
+#                 pipeline=pipe,
+#             )
 
-        await pipe.execute() 
-    except Exception as e:
-        await msg.nack()
+#         await pipe.execute() 
+#     except Exception as e:
+#         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
-        "audiovisual:asr_stream",
-        group="audiovisual:asr_group",
-        consumer="asr_worker_9",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_asr_worker_9(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        asr_results = await _process_asr(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=asr_results, 
-            status={"complete": False, "step": "NLP" })
+# @asr_broker.subscriber(stream=StreamSub(
+#         "audiovisual:asr_stream",
+#         group="audiovisual:asr_group",
+#         consumer="asr_worker_9",
+#         batch=True,
+#         max_records=10,
+#         polling_interval=100,
+#     )
+# )
+# async def process_asr_worker_9(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+#     try:
+#         asr_results = await _process_asr(data)
+#         # update stream data in database 
+#         results = await update_stream_data(
+#             data=asr_results, 
+#             status={"complete": False, "step": "NLP" })
 
-        await msg.ack(redis)
+#         await msg.ack(redis)
 
-        # batch publish to next stage
-        for result in results:
-            await asr_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:nlp_stream",
-                pipeline=pipe,
-            )
+#         # batch publish to next stage
+#         for result in results:
+#             await asr_broker.publish(
+#                 { "_index": result.get("_index"), "_id": result.get("_id") },
+#                 stream="audiovisual:nlp_stream",
+#                 pipeline=pipe,
+#             )
 
-        await pipe.execute() 
-    except Exception as e:
-        await msg.nack()
+#         await pipe.execute() 
+#     except Exception as e:
+#         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
-        "audiovisual:asr_stream",
-        group="audiovisual:asr_group",
-        consumer="asr_worker_10",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_asr_worker_10(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        asr_results = await _process_asr(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=asr_results, 
-            status={"complete": False, "step": "NLP" })
+# @asr_broker.subscriber(stream=StreamSub(
+#         "audiovisual:asr_stream",
+#         group="audiovisual:asr_group",
+#         consumer="asr_worker_10",
+#         batch=True,
+#         max_records=10,
+#         polling_interval=100,
+#     )
+# )
+# async def process_asr_worker_10(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+#     try:
+#         asr_results = await _process_asr(data)
+#         # update stream data in database 
+#         results = await update_stream_data(
+#             data=asr_results, 
+#             status={"complete": False, "step": "NLP" })
 
-        await msg.ack(redis)
+#         await msg.ack(redis)
 
-        # batch publish to next stage
-        for result in results:
-            await asr_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:nlp_stream",
-                pipeline=pipe,
-            )
+#         # batch publish to next stage
+#         for result in results:
+#             await asr_broker.publish(
+#                 { "_index": result.get("_index"), "_id": result.get("_id") },
+#                 stream="audiovisual:nlp_stream",
+#                 pipeline=pipe,
+#             )
 
-        await pipe.execute() 
-    except Exception as e:
-        await msg.nack()
+#         await pipe.execute() 
+#     except Exception as e:
+#         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
-        "audiovisual:asr_stream",
-        group="audiovisual:asr_group",
-        consumer="asr_worker_11",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_asr_worker_11(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        asr_results = await _process_asr(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=asr_results, 
-            status={"complete": False, "step": "NLP" })
+# @asr_broker.subscriber(stream=StreamSub(
+#         "audiovisual:asr_stream",
+#         group="audiovisual:asr_group",
+#         consumer="asr_worker_11",
+#         batch=True,
+#         max_records=10,
+#         polling_interval=100,
+#     )
+# )
+# async def process_asr_worker_11(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+#     try:
+#         asr_results = await _process_asr(data)
+#         # update stream data in database 
+#         results = await update_stream_data(
+#             data=asr_results, 
+#             status={"complete": False, "step": "NLP" })
 
-        await msg.ack(redis)
+#         await msg.ack(redis)
 
-        # batch publish to next stage
-        for result in results:
-            await asr_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:nlp_stream",
-                pipeline=pipe,
-            )
+#         # batch publish to next stage
+#         for result in results:
+#             await asr_broker.publish(
+#                 { "_index": result.get("_index"), "_id": result.get("_id") },
+#                 stream="audiovisual:nlp_stream",
+#                 pipeline=pipe,
+#             )
 
-        await pipe.execute() 
-    except Exception as e:
-        await msg.nack()
+#         await pipe.execute() 
+#     except Exception as e:
+#         await msg.nack()
 
-@asr_broker.subscriber(stream=StreamSub(
-        "audiovisual:asr_stream",
-        group="audiovisual:asr_group",
-        consumer="asr_worker_12",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_asr_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        asr_results = await _process_asr(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=asr_results, 
-            status={"complete": False, "step": "NLP" })
+# @asr_broker.subscriber(stream=StreamSub(
+#         "audiovisual:asr_stream",
+#         group="audiovisual:asr_group",
+#         consumer="asr_worker_12",
+#         batch=True,
+#         max_records=10,
+#         polling_interval=100,
+#     )
+# )
+# async def process_asr_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+#     try:
+#         asr_results = await _process_asr(data)
+#         # update stream data in database 
+#         results = await update_stream_data(
+#             data=asr_results, 
+#             status={"complete": False, "step": "NLP" })
 
-        await msg.ack(redis)
+#         await msg.ack(redis)
 
-        # batch publish to next stage
-        for result in results:
-            await asr_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:nlp_stream",
-                pipeline=pipe,
-            )
+#         # batch publish to next stage
+#         for result in results:
+#             await asr_broker.publish(
+#                 { "_index": result.get("_index"), "_id": result.get("_id") },
+#                 stream="audiovisual:nlp_stream",
+#                 pipeline=pipe,
+#             )
 
-        await pipe.execute() 
-    except Exception as e:
-        await msg.nack()
+#         await pipe.execute() 
+#     except Exception as e:
+#         await msg.nack()
