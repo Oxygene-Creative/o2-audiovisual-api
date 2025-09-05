@@ -6,18 +6,17 @@ async def queue_processor():
      while True:
         if not worker_1_busy_lock.locked() or not worker_2_busy_lock.locked() or not worker_3_busy_lock.locked():
             # retrieve the next 10 items in the queue
-            results = await redis_client.zpopmax("audiovisual:priority_queue", count=1)
+            result = await redis_client.zpopmax("audiovisual:priority_queue", count=1)
+
+            if result:
+                data_json, score = result[0]
+                result_json = json.loads(data_json)
             
-            data_json, score = results[0]
-            result_json = json.loads(data_json)
-            
-            # post to media analysis
-            await queue_broker.publish(
-                result_json, 
-                stream="audiovisual:segmentation_stream"
-            )
-                
-                    
+                # post to media analysis
+                await queue_broker.publish(
+                    result_json, 
+                    stream="audiovisual:segmentation_stream"
+                )   
         else:
             print("🔁 AudioVisual Queue Still busy...")
         await asyncio.sleep(0.5)
