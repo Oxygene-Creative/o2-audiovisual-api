@@ -99,6 +99,29 @@ async def _process_nlp(data: list[dict]):
         logger.error(f"An unexpected error occurred during nlp analysis: {e}")
         raise
 
+async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    try:
+        nlp_results = await _process_nlp(data)
+        # update stream data in database 
+        results = await update_stream_data(
+            data=nlp_results, 
+            status={"complete": False, "step": "LLM" })
+
+        # batch publish to next stage
+        for result in results:
+            await nlp_broker.publish(
+                { "_index": result.get("_index"), "_id": result.get("_id") },
+                stream="audiovisual:llm_stream",
+                pipeline=pipe,
+            )
+
+        await pipe.execute() 
+
+        await msg.ack(redis)
+    except Exception as e:
+        await msg.nack()
+
+
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
         group="audiovisual:nlp_group",
@@ -109,27 +132,8 @@ async def _process_nlp(data: list[dict]):
     )
 )
 async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
+    await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
+    
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
         group="audiovisual:nlp_group",
@@ -140,26 +144,7 @@ async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
     )
 )
 async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
+    await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
@@ -171,26 +156,7 @@ async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
     )
 )
 async def process_nlp_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
+    await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
@@ -202,26 +168,7 @@ async def process_nlp_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
     )
 )
 async def process_nlp_worker_4(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
+    await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
@@ -233,26 +180,7 @@ async def process_nlp_worker_4(data: list[dict], msg: RedisMessage, redis: Redis
     )
 )
 async def process_nlp_worker_5(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
+    await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
         "audiovisual:nlp_stream",
@@ -264,210 +192,5 @@ async def process_nlp_worker_5(data: list[dict], msg: RedisMessage, redis: Redis
     )
 )
 async def process_nlp_worker_6(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
-@nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
-        consumer="nlp_worker_7",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_nlp_worker_7(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
-@nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
-        consumer="nlp_worker_8",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_nlp_worker_8(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
-@nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
-        consumer="nlp_worker_9",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_nlp_worker_9(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
-@nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
-        consumer="nlp_worker_10",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_nlp_worker_10(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
-@nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
-        consumer="nlp_worker_11",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_nlp_worker_11(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
-
-@nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
-        consumer="nlp_worker_12",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_nlp_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        nlp_results = await _process_nlp(data)
-        # update stream data in database 
-        results = await update_stream_data(
-            data=nlp_results, 
-            status={"complete": False, "step": "LLM" })
-
-        # batch publish to next stage
-        for result in results:
-            await nlp_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
+    await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 

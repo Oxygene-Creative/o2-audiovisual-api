@@ -5,16 +5,17 @@ import asyncio
 async def queue_processor():
      while True:
         if not queue_busy_lock.locked():
-            # retrieve the next item in the queue
-            result = await redis_client.zpopmax("audiovisual:priority_queue", count=1)
+            # retrieve the next 10 items in the queue
+            results = await redis_client.zpopmax("audiovisual:priority_queue", count=1)
             
-            if result:
-                data_json, score = result[0]
+            for result in results:
+                data_json, score = result
                 result_json = json.loads(data_json)
 
                 # post to media analysis
                 await queue_broker.publish(
-                    result_json, stream="audiovisual:segmentation_stream"
+                    result_json, 
+                    stream="audiovisual:segmentation_stream"
                 )
                     
         else:

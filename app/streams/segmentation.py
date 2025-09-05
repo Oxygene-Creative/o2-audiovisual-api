@@ -4,7 +4,7 @@ from app.core.es import save_bulk
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
 from app.core.gcp import delete_blob, download_file, upload
 from app.core.media_processing import extract_audio_from_video, slice_audio, slice_video
-from app.core.redis import redis_broker as segmentation_broker, queue_busy_lock
+from app.core.redis import redis_broker as segmentation_broker, worker_1_busy_lock, worker_2_busy_lock, worker_3_busy_lock
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 import logging
@@ -90,68 +90,67 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
     return processed_segments
     
 async def _segment_media(data: list[dict]):
-    async with queue_busy_lock:
-        try:
-            # Start timing
-            start_time = time.time() 
-            # extract gcp_blob paths from data
-            payload = []
-            for item in data:
-                if item.get("stream_type", "").lower() == "audio":
-                    payload.append({ "bucket": item.get("gcp_bucket"), "blob": item.get("gcp_blob") })
-                    continue 
+    try:
+        # Start timing
+        start_time = time.time() 
+        # extract gcp_blob paths from data
+        payload = []
+        for item in data:
+            if item.get("stream_type", "").lower() == "audio":
+                payload.append({ "bucket": item.get("gcp_bucket"), "blob": item.get("gcp_blob") })
+                continue 
 
-                if item.get("stream_type", "").lower() == "video":
-                    payload.append({ "bucket": item.get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("gcp_blob")) })
+            if item.get("stream_type", "").lower() == "video":
+                payload.append({ "bucket": item.get("gcp_bucket"), "blob": replace_mp4_with_mp3(item.get("gcp_blob")) })
+        
+
+        logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for speech and music segmentation")
+        
+        # Make async POST request using httpx
+        async with httpx.AsyncClient(timeout=1200) as client:
+            response = await client.post(
+                f"{SEGMENTATION_GPU_URL}/vad/batch",
+                json=payload
+            )        
+        response.raise_for_status()
+        subfolder_check(f"{os.getcwd()}/o2-files")
+        results = []
+
+        for idx, result in enumerate(response.json()):
+            if not result.get("success", False):
+                continue
+
+            # only speech stuff
+            activity = {item["labels"]: item["duration"] for item in result.get("activity")}
+            if activity.get("male") in [0, None] and activity.get("female") == [0, None]:
+                print("skipping segment")
+                continue
             
+            # download master file
+            file_name = extract_file_name(data[idx].get("gcp_blob"))
+            asset_file_path = f"{os.getcwd()}/o2-files/{file_name}"
+            await asyncio.to_thread(download_file, data[idx].get("gcp_bucket"), data[idx].get("gcp_blob"), asset_file_path)
 
-            logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for speech and music segmentation")
+            processed_segments = await _process_segmet(
+                data=data[idx],
+                segments=result.get("speech"),
+                asset_file_path=asset_file_path
+            )
             
-            # Make async POST request using httpx
-            async with httpx.AsyncClient(timeout=1200) as client:
-                response = await client.post(
-                    f"{SEGMENTATION_GPU_URL}/vad/batch",
-                    json=payload
-                )        
-            response.raise_for_status()
-            subfolder_check(f"{os.getcwd()}/o2-files")
-            results = []
+            end_time = time.time()
+            time_taken = end_time - start_time
+            results.extend(processed_segments)
+            logger.info(f'segment analysis for {data[idx]["source"]["name"]} done in {time_taken}s')
 
-            for idx, result in enumerate(response.json()):
-                if not result.get("success", False):
-                    continue
+        return results
 
-                # only speech stuff
-                activity = {item["labels"]: item["duration"] for item in result.get("activity")}
-                if activity.get("male") in [0, None] and activity.get("female") == [0, None]:
-                    print("skipping segment")
-                    continue
-                
-                # download master file
-                file_name = extract_file_name(data[idx].get("gcp_blob"))
-                asset_file_path = f"{os.getcwd()}/o2-files/{file_name}"
-                await asyncio.to_thread(download_file, data[idx].get("gcp_bucket"), data[idx].get("gcp_blob"), asset_file_path)
-
-                processed_segments = await _process_segmet(
-                    data=data[idx],
-                    segments=result.get("speech"),
-                    asset_file_path=asset_file_path
-                )
-                
-                end_time = time.time()
-                time_taken = end_time - start_time
-                results.extend(processed_segments)
-                logger.info(f'segment analysis for {data[idx]["source"]["name"]} done in {time_taken}s')
-
-            return results
-
-        except httpx.RequestError as e:
-            logger.error(f"Request error during batch segmentation: {e}")
-            raise
-            
-        except Exception as e:
-            logger.error(f"An unexpected error occurred during segmentation: {e}")
-            raise
+    except httpx.RequestError as e:
+        logger.error(f"Request error during batch segmentation: {e}")
+        raise
+        
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during segmentation: {e}")
+        raise
 
 async def _save_segments(segments: list[dict]):
     actions = []
@@ -172,16 +171,7 @@ async def _save_segments(segments: list[dict]):
 
     return actions
 
-@segmentation_broker.subscriber(stream=StreamSub(
-        "audiovisual:segmentation_stream",
-        group="audiovisual:segmentation_group",
-        consumer="segmentation_worker_1",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
-)
-async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     try:
         segments = await _segment_media(data=data)
         results = await _save_segments(segments=segments)
@@ -200,6 +190,19 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
     except Exception as e:
         logger.error(f"nack called, error: {e}")
         await msg.nack()
+
+@segmentation_broker.subscriber(stream=StreamSub(
+        "audiovisual:segmentation_stream",
+        group="audiovisual:segmentation_group",
+        consumer="segmentation_worker_1",
+        batch=True,
+        max_records=10,
+        polling_interval=100,
+    )
+)
+async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
+    async with worker_1_busy_lock:
+        await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @segmentation_broker.subscriber(stream=StreamSub(
         "audiovisual:segmentation_stream",
@@ -211,24 +214,8 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
     )
 )
 async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        segments = await _segment_media(data=data)
-        results = await _save_segments(segments=segments)
-
-        # batch publish to next stage
-        for result in results:
-            await segmentation_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:audience_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-        # acknowledge message
-        await msg.ack(redis)
-    except Exception as e:
-        logger.error(f"nack called, error: {e}")
-        await msg.nack()
+    async with worker_2_busy_lock:
+        await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @segmentation_broker.subscriber(stream=StreamSub(
         "audiovisual:segmentation_stream",
@@ -240,295 +227,6 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
     )
 )
 async def process_segmentation_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    try:
-        segments = await _segment_media(data=data)
-        results = await _save_segments(segments=segments)
+    async with worker_3_busy_lock:
+        await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
-        # batch publish to next stage
-        for result in results:
-            await segmentation_broker.publish(
-                { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:audience_stream",
-                pipeline=pipe,
-            )
-
-        await pipe.execute() 
-        
-        # acknowledge message
-        await msg.ack(redis)
-    except Exception as e:
-        logger.error(f"nack called, error: {e}")
-        await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_4",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_4(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print("nack call")
-#         print(e)
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_5",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_5(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print(e)
-#         print("nack call")
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_6",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_6(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-        
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print("nack call")
-#         print(e)
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_7",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_7(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print("nack call")
-#         print(e)
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_8",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_8(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print(e)
-#         print("nack call")
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_9",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_9(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-        
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print("nack call")
-#         print(e)
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_10",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_10(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print("nack call")
-#         print(e)
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_11",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_11(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print(e)
-#         print("nack call")
-#         await msg.nack()
-
-# @segmentation_broker.subscriber(stream=StreamSub(
-#         "audiovisual:segmentation_stream",
-#         group="audiovisual:segmentation_group",
-#         consumer="segmentation_worker_12",
-#         batch=True,
-#         max_records=10,
-#         polling_interval=100,
-#     )
-# )
-# async def process_segmentation_worker_12(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-#     try:
-#         segments = await _segment_media(data=data)
-#         results = await _save_segments(segments=segments)
-
-#         # batch publish to next stage
-#         for result in results:
-#             await segmentation_broker.publish(
-#                 { "_index": result.get("_index"), "_id": result.get("_id") },
-#                 stream="audiovisual:audience_stream",
-#                 pipeline=pipe,
-#             )
-
-#         await pipe.execute() 
-        
-#         # acknowledge message
-#         await msg.ack(redis)
-#     except Exception as e:
-#         print("nack call")
-#         print(e)
-#         await msg.nack()
