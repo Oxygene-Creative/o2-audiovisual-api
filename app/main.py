@@ -1,24 +1,24 @@
 import asyncio
 from app.core.config import setup_env
 from fastapi import FastAPI
-from app.routers.embeddings import embeddings_router
 from app.routers.ads import ads_router
+from app.routers.ingestion import ingestion_router
 from dotenv import load_dotenv
-from contextlib import asynccontextmanager
-from app.core.redis import close_redis_client, load_redis_client, redis_router
-from app.pipelines.audio_analytics import audio_router
-from app.pipelines.priority_queue import queue_processor, queue_router
-from app.pipelines.video_analytics import video_router
-from app.pipelines.transcript_analysis import transcript_router
+from app.streams.asr import asr_broker
+from app.streams.audience import audience_broker
+from app.streams.llm import llm_broker
+from app.streams.nlp import nlp_broker
+from app.streams.segmentation import segmentation_broker
+from app.streams.queue import queue_processor
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.pi_uploads import uploads_router
+from app.core.redis import redis_broker
 import os
 
 load_dotenv()
 os.environ["GRPC_FORK_SUPPORT_ENABLED"] = "0"
 
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,25 +27,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# include faststream handlers
-app.include_router(audio_router)
-app.include_router(video_router)
-app.include_router(transcript_router)
-app.include_router(queue_router)
-
 # Include routers for modular endpoints
-app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(ads_router, prefix="/analysis", tags=["ads"])
 app.include_router(uploads_router, tags=["uploads"])
+app.include_router(ingestion_router, tags=["ingestion"])
 
 @app.on_event("startup")
 async def start_app():
-    await redis_router.broker.connect()
+    await redis_broker.start()
     setup_env()
     # Start the background worker task
     asyncio.create_task(queue_processor())
 
 @app.on_event("shutdown")
 async def shutdown_app():
-    await redis_router.broker.close()
-    await close_redis_client()
+    await redis_broker.close()

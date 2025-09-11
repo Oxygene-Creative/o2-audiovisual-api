@@ -14,7 +14,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN apt-get update && apt-get install -y python3-opencv
 
-# Install C, ffmpeg and graphics packages
+# Install C, ffmpeg and graphics packages if using alpine distro
 # RUN apk add --no-cache \
 #     gcc \
 #     musl-dev \
@@ -38,7 +38,7 @@ RUN pip install pipenv && pipenv install --system
 # Copy the app folder
 COPY ./app ./app
 
-COPY .env .
+# COPY .env .
 
 RUN mkdir ./o2-files
 

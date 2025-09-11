@@ -14,7 +14,7 @@ load_dotenv()
 
 # Initialize language model
 primary_llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     temperature=0,
     max_tokens=None,
     timeout=None,
@@ -24,7 +24,7 @@ primary_llm = ChatGoogleGenerativeAI(
 
 fallback_llm = AzureChatOpenAI(
     azure_deployment="gpt-4o",
-    api_version="2023-06-01-preview",  # or your api version
+    api_version="2023-06-01-preview",
     temperature=0,
     max_tokens=None,
     timeout=None,

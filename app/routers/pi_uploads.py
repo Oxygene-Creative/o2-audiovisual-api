@@ -7,7 +7,6 @@ from pathlib import Path
 from app.core.gcp import upload
 import asyncio
 from datetime import datetime
-from app.pipelines.video_analytics import handle_start_video_analysis
 
 uploads_router = APIRouter()
 

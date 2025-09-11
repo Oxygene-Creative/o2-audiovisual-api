@@ -24,7 +24,7 @@ async def embed_text(data: list[str]):
         client = APIClient(base_url=AI_API_URL)    
         # Emotions example
         embeddings_result = await client.get_embeddings(data=data)
-        return embeddings_result['embeddings']
+        return embeddings_result
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
