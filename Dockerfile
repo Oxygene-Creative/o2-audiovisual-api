@@ -35,6 +35,8 @@ COPY Pipfile Pipfile.lock /code/
 # Install pipenv and install dependencies
 RUN pip install pipenv && pipenv install --system
 
+RUN pip install 'faststream[redis]' numpy
+
 # Copy the app folder
 COPY ./app ./app
 
