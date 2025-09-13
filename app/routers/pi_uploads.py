@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 from fastapi.responses import FileResponse
+from app.core.media_processing import check_media_integrity, validate_file_size
 import ffmpeg
 import tempfile
 import os
@@ -25,9 +26,20 @@ async def upload_videos_from_pi(
         temp_ts.write(content)
         temp_ts_path = temp_ts.name
     
-    output_path = temp_ts_path.replace('.ts', '.mp4')
-    
     try:
+        # Validate file size first (quick check)
+        if not await validate_file_size(temp_ts_path, min_size_bytes=1024):  # At least 1KB
+            raise HTTPException(status_code=400, detail="Uploaded file is too small or empty")
+        
+        # Check for corruption using ffprobe
+        print(f"Checking integrity of {file.filename}...")
+        if not await check_media_integrity(temp_ts_path):
+            raise HTTPException(status_code=400, detail="Uploaded media file appears to be corrupted or invalid")
+        
+        print(f"Media file {file.filename} passed integrity checks")
+
+        output_path = temp_ts_path.replace('.ts', '.mp4')
+
         # Convert using ffmpeg-python
         (
             ffmpeg
