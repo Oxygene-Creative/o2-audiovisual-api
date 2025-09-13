@@ -2,10 +2,16 @@ import asyncio
 import json
 import time
 from app.analyzers.llm import llm_transcript_analysis
+from app.core.graphql import update_last_seen
 from app.core.redis import redis_broker as llm_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
+from datetime import datetime, timedelta
+
+# Define the EAT timezone (UTC+3)
+eat_offset = timedelta(hours=3)
+
 
 import logging
 
@@ -44,12 +50,20 @@ async def _process_llm(data: list[dict]):
             data[idx]["_updates"]["creator"] = llm_analysis_dict.get("show_metadata", {}).get("host", "")
             data[idx]["_updates"]["title"] = llm_analysis_dict.get("show_metadata", {}).get("program_name", "")
 
+            # Update last seen
+            timestamp_dt = datetime.utcnow() + eat_offset
+            timestamp = timestamp_dt.strftime("%Y-%m-%dT%H:%M")
+
+            if data[idx].get("_index", "").startswith == "tv":
+                await update_last_seen(stream_type= "tv", stream_id=data[idx].get("_id", None), timestamp=timestamp)
+            elif data[idx].get("_index", "").startswith == "radio":
+                await update_last_seen(stream_type= "radio", stream_id=data[idx].get("_id", None), timestamp=timestamp)
+             
             # End timing
             end_time = time.time()
             time_taken = end_time - start_time
-
             logger.info(f'llm analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s')
-    
+        
         return data
     
     except Exception as e:
