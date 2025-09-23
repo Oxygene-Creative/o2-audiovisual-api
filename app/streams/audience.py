@@ -1,4 +1,6 @@
+import asyncio
 import time
+from app.core.gcp import delete_blob
 from app.core.redis import redis_broker as audience_broker
 from app.streams.segmentation import replace_mp4_with_mp3
 from faststream.redis import StreamSub, Pipeline
@@ -56,6 +58,11 @@ async def _process_audience(data: list[dict]):
             time_taken = end_time - start_time
             logger.info(f'audience analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s')
 
+        # Remove soundtracks
+        for item in data:
+            if item.get("_index", "").startswith("tv_"):
+                soundtrack = replace_mp4_with_mp3(item.get("_source", {}).get("gcp_blob")) 
+                await asyncio.to_thread(delete_blob, item.get("_source").get("gcp_bucket"), soundtrack)
         return data
 
     except httpx.RequestError as e:

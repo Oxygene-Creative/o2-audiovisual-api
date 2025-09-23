@@ -28,12 +28,12 @@ folder_to_station_map = [
     {"folder": "radio/Capital FM", "station": {"id": "3571c245-ff27-4a8f-b096-1df857d78021", "radio_stream_name": "Capital FM"}},
     {"folder": "radio/Radio Citizen", "station": {"id": "075d8278-9977-40ba-a0c2-189b4bdd10fa", "radio_stream_name": "Radio Citizen"}},
     {"folder": "radio/Radio Jambo", "station": {"id": "72e7e42e-1450-42db-aa1d-990f3c8f915a", "radio_stream_name": "Radio Jambo"}},
-    {"folder": "radio/Spice FM", "station": {"id": "204a6953-5e8a-4a8d-b60f-51fb97d0a566", "radio_stream_name": "Spice FM"}},
-    {"folder": "radio/Ghetto Radio", "station": {"id": "ea2f4b20-b21d-410a-ab98-082fa5a05a6d", "radio_stream_name": "Ghetto Radio"}},
-    {"folder": "radio/Classic FM", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},
-    {"folder": "radio/capitalfm", "station": {"id": "3571c245-ff27-4a8f-b096-1df857d78021", "radio_stream_name": "Capital FM"}},  
-    {"folder": "radio/classicfm", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},  
-    {"folder": "radio/radiojambo", "station": {"id": "72e7e42e-1450-42db-aa1d-990f3c8f915a", "radio_stream_name": "Radio Jambo"}}, 
+    # {"folder": "radio/Spice FM", "station": {"id": "204a6953-5e8a-4a8d-b60f-51fb97d0a566", "radio_stream_name": "Spice FM"}},
+    # {"folder": "radio/Ghetto Radio", "station": {"id": "ea2f4b20-b21d-410a-ab98-082fa5a05a6d", "radio_stream_name": "Ghetto Radio"}},
+    # {"folder": "radio/Classic FM", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},
+    # {"folder": "radio/capitalfm", "station": {"id": "3571c245-ff27-4a8f-b096-1df857d78021", "radio_stream_name": "Capital FM"}},  
+    # {"folder": "radio/classicfm", "station": {"id": "34aa475f-74dd-4737-a4f4-e5cb06de1e27", "radio_stream_name": "Classic 105"}},  
+    # {"folder": "radio/radiojambo", "station": {"id": "72e7e42e-1450-42db-aa1d-990f3c8f915a", "radio_stream_name": "Radio Jambo"}}, 
 ]
 
 
@@ -76,7 +76,7 @@ def list_mp3_files_in_folder(bucket_name, folder_name):
     ]
 
     # Sort files in reverse order based on their timestamp
-    mp3_files.sort(key=lambda x: x.split("_")[-2] + "_" + x.split("_")[-1].replace(".mp3", ""), reverse=False)
+    mp3_files.sort(key=lambda x: x.split("_")[-2] + "_" + x.split("_")[-1].replace(".mp3", ""), reverse=True)
 
     return mp3_files
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         mp3_files = list_mp3_files_in_folder(bucket_name, folder_name)
 
         # Select up to 40 recordings (use slicing to limit)
-        selected_recordings = mp3_files[:72]
+        selected_recordings = mp3_files[:48]
 
         # Add the count of mp3 files to the total
         total_files_count += len(mp3_files)
@@ -109,8 +109,8 @@ if __name__ == "__main__":
     print(f"Total mp3 files in root directories across all folders: {total_files_count}")
 
     print("Posting data to the API...")
-    batch_size = 18
-    batch_timeout = 15 * 60
+    batch_size = 6
+    batch_timeout = 5 * 60
 
     for i in range(0, len(overall_recordings), batch_size):
         # Slice the overall recordings into batches of 6

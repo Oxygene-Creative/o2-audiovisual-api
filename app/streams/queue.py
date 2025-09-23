@@ -17,6 +17,6 @@ async def queue_processor():
                     result_json, 
                     stream="audiovisual:segmentation_stream"
                 )   
-        else:
-            print("🔁 AudioVisual Queue Still busy...")
+        # else:
+        #     print("🔁 AudioVisual Queue Still busy...")
         await asyncio.sleep(0.5)

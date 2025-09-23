@@ -67,7 +67,7 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
         
         if stream_type == "video":
             # Extract sound track of video segment and upload to GCS
-            soundtrack_file_path = await extract_audio_from_video(local_file_path)
+            soundtrack_file_path = await extract_audio_from_video(asset_file_path)
             soundtrack_file_name = extract_file_name(soundtrack_file_path)
             soundtrack_dest_file_path = f"tv/{data.get('source').get('name')}/{recording_date}/{soundtrack_file_name}"          
             await asyncio.to_thread(upload, data.get("gcp_bucket"), soundtrack_file_path, soundtrack_dest_file_path)
