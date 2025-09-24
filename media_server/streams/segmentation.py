@@ -1,10 +1,10 @@
 import asyncio
 import uuid
-from app.core.es import save_bulk
-from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
-from app.core.gcp import delete_blob, download_file, upload
-from app.core.media_processing import extract_audio_from_video, slice_audio, slice_video
-from app.core.redis import redis_broker as segmentation_broker, worker_1_busy_lock, worker_2_busy_lock, worker_3_busy_lock
+from utils.es import save_bulk
+from utils.files import calc_file_size, delete_file, extract_file_name, subfolder_check
+from utils.gcp import delete_blob, download_file, upload
+from utils.media_processing import extract_audio_from_video, slice_audio, slice_video
+from utils.redis import redis_broker as segmentation_broker, worker_1_busy_lock, worker_2_busy_lock, worker_3_busy_lock
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 import logging

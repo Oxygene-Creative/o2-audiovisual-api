@@ -3,6 +3,7 @@ from routers.uploads import uploads_router
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from routers.uploads import uploads_router
+from app.core.redis import redis_broker
 
 load_dotenv()
 
@@ -18,3 +19,11 @@ app.add_middleware(
 
 # include faststream handlers
 app.include_router(uploads_router, tags=["uploads"])
+
+@app.on_event("startup")
+async def start_app():
+    await redis_broker.start()
+
+@app.on_event("shutdown")
+async def shutdown_app():
+    await redis_broker.close()
