@@ -2,7 +2,7 @@ import httpx
 from typing import List, Optional
 
 class APIClient:
-    def __init__(self, base_url: str, timeout: float = 300.0, retries: int = 3):
+    def __init__(self, base_url: str, timeout: float = 400.0, retries: int = 3):
         """
         Initialize the API client with the base URL.
         """
@@ -45,7 +45,7 @@ class APIClient:
 
     async def get_embeddings(self, data: list[str]):
         """
-        Call the /embeddings/text endpoint.
+        Call the /embeddings/text/batch endpoint.
         """
         return await self._make_request(
             method="POST",
@@ -55,7 +55,7 @@ class APIClient:
 
     async def get_emotions(self, data: list):
         """
-        Call the /emotions endpoint.
+        Call the /emotions/batch endpoint.
         """
         return await self._make_request(
             method="POST",
@@ -75,7 +75,7 @@ class APIClient:
 
     async def analyze_sentiment(self, data: list):
         """
-        Call the /sentiment endpoint.
+        Call the /sentiment/batch endpoint.
         """
         return await self._make_request(
             method="POST",
