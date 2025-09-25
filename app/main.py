@@ -16,7 +16,7 @@ from app.core.redis import redis_broker
 import os
 import urllib3
 
-# disable url3 warnings
+# disable ssl warnings
 urllib3.disable_warnings()
 
 load_dotenv()
