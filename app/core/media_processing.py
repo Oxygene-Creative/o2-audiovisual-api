@@ -3,6 +3,7 @@ from moviepy import VideoFileClip
 from pydub import AudioSegment
 from pathlib import Path
 from app.core.files import subfolder_check
+import ffmpeg
 
 async def extract_audio_from_video(video_path):
     # extract the file name
@@ -58,7 +59,6 @@ async def slice_audio(speech_segments, audio_path):
         
     return extracted_files
 
-
 async def slice_video(video_path, start, stop):
     output_file_name = f"{Path(video_path).stem}_{start}_{stop}.mp4"
     # Load the video file
@@ -82,3 +82,61 @@ async def slice_video(video_path, start, stop):
         "duration": stop - start,
         "file_path": output_file_path
     }
+
+async def check_media_integrity(file_path: str) -> bool:
+    try:
+        # Use ffprobe to analyze the file
+        probe = ffmpeg.probe(file_path)
+        
+        # Check if we have streams
+        if 'streams' not in probe or len(probe['streams']) == 0:
+            print(f"No streams found in {file_path}")
+            return False
+            
+        # Check each stream
+        for stream in probe['streams']:
+            # For video streams, check if we have basic video info
+            if stream['codec_type'] == 'video':
+                if 'width' not in stream or 'height' not in stream:
+                    print(f"Invalid video stream in {file_path}")
+                    return False
+            
+            # Check if codec is recognizable
+            if 'codec_name' not in stream or stream['codec_name'] == 'unknown':
+                print(f"Unknown codec in stream: {stream}")
+                return False
+        
+        # Additional check: try to read first few frames
+        try:
+            (
+                ffmpeg
+                .input(file_path)
+                .output('pipe:', vframes=1, f='null')
+                .run(capture_stdout=True, capture_stderr=True, timeout=10)
+            )
+        except ffmpeg.Error as e:
+            print(f"Cannot decode frames from {file_path}: {e}")
+            return False
+        except Exception as e:
+            print(f"Timeout or other error checking frames: {e}")
+            return False
+            
+        return True
+        
+    except ffmpeg.Error as e:
+        print(f"FFprobe error for {file_path}: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error checking {file_path}: {e}")
+        return False
+
+async def validate_file_size(file_path: str, min_size_bytes: int = 1024) -> bool:
+    try:
+        file_size = os.path.getsize(file_path)
+        if file_size < min_size_bytes:
+            print(f"File too small: {file_size} bytes")
+            return False
+        return True
+    except Exception as e:
+        print(f"Error checking file size: {e}")
+        return False

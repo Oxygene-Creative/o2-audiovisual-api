@@ -206,3 +206,24 @@ async def fetch_industries():
     except Exception as e:
         print(f"Error  in fetching industries: {e}")
         return None
+    
+async def update_last_seen(stream_type: str, stream_id: str, timestamp: str):
+    mutation = """
+    mutation ($id: String!, $stream: String!, $timestamp: String!){
+        updateLastSeen(id: $id, stream: $stream, timestamp: $timestamp){
+                id
+            }
+        }
+    """
+    variables = { "id": stream_id, "stream": stream_type, "timestamp": timestamp}
+    try:
+        response = fetch_data(mutation, variables)
+        if "errors" in response:
+            print(f"GraphQL errors in fetching industries: {response['errors']}")
+            return None
+        data = response["updateLastSeen"]
+
+        return data
+    except Exception as e:
+        print(f"Error  in fetching industries: {e}")
+        return None
