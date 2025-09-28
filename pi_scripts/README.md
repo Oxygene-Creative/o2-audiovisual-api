@@ -1,0 +1,7 @@
+# PI Uploader
+TVHEADEND_USER=admin
+TVHEADEND_PASS=1234
+TVHEADEND_URI=http://172.22.2.103:9981
+GRAPHQL_URI=https://monitorapi.oxygenehosting.com/graphql
+GRAPHQL_API_KEY=9a459479ce5c6ad8d39f5778eed34ce66df14a2231f2c025714129de475d20d0
+AUDIOVISUAL_API_URI=https://monitorapi.oxygenehosting.com/api/av
