@@ -19,7 +19,7 @@ USERNAME = os.getenv("TVHEADEND_USER")
 PASSWORD = os.getenv("TVHEADEND_PASS")
 GRAPHQL_URI = os.environ['GRAPHQL_URI']
 GRAPHQL_API_KEY = os.environ['GRAPHQL_API_KEY']
-AUDIOVISUAL_URI = os.environ["AUDIOVISUAL_API_URI"]
+MEDIASERVER_URI = os.environ["MEDIASERVER_URI"]
 
 auth = DigestAuth(USERNAME, PASSWORD)
 
@@ -74,7 +74,7 @@ async def upload_recording(
                 "timestamp": timestamp,
             }
             response = await client.post(
-                f"{AUDIOVISUAL_URI}/uploads-from-pi", 
+                f"{MEDIASERVER_URI}/uploads-from-pi", 
                 files=files, 
                 data=data
             )
