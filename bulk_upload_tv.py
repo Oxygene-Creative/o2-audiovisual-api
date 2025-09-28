@@ -95,8 +95,8 @@ if __name__ == "__main__":
     results = list_mp4_recordings(
         bucket_name=bucket_name,
         tv_stations=tv_stations,
-        start_date="2025-09-25",
-        end_date="2025-09-25"
+        start_date="2025-09-26",
+        end_date="2025-09-28"
     )
 
     for r in results:
