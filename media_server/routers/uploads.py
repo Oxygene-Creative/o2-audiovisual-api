@@ -61,11 +61,11 @@ def background_task_conversion_and_analysis(
             "timestamp_str": timestamp
         }
 
-        # # extract audio from video
-        # soundtrack_file_path = asyncio.run(extract_audio_from_video(output_path))
-        # # upload audio file
-        # sound_track_dest = replace_mp4_with_mp3(gcp_path)
-        # upload(bucket_name, soundtrack_file_path, sound_track_dest)
+        # extract audio from video
+        soundtrack_file_path = asyncio.run(extract_audio_from_video(output_path))
+        # upload audio file
+        sound_track_dest = replace_mp4_with_mp3(gcp_path)
+        upload(bucket_name, soundtrack_file_path, sound_track_dest)
 
         # Start video analysis
         asyncio.run(handle_start_video_analysis(upload=upload_file_info))

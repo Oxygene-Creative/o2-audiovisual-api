@@ -97,7 +97,7 @@ if __name__ == "__main__":
         mp3_files = list_mp3_files_in_folder(bucket_name, folder_name)
 
         # Select up to 40 recordings (use slicing to limit)
-        selected_recordings = mp3_files[:20]
+        selected_recordings = mp3_files[:10]
 
         # Add the count of mp3 files to the total
         total_files_count += len(mp3_files)
