@@ -3,7 +3,8 @@ from routers.uploads import uploads_router
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from routers.uploads import uploads_router
-from app.core.redis import redis_broker
+from utils.redis import redis_broker
+from streams.segmentation import segmentation_broker
 
 load_dotenv()
 

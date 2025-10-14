@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 from fastapi.responses import FileResponse
-from utils.media_processing import convert_video_format
+from utils.media_processing import convert_video_format, extract_audio_from_video
 import tempfile
 import os
 from pathlib import Path
@@ -9,6 +9,7 @@ import asyncio
 from datetime import datetime
 import httpx
 from fastapi import BackgroundTasks
+from streams.segmentation import replace_mp4_with_mp3
 
 uploads_router = APIRouter()
 AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxygenehosting.com/api/av")
@@ -16,12 +17,12 @@ AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxyge
 async def handle_start_video_analysis(upload: dict):
     try:        
         async with httpx.AsyncClient() as client:
-            response = await client.post(f"{AUDIOVISUAL_API_URI}/", json=upload)
+            response = await client.post(f"{AUDIOVISUAL_API_URI}/ingestion", json=upload)
             
             # Check response status code
             if response.status_code == 200:
                 # Parse JSON response if needed
-                return response.json().get("analysis_id")
+                return response.json()
             else:
                 raise Exception(f"Failed to start video analysis: {response.status_code} - {response.text}")
                 
@@ -48,15 +49,23 @@ def background_task_conversion_and_analysis(
         gcp_path = f'tv/{stream_name}/{recording_date}/{stream_name}_{datetime_str}.mp4'
 
         # Upload to GCP
-        upload("audiovisual-streams", output_path, gcp_path)
+        bucket_name = "audiovisual-streams"
+        upload(bucket_name, output_path, gcp_path)
 
         upload_file_info = {
             "stream_id": stream_id,
             "stream_name": stream_name,
-            "bucket": "audiovisual-streams",
+            "bucket": bucket_name,
             "blob": gcp_path,
-            "timestamp_str": timestamp  
+            "media_type": "video",
+            "timestamp_str": timestamp
         }
+
+        # # extract audio from video
+        # soundtrack_file_path = asyncio.run(extract_audio_from_video(output_path))
+        # # upload audio file
+        # sound_track_dest = replace_mp4_with_mp3(gcp_path)
+        # upload(bucket_name, soundtrack_file_path, sound_track_dest)
 
         # Start video analysis
         asyncio.run(handle_start_video_analysis(upload=upload_file_info))

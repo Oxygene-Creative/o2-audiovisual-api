@@ -18,7 +18,7 @@ RUN mkdir ./o2-files
 RUN pip install -r requirements.txt
 
 # Expose port 
-EXPOSE 8610
+EXPOSE 8710
 
 # Run fastapi using uvicorn
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8610"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8710"]
