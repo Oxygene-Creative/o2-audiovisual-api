@@ -107,7 +107,7 @@ async def _segment_media(data: list[dict]):
         logger.info(f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for speech and music segmentation")
         
         # Make async POST request using httpx
-        async with httpx.AsyncClient(timeout=1200) as client:
+        async with httpx.AsyncClient(timeout=600) as client:
             response = await client.post(
                 f"{SEGMENTATION_GPU_URL}/vad/batch",
                 json=payload

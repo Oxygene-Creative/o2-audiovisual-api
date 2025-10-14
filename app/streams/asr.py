@@ -50,7 +50,7 @@ async def _process_asr(data: list[dict]):
 
             raw_text = result.get("transcription").get("raw_text","")
             if len(raw_text.split()) > 10:
-                processed_transcript = await post_process_transcription(raw_text.split())
+                processed_transcript = await post_process_transcription(raw_text)
             else:
                 processed_transcript = raw_text
 
