@@ -10,6 +10,21 @@ from datetime import datetime
 import httpx
 from fastapi import BackgroundTasks
 from streams.segmentation import replace_mp4_with_mp3
+import subprocess
+import os
+
+def is_video_corrupted(file_path):
+    try:
+        # Run FFmpeg on the file and check for integrity
+        result = subprocess.run(
+            ["ffmpeg", "-v", "error", "-i", file_path, "-f", "null", "-"],
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        return "Error" in result.stderr.decode("utf-8")
+    except Exception as e:
+        print(f"Error checking file '{file_path}': {e}")
+        return True
 
 uploads_router = APIRouter()
 AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxygenehosting.com/api/av")
@@ -36,6 +51,12 @@ def background_task_conversion_and_analysis(
     timestamp: str
 ):
     try:
+        # check if video recording is legit
+        if is_video_corrupted(temp_ts_path):
+            if os.path.exists(temp_ts_path):
+                os.unlink(temp_ts_path)
+            return
+
         # Use the new function for conversion
         output_path = convert_video_format(temp_ts_path, "ts", "mp4")
         

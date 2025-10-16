@@ -23,6 +23,8 @@ MEDIASERVER_URI = os.environ["MEDIASERVER_URI"]
 
 auth = DigestAuth(USERNAME, PASSWORD)
 
+print(f"{MEDIASERVER_URI}/uploads-from-pi")
+
 async def get_finished_recordings():
     timeout = httpx.Timeout(10800)
     async with httpx.AsyncClient(timeout=timeout) as client:  # Create client locally
@@ -75,6 +77,7 @@ async def upload_recording(
             }
 
             try:
+                
                 response = await client.post(
                     f"{MEDIASERVER_URI}/uploads-from-pi", 
                     files=files, 
