@@ -27,7 +27,7 @@ async def handle_start_video_analysis(upload: dict):
                 raise Exception(f"Failed to start video analysis: {response.status_code} - {response.text}")
                 
     except httpx.RequestError as e:
-        raise Exception(f"Error communicating with video analysis endpoint: {str(e)}")
+        raise Exception(f"Error ingesting video to data streams: {str(e)}")
 
 def background_task_conversion_and_analysis(
     temp_ts_path: str, 

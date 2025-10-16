@@ -63,24 +63,27 @@ async def upload_recording(
     file_name = Path(file_path).name
     timeout = httpx.Timeout(10800)
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        with open(file_path, "rb") as f:
-            files = {
-                "file": (file_name, f, "video/MP2T"),
-            }
-            data = {
-                "stream_id": stream_id,
-                "stream_name": stream_name,
-                "timestamp": timestamp,
-            }
-            response = await client.post(
-                f"{MEDIASERVER_URI}/uploads-from-pi", 
-                files=files, 
-                data=data
-            )
-            response.raise_for_status()
-            print("✅ Uploaded successfully:", response.json())
-            return response.json()
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            with open(file_path, "rb") as f:
+                files = {
+                    "file": (file_name, f, "video/MP2T"),
+                }
+                data = {
+                    "stream_id": stream_id,
+                    "stream_name": stream_name,
+                    "timestamp": timestamp,
+                }
+                response = await client.post(
+                    f"{MEDIASERVER_URI}/uploads-from-pi", 
+                    files=files, 
+                    data=data
+                )
+                response.raise_for_status()
+                print("✅ Uploaded successfully:", response.json())
+                return response.json()
+    except Exception as e:
+        print(f"error uploading file: {e}")
 
 async def get_tv_streams():
     query = """
