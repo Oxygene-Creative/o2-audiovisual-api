@@ -37,6 +37,7 @@ async def handle_start_video_analysis(upload: dict):
             # Check response status code
             if response.status_code == 200:
                 # Parse JSON response if needed
+                print("video ingested")
                 return response.json()
             else:
                 raise Exception(f"Failed to start video analysis: {response.status_code} - {response.text}")
@@ -55,12 +56,14 @@ def background_task_conversion_and_analysis(
     try:
         # check if video recording is legit
         if is_video_corrupted(temp_ts_path):
+            print("corrupt file")
             if os.path.exists(temp_ts_path):
                 os.unlink(temp_ts_path)
             return
 
         # Use the new function for conversion
         output_path = convert_video_format(temp_ts_path, "ts", "mp4")
+        print("video converted")
         
         # Parse into datetime object
         dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M")
@@ -74,6 +77,7 @@ def background_task_conversion_and_analysis(
         # Upload to GCP
         bucket_name = "audiovisual-streams"
         upload(bucket_name, output_path, gcp_path)
+        print("video uploaded to gcp")
 
         upload_file_info = {
             "stream_id": stream_id,
