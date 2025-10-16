@@ -51,7 +51,7 @@ def background_task_conversion_and_analysis(
     stream_name: str, 
     timestamp: str
 ):
-    
+    print("starting background task")
     output_path = ""
     try:
         # check if video recording is legit
