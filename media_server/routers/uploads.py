@@ -50,6 +50,8 @@ def background_task_conversion_and_analysis(
     stream_name: str, 
     timestamp: str
 ):
+    
+    output_path = ""
     try:
         # check if video recording is legit
         if is_video_corrupted(temp_ts_path):
