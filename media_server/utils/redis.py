@@ -6,7 +6,7 @@ from redis.asyncio.client import Pipeline
 from fastapi import Depends
 
 # Create shared broker instance
-REDIS_URI = os.getenv("REDIS_URI", "redis://redis:6379")
+REDIS_URI = os.getenv("REDIS_URI", "redis://34.35.19.174:6379")
 redis_router = fastapi.RedisRouter(REDIS_URI)
 redis_broker = RedisBroker(REDIS_URI)
 redis_host = REDIS_URI.split("://")[-1]
