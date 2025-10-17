@@ -134,25 +134,3 @@ async def _worker_handler(data: dict, msg: RedisMessage, redis: Redis, pipe: Pip
 async def process_media_worker_1(data: dict, msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     async with worker_1_busy_lock:
         await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
-
-@media_processing_broker.subscriber(stream=StreamSub(
-        "media_srv:media_processing",
-        group="media_srv:media_processing_group",
-        consumer="media_processing_2",
-        polling_interval=100,
-    )
-)
-async def process_media_worker_2(data: dict, msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    async with worker_2_busy_lock:
-        await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
-
-@media_processing_broker.subscriber(stream=StreamSub(
-        "media_srv:media_processing",
-        group="media_srv:media_processing_group",
-        consumer="media_processing_3",
-        polling_interval=100,
-    )
-)
-async def process_media_worker_3(data: dict, msg: RedisMessage, redis: Redis, pipe: Pipeline,):
-    async with worker_3_busy_lock:
-        await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)

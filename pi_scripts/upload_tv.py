@@ -173,7 +173,7 @@ async def process_and_upload(streams: list, recording_path: str, uuid: str):
     )
 
     # Step 3: Remove recording
-    await delete_recording(uuid)
+    # await delete_recording(uuid)
 
 async def main():
     # Run the async function

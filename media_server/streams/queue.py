@@ -4,7 +4,7 @@ import asyncio
 
 async def queue_processor():
      while True:
-        if not worker_1_busy_lock.locked() or not worker_2_busy_lock.locked() or not worker_3_busy_lock.locked():
+        if not worker_1_busy_lock.locked():
             # retrieve the next 10 items in the queue
             result = await redis_client.zpopmax("media_srv:priority_queue", count=1)
 
