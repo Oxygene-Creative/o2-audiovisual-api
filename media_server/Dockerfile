@@ -21,4 +21,4 @@ RUN pip install -r requirements.txt
 EXPOSE 8710
 
 # Run fastapi using uvicorn
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8710"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8710", "--reload"]

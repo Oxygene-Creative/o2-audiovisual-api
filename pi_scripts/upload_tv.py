@@ -169,7 +169,7 @@ async def process_and_upload(streams: list, recording_path: str, uuid: str):
         file_path=recording_path,
         stream_id=stream_id,
         stream_name=stream_name,
-        timestamp=f"{date}T{timestamp}"
+        timestamp=f"{date}T{timestamp}:00"
     )
 
     # Step 3: Remove recording
