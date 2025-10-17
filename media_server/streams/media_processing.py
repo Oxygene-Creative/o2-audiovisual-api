@@ -23,6 +23,7 @@ AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxyge
 
 async def _is_video_corrupted(file_path):
     try:
+        print("checking video validity")
         # Run FFmpeg on the file and check for integrity
         result = subprocess.run(
             ["ffmpeg", "-v", "error", "-i", file_path, "-f", "null", "-"],
@@ -54,6 +55,7 @@ async def _process_media(data: dict):
     try:
         # Start timing
         start_time = time.time() 
+        output_path = ""
 
         path = data.get("path", None)
         stream_name = data.get("stream_name", "")

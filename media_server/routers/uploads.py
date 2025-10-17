@@ -1,16 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
-from fastapi.responses import FileResponse
-from utils.media_processing import convert_video_format, extract_audio_from_video
 import tempfile
-import os
-from pathlib import Path
-from utils.gcp import upload
-import asyncio
 from datetime import datetime
-import httpx
-from fastapi import BackgroundTasks
-from streams.segmentation import replace_mp4_with_mp3
-import subprocess
 import os
 from utils.redis import redis_client
 import json
