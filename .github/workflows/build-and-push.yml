@@ -1,0 +1,51 @@
+name: Build and Push AV API
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  GCP_REGION: us-west2
+  ARTIFACT_REGISTRY: us-west2-docker.pkg.dev
+  ARTIFACT_REPOSITORY: oxygene-monitor/o2-monitor
+  IMAGE_NAME: av-api
+  IMAGE_TAG: latest
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker authentication
+        run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }} --quiet
+
+      - name: Submit build to Cloud Build
+        env:
+          IMAGE_URI_BASE: ${{ env.ARTIFACT_REGISTRY }}/${{ env.ARTIFACT_REPOSITORY }}/${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          IMAGE_SHA="${IMAGE_URI_BASE}:${GITHUB_SHA}"
+          IMAGE_LATEST="${IMAGE_URI_BASE}:${IMAGE_TAG}"
+          echo "Building and tagging ${IMAGE_SHA} and ${IMAGE_LATEST}"
+          gcloud builds submit \
+            --region="${{ env.GCP_REGION }}" \
+            --tag "${IMAGE_SHA}" \
+            --tag "${IMAGE_LATEST}" \
+            .
