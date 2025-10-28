@@ -16,6 +16,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: av_api
     permissions:
       contents: read
       id-token: write
