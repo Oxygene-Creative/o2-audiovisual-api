@@ -11,31 +11,37 @@ from datetime import datetime
 
 uploads_router = APIRouter()
 
+
 @uploads_router.post("/uploads-from-pi")
 async def upload_videos_from_pi(
     file: UploadFile = File(...),
     stream_id: str = Form(...),
     stream_name: str = Form(...),
     timestamp: str = Form(...)
-    ):
+):
     if not file.filename.endswith('.ts'):
         raise HTTPException(status_code=400, detail="File must be a .ts file")
-    
+
     with tempfile.NamedTemporaryFile(delete=False, suffix='.ts') as temp_ts:
         content = await file.read()
         temp_ts.write(content)
         temp_ts_path = temp_ts.name
-    
+
+    output_path = None  # Initialize to None to avoid UnboundLocalError
+
     try:
         # Validate file size first (quick check)
-        if not await validate_file_size(temp_ts_path, min_size_bytes=1024):  # At least 1KB
-            raise HTTPException(status_code=400, detail="Uploaded file is too small or empty")
-        
+        # At least 1KB
+        if not await validate_file_size(temp_ts_path, min_size_bytes=1024):
+            raise HTTPException(
+                status_code=400, detail="Uploaded file is too small or empty")
+
         # Check for corruption using ffprobe
         print(f"Checking integrity of {file.filename}...")
         if not await check_media_integrity(temp_ts_path):
-            raise HTTPException(status_code=400, detail="Uploaded media file appears to be corrupted or invalid")
-        
+            raise HTTPException(
+                status_code=400, detail="Uploaded media file appears to be corrupted or invalid")
+
         print(f"Media file {file.filename} passed integrity checks")
 
         output_path = temp_ts_path.replace('.ts', '.mp4')
@@ -48,7 +54,7 @@ async def upload_videos_from_pi(
             .overwrite_output()
             .run(capture_stdout=True, capture_stderr=True)
         )
-        
+
         # Parse into datetime object
         dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M")
 
@@ -65,9 +71,9 @@ async def upload_videos_from_pi(
         #     stream_name=stream_name,
         #     bucket="audiovisual-streams",
         #     blob=gcp_path,
-        #     timestamp_str=timestamp  
+        #     timestamp_str=timestamp
         # )
-        
+
         # analysis_id = await handle_start_video_analysis(upload=uploadFile)
 
         return {
@@ -75,16 +81,15 @@ async def upload_videos_from_pi(
             # "analysis_id": analysis_id,
             "gcp_path": gcp_path
         }
-        
+
     except ffmpeg.Error as e:
         print("stdout:", e.stdout.decode('utf8', errors='ignore'))
         print("stderr:", e.stderr.decode('utf8', errors='ignore'))
         raise HTTPException(status_code=500, detail=f"Conversion failed: {e}")
-    
+
     finally:
         if os.path.exists(temp_ts_path):
             os.unlink(temp_ts_path)
 
-        if os.path.exists(output_path):
+        if output_path and os.path.exists(output_path):
             os.unlink(output_path)
-        
