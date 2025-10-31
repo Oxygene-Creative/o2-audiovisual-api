@@ -5,10 +5,11 @@ from pathlib import Path
 from app.core.files import subfolder_check
 import ffmpeg
 
+
 async def extract_audio_from_video(video_path):
     # extract the file name
     audio_file_name = Path(video_path).stem
-    
+
     # Load the video file
     video_clip = VideoFileClip(video_path)
 
@@ -26,6 +27,7 @@ async def extract_audio_from_video(video_path):
 
     return audio_path
 
+
 async def slice_audio(speech_segments, audio_path):
     # Get the audio file name from the path
     audio_file_name = Path(audio_path).stem
@@ -38,26 +40,27 @@ async def slice_audio(speech_segments, audio_path):
 
     for segment in speech_segments:
         # Time to miliseconds
-        startTime =  max(0, (segment['start']) * 1000)
+        startTime = max(0, (segment['start']) * 1000)
         endTime = (segment['stop']) * 1000
 
         # Extract the audio data for time slice
         extract = audio[startTime:endTime]
 
         # Generate the output file name with start and stop values
-        extract_file_name= f"{audio_file_name}_{segment['start']:.2f}_{segment['stop']:.2f}.mp3"
-        extract_file_path=f"{os.getcwd()}/o2-files/{extract_file_name}"
+        extract_file_name = f"{audio_file_name}_{segment['start']:.2f}_{segment['stop']:.2f}.mp3"
+        extract_file_path = f"{os.getcwd()}/o2-files/{extract_file_name}"
         # Export the sliced audio
         subfolder_check(f"{os.getcwd()}/o2-files")
         extract.export(extract_file_path, format="mp3")
 
-        extracted_files.append({ 
-            "start": segment["start"], 
+        extracted_files.append({
+            "start": segment["start"],
             "stop": segment["stop"],
             "duration": segment["duration"],
-            "file_path": extract_file_path })
-        
+            "file_path": extract_file_path})
+
     return extracted_files
+
 
 async def slice_video(video_path, start, stop):
     output_file_name = f"{Path(video_path).stem}_{start}_{stop}.mp4"
@@ -83,16 +86,17 @@ async def slice_video(video_path, start, stop):
         "file_path": output_file_path
     }
 
+
 async def check_media_integrity(file_path: str) -> bool:
     try:
         # Use ffprobe to analyze the file
         probe = ffmpeg.probe(file_path)
-        
+
         # Check if we have streams
         if 'streams' not in probe or len(probe['streams']) == 0:
             print(f"No streams found in {file_path}")
             return False
-            
+
         # Check each stream
         for stream in probe['streams']:
             # For video streams, check if we have basic video info
@@ -100,19 +104,19 @@ async def check_media_integrity(file_path: str) -> bool:
                 if 'width' not in stream or 'height' not in stream:
                     print(f"Invalid video stream in {file_path}")
                     return False
-            
+
             # Check if codec is recognizable
             if 'codec_name' not in stream or stream['codec_name'] == 'unknown':
                 print(f"Unknown codec in stream: {stream}")
                 return False
-        
+
         # Additional check: try to read first few frames
         try:
             (
                 ffmpeg
                 .input(file_path)
                 .output('pipe:', vframes=1, f='null')
-                .run(capture_stdout=True, capture_stderr=True, timeout=10)
+                .run(capture_stdout=True, capture_stderr=True)
             )
         except ffmpeg.Error as e:
             print(f"Cannot decode frames from {file_path}: {e}")
@@ -120,15 +124,16 @@ async def check_media_integrity(file_path: str) -> bool:
         except Exception as e:
             print(f"Timeout or other error checking frames: {e}")
             return False
-            
+
         return True
-        
+
     except ffmpeg.Error as e:
         print(f"FFprobe error for {file_path}: {e}")
         return False
     except Exception as e:
         print(f"Unexpected error checking {file_path}: {e}")
         return False
+
 
 async def validate_file_size(file_path: str, min_size_bytes: int = 1024) -> bool:
     try:
