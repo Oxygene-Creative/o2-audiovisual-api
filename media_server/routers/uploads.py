@@ -14,9 +14,9 @@ async def upload_videos_from_pi(
     stream_name: str = Form(...),
     timestamp: str = Form(...)
 ):
-    if not file.filename.endswith('.ts'):
-        raise HTTPException(status_code=400, detail="File must be a .ts file")
-    
+    # if not file.filename.endswith('.ts'):
+    #     raise HTTPException(status_code=400, detail="File must be a .ts file")
+
     with tempfile.NamedTemporaryFile(delete=False, suffix='.ts') as temp_ts:
         content = await file.read()
         temp_ts.write(content)
@@ -37,7 +37,7 @@ async def upload_videos_from_pi(
 
     # Add to redis sorted list
     await redis_client.zadd(
-        "media_srv:priority_queue", 
+        "media_srv:priority_queue",
         {json.dumps(payload): timestamp_dt.timestamp()})
 
 
