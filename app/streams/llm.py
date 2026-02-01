@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import json
 import time
@@ -13,26 +14,26 @@ from datetime import datetime, timedelta
 eat_offset = timedelta(hours=3)
 
 
-import logging
-
 # Configure the logger
 logging.basicConfig(
-    level=logging.INFO, 
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 # Create logger instance
 logger = logging.getLogger(__name__)
 
+
 async def _process_llm(data: list[dict]):
     try:
         # Start timing
-        start_time = time.time() 
+        start_time = time.time()
         data = await fetch_stream_data(data)
 
         # create tasks for threading
         tasks = [
-            llm_transcript_analysis(item.get("_source", {}).get("raw_text", "")) 
+            llm_transcript_analysis(
+                item.get("_source", {}).get("raw_text", ""))
             for item in data
         ]
 
@@ -43,115 +44,125 @@ async def _process_llm(data: list[dict]):
 
             if item is None:
                 continue
-            
+
             llm_analysis_json = item.model_dump_json()
             llm_analysis_dict = json.loads(llm_analysis_json)
             data[idx]["_updates"].update(llm_analysis_dict)
-            data[idx]["_updates"]["creator"] = llm_analysis_dict.get("show_metadata", {}).get("host", "")
-            data[idx]["_updates"]["title"] = llm_analysis_dict.get("show_metadata", {}).get("program_name", "")
+            data[idx]["_updates"]["creator"] = llm_analysis_dict.get(
+                "show_metadata", {}).get("host", "")
+            data[idx]["_updates"]["title"] = llm_analysis_dict.get(
+                "show_metadata", {}).get("program_name", "")
 
             # Update last seen
             timestamp_dt = datetime.utcnow() + eat_offset
             timestamp = timestamp_dt.strftime("%Y-%m-%dT%H:%M")
 
-            if data[idx].get("_index", "").startswith == "tv":
-                await update_last_seen(stream_type= "tv", stream_id=data[idx].get("_id", None), timestamp=timestamp)
-            elif data[idx].get("_index", "").startswith == "radio":
-                await update_last_seen(stream_type= "radio", stream_id=data[idx].get("_id", None), timestamp=timestamp)
-             
+            if data[idx].get("_index", "").startswith("tv_"):
+                await update_last_seen(stream_type="tv", stream_id=data[idx].get("_id", None), timestamp=timestamp)
+            elif data[idx].get("_index", "").startswith("radio_"):
+                await update_last_seen(stream_type="radio", stream_id=data[idx].get("_id", None), timestamp=timestamp)
+
             # End timing
             end_time = time.time()
             time_taken = end_time - start_time
-            logger.info(f'llm analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s')
-        
+            logger.info(
+                f'llm analysis for {data[idx]["_source"]["source"]["name"]} completed in {time_taken}s')
+
         return data
-    
+
     except Exception as e:
         logger.error(f"An unexpected error occurred during llm analysis: {e}")
         raise
+
 
 async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     try:
         results = await _process_llm(data)
 
-        # update stream data in database 
+        # update stream data in database
         await update_stream_data(
-            data=results, 
-            status={"complete": True, "step": None })
+            data=results,
+            status={"complete": True, "step": None})
 
         await msg.ack(redis)
- 
+
     except Exception as e:
         await msg.nack()
 
+
 @llm_broker.subscriber(stream=StreamSub(
-        "audiovisual:llm_stream",
-        group="audiovisual:llm_group",
-        consumer="llm_worker_1",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
+    "audiovisual:llm_stream",
+    group="audiovisual:llm_group",
+    consumer="llm_worker_1",
+    batch=True,
+    max_records=10,
+    polling_interval=100,
+)
 )
 async def process_llm_worker_1(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
+
 @llm_broker.subscriber(stream=StreamSub(
-        "audiovisual:llm_stream",
-        group="audiovisual:llm_group",
-        consumer="llm_worker_2",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
+    "audiovisual:llm_stream",
+    group="audiovisual:llm_group",
+    consumer="llm_worker_2",
+    batch=True,
+    max_records=10,
+    polling_interval=100,
+)
 )
 async def process_llm_worker_2(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
+
 @llm_broker.subscriber(stream=StreamSub(
-        "audiovisual:llm_stream",
-        group="audiovisual:llm_group",
-        consumer="llm_worker_3",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
+    "audiovisual:llm_stream",
+    group="audiovisual:llm_group",
+    consumer="llm_worker_3",
+    batch=True,
+    max_records=10,
+    polling_interval=100,
+)
 )
 async def process_llm_worker_3(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
+
 @llm_broker.subscriber(stream=StreamSub(
-        "audiovisual:llm_stream",
-        group="audiovisual:llm_group",
-        consumer="llm_worker_4",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
+    "audiovisual:llm_stream",
+    group="audiovisual:llm_group",
+    consumer="llm_worker_4",
+    batch=True,
+    max_records=10,
+    polling_interval=100,
+)
 )
 async def process_llm_worker_4(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
+
 @llm_broker.subscriber(stream=StreamSub(
-        "audiovisual:llm_stream",
-        group="audiovisual:llm_group",
-        consumer="llm_worker_5",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
+    "audiovisual:llm_stream",
+    group="audiovisual:llm_group",
+    consumer="llm_worker_5",
+    batch=True,
+    max_records=10,
+    polling_interval=100,
+)
 )
 async def process_llm_worker_5(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
+
 @llm_broker.subscriber(stream=StreamSub(
-        "audiovisual:llm_stream",
-        group="audiovisual:llm_group",
-        consumer="llm_worker_6",
-        batch=True,
-        max_records=10,
-        polling_interval=100,
-    )
+    "audiovisual:llm_stream",
+    group="audiovisual:llm_group",
+    consumer="llm_worker_6",
+    batch=True,
+    max_records=10,
+    polling_interval=100,
+)
 )
 async def process_llm_worker_6(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
