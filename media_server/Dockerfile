@@ -12,12 +12,12 @@ WORKDIR /code
 # Copy the app folder
 COPY ./ .
 
-RUN mkdir ./o2-files
+RUN mkdir -p ./o2-files
 
 # install deps
 RUN pip install -r requirements.txt
 
-# Expose port 
+# Expose port
 EXPOSE 8710
 
 # Run fastapi using uvicorn
