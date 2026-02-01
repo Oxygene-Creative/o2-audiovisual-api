@@ -10,6 +10,7 @@ load_dotenv()
 GRAPHQL_URI = os.environ['GRAPHQL_URI']
 GRAPHQL_API_KEY = os.environ['GRAPHQL_API_KEY']
 
+
 def fetch_data(query: str, variables: Any):
     headers = {
         "Content-Type": "application/json",
@@ -17,8 +18,8 @@ def fetch_data(query: str, variables: Any):
     }
     try:
         response = requests.post(
-            url=GRAPHQL_URI, 
-            json={"query": query, "variables": variables },
+            url=GRAPHQL_URI,
+            json={"query": query, "variables": variables},
             headers=headers,
             verify=False)
         response.raise_for_status()
@@ -30,11 +31,12 @@ def fetch_data(query: str, variables: Any):
             raise Exception(f"GraphQL error: {error_message}")
 
         return response_json['data']
-    
+
     except requests.exceptions.RequestException as e:
         # Handle specific exceptions or log the error as needed
         print(f"Request failed: {e}")
         return None
+
 
 async def get_all_terms():
     query = """
@@ -42,12 +44,13 @@ async def get_all_terms():
         findUniqueTerms
     }
     """
-    variables = { }
+    variables = {}
     try:
         response = fetch_data(query, variables)
         return response['findUniqueTerms']
     except Exception as e:
         print(f"Error fetching terms: {e}")  # Optional: log the error
+
 
 async def get_tags(stream_type: str) -> List[str]:
     query = """
@@ -57,11 +60,11 @@ async def get_tags(stream_type: str) -> List[str]:
         }
     }
     """
-    variables = { "query": { "name": stream_type } }
+    variables = {"query": {"name": stream_type}}
     try:
         response = fetch_data(query, variables)
         tags = []
-        
+
         for res in response['findTags']:
             tags.extend(res['values'])
         return tags
@@ -69,8 +72,9 @@ async def get_tags(stream_type: str) -> List[str]:
         print(f"Error fetching terms: {e}")  # Optional: log the error
         return ["sports", "news", "lifestyle", "education", "energy"]
 
+
 def get_configs() -> List[Config]:
-    query = """ 
+    query = """
     query ($query: FindConfigInput!){
         findConfigs(query: $query){
             key
@@ -78,13 +82,14 @@ def get_configs() -> List[Config]:
         }
     }
     """
-    variables = { "query": {} }
+    variables = {"query": {}}
     try:
         response = fetch_data(query, variables)
         return response['findConfigs']
     except Exception as e:
         print(f"Error fetching terms: {e}")  # Optional: log the error
         return None
+
 
 def add_tv_stream_upload(
     tv_stream_id: str,
@@ -126,12 +131,14 @@ def add_tv_stream_upload(
     try:
         response = fetch_data(query, variables)
         if "errors" in response:
-            print(f"GraphQL errors in adding TV stream upload: {response['errors']}")
+            print(
+                f"GraphQL errors in adding TV stream upload: {response['errors']}")
             return None
         return response["addTvStreamUpload"]
     except Exception as e:
         print(f"Error adding TV stream upload: {e}")
         return None
+
 
 def add_radio_stream_upload(
     radio_stream_id: str,
@@ -173,30 +180,35 @@ def add_radio_stream_upload(
     try:
         response = fetch_data(query, variables)
         if "errors" in response:
-            print(f"GraphQL errors in adding radio stream upload: {response['errors']}")
+            print(
+                f"GraphQL errors in adding radio stream upload: {response['errors']}")
             return None
         return response["addRadioStreamUpload"]
     except Exception as e:
         print(f"Error adding Radio stream upload: {e}")
         return None
-    
+
+
 async def fetch_industries():
     query = """
-    query ($query: FindIndustryInput!){
-    findIndustries(query: $query){
-        name
-        value
-    }
+    query {
+        findIndustries(query: {}){
+            name
+            value
+        }
     }
     """
-    variables = { "query": {}}
+    variables = None
     try:
         response = fetch_data(query, variables)
+        if not response:
+            return []
         if "errors" in response:
-            print(f"GraphQL errors in fetching industries: {response['errors']}")
-            return None
+            print(
+                f"GraphQL errors in fetching industries: {response['errors']}")
+            return []
         data = response["findIndustries"]
-    
+
         all_sub_sectors = []
         for item in data:
             sub_sectors = [s.strip() for s in item["value"].split(",")]
@@ -205,8 +217,9 @@ async def fetch_industries():
         return all_sub_sectors
     except Exception as e:
         print(f"Error  in fetching industries: {e}")
-        return None
-    
+        return []
+
+
 async def update_last_seen(stream_type: str, stream_id: str, timestamp: str):
     mutation = """
     mutation ($id: String!, $stream: String!, $timestamp: String!){
@@ -215,11 +228,13 @@ async def update_last_seen(stream_type: str, stream_id: str, timestamp: str):
             }
         }
     """
-    variables = { "id": stream_id, "stream": stream_type, "timestamp": timestamp}
+    variables = {"id": stream_id,
+                 "stream": stream_type, "timestamp": timestamp}
     try:
         response = fetch_data(mutation, variables)
         if "errors" in response:
-            print(f"GraphQL errors in fetching industries: {response['errors']}")
+            print(
+                f"GraphQL errors in fetching industries: {response['errors']}")
             return None
         data = response["updateLastSeen"]
 
