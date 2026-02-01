@@ -19,17 +19,21 @@ credentials = service_account.Credentials.from_service_account_info(
     credentials_dict
 )
 
+
 def upload(bucket_name, source, destination_blob_name):
-    storage_client = storage.Client(credentials = credentials, project=os.environ['GCP_PROJECT_ID'])
+    storage_client = storage.Client(
+        credentials=credentials, project=os.environ['GCP_PROJECT_ID'])
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_filename(source)
     return blob.public_url
 
+
 def download_file(bucket_name, source_blob_name, destination_file_name):
-    storage_client = storage.Client(credentials = credentials, project=os.environ['GCP_PROJECT_ID'])
+    storage_client = storage.Client(
+        credentials=credentials, project=os.environ['GCP_PROJECT_ID'])
     bucket = storage_client.bucket(bucket_name)
-    
+
     """Downloads a blob from the bucket."""
     blob = bucket.blob(source_blob_name)
 
@@ -38,13 +42,23 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
 
     # Create the subfolder if it doesn't exist
     subfolder_check(subfolder_path)
-    
+
     blob.download_to_filename(destination_file_name)
     print(f"Blob {source_blob_name} downloaded to {destination_file_name}.")
-    
+
+
+def blob_exists(bucket_name, blob_name) -> bool:
+    storage_client = storage.Client(
+        credentials=credentials, project=os.environ['GCP_PROJECT_ID'])
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    return blob.exists()
+
+
 def delete_blob(bucket_name, blob_name):
     """Deletes a blob from the bucket."""
-    storage_client = storage.Client(credentials = credentials, project=os.environ['GCP_PROJECT_ID'])
+    storage_client = storage.Client(
+        credentials=credentials, project=os.environ['GCP_PROJECT_ID'])
 
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
@@ -53,7 +67,8 @@ def delete_blob(bucket_name, blob_name):
     # Optional: set a generation-match precondition to avoid potential race conditions
     # and data corruptions. The request to delete is aborted if the object's
     # generation number does not match your precondition.
-    blob.reload()  # Fetch blob metadata to use in generation_match_precondition.
+    # Fetch blob metadata to use in generation_match_precondition.
+    blob.reload()
     generation_match_precondition = blob.generation
 
     blob.delete(if_generation_match=generation_match_precondition)
