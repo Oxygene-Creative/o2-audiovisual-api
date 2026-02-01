@@ -12,14 +12,16 @@ import subprocess
 
 # Configure the logger
 logging.basicConfig(
-    level=logging.INFO, 
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 # Create logger instance
 logger = logging.getLogger(__name__)
 
-AUDIOVISUAL_API_URI = os.getenv("AUDIOVISUAL_API_URI", "https://monitorapi.oxygenehosting.com/api/av")
+AUDIOVISUAL_API_URI = os.getenv(
+    "AUDIOVISUAL_API_URI", "https://monitorapi.oxygenehosting.com/api/av")
+
 
 async def _is_video_corrupted(file_path):
     try:
@@ -35,27 +37,30 @@ async def _is_video_corrupted(file_path):
         print(f"Error checking file '{file_path}': {e}")
         return True
 
+
 async def _ingest_video(upload: dict):
-    try:        
+    try:
         async with httpx.AsyncClient() as client:
             response = await client.post(f"{AUDIOVISUAL_API_URI}/ingestion", json=upload)
-            
+
             # Check response status code
             if response.status_code == 200:
                 # Parse JSON response if needed
                 print("video ingested")
                 return response.json()
             else:
-                raise Exception(f"Failed to start video analysis: {response.status_code} - {response.text}")
-                
+                raise Exception(
+                    f"Failed to start video analysis: {response.status_code} - {response.text}")
+
     except httpx.RequestError as e:
         raise Exception(f"Error ingesting video to data streams: {str(e)}")
+
 
 async def _process_media(data: dict):
     try:
         # Start timing
-        start_time = time.time() 
-        output_path = ""
+        start_time = time.time()
+        output_path = None
 
         path = data.get("path", None)
         stream_name = data.get("stream_name", "")
@@ -69,17 +74,26 @@ async def _process_media(data: dict):
                 os.unlink(path)
             return
 
-        # Use the new function for conversion
-        output_path = convert_video_format(path, "ts", "mp4")
-        print("video converted")
-        
+        # Convert if needed
+        ext = os.path.splitext(path)[1].lower() if path else ""
+        if ext == ".ts":
+            output_path = convert_video_format(path, "ts", "mp4")
+            print("video converted")
+        elif ext == ".mp4":
+            output_path = path
+        else:
+            raise Exception(f"Unsupported file extension: {ext}")
+
         # Parse into datetime object
         dt = datetime.strptime(data.get("timestamp", ""), "%Y-%m-%dT%H:%M:%S")
 
+        if not output_path or not output_path.lower().endswith(".mp4"):
+            raise Exception("Conversion did not produce an .mp4 output")
+
         # Format outputs
         recording_date = dt.strftime("%Y-%m-%d")
-        datetime_str = dt.strftime("%Y%m%d_%H%M")        
-        
+        datetime_str = dt.strftime("%Y%m%d_%H%M")
+
         gcp_path = f'tv/{stream_name}/{recording_date}/{stream_name}_{datetime_str}.mp4'
 
         # Upload to GCP
@@ -101,19 +115,22 @@ async def _process_media(data: dict):
 
         end_time = time.time()
         time_taken = end_time - start_time
-        logger.info(f'Media processing for {stream_name} ar {timestamp} done in {time_taken}s')
-        
+        logger.info(
+            f'Media processing for {stream_name} ar {timestamp} done in {time_taken}s')
+
     except Exception as e:
-        logger.error(f"An unexpected error occurred during media processing: {e}")
+        logger.error(
+            f"An unexpected error occurred during media processing: {e}")
         raise
 
     finally:
         # Clean up files
-        if os.path.exists(data.get("path", None)):
-            os.unlink(data.get("path", None))
+        if data.get("path") and os.path.exists(data.get("path")):
+            os.unlink(data.get("path"))
 
-        if os.path.exists(output_path):
+        if output_path and output_path != data.get("path") and os.path.exists(output_path):
             os.unlink(output_path)
+
 
 async def _worker_handler(data: dict, msg: RedisMessage, redis: Redis, pipe: Pipeline):
     try:
@@ -124,12 +141,13 @@ async def _worker_handler(data: dict, msg: RedisMessage, redis: Redis, pipe: Pip
         logger.error(f"nack called, error: {e}")
         await msg.nack()
 
+
 @media_processing_broker.subscriber(stream=StreamSub(
-        "media_srv:media_processing",
-        group="media_srv:media_processing_group",
-        consumer="media_processing_1",
-        polling_interval=100,
-    )
+    "media_srv:media_processing",
+    group="media_srv:media_processing_group",
+    consumer="media_processing_1",
+    polling_interval=100,
+)
 )
 async def process_media_worker_1(data: dict, msg: RedisMessage, redis: Redis, pipe: Pipeline,):
     async with worker_1_busy_lock:

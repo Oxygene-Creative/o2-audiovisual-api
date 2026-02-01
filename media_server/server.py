@@ -7,11 +7,12 @@ from utils.redis import redis_broker
 # from streams.segmentation import segmentation_broker
 from streams.media_processing import media_processing_broker
 from streams.queue import queue_processor
-import asyncio 
+import asyncio
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 load_dotenv()
+
 
 class LimitRequestSizeMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, max_body_size: int):
@@ -19,13 +20,22 @@ class LimitRequestSizeMiddleware(BaseHTTPMiddleware):
         self.max_body_size = max_body_size
 
     async def dispatch(self, request: Request, call_next):
-        # Check the size of the incoming request
-        request_body = await request.body()
-        if len(request_body) > self.max_body_size:
-            return JSONResponse(
-                {"error": "Request size exceeds the allowed limit of 2 GB."}, status_code=413
-            )
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > self.max_body_size:
+                    return JSONResponse(
+                        {
+                            "error": (
+                                "Request size exceeds the allowed limit of 2 GB."
+                            )
+                        },
+                        status_code=413,
+                    )
+            except ValueError:
+                pass
         return await call_next(request)
+
 
 app = FastAPI()
 
@@ -43,11 +53,13 @@ app.add_middleware(LimitRequestSizeMiddleware, max_body_size=2 * 1024**3)
 # include faststream handlers
 app.include_router(uploads_router, tags=["uploads"])
 
+
 @app.on_event("startup")
 async def start_app():
     await redis_broker.start()
     # Start the background worker task
     asyncio.create_task(queue_processor())
+
 
 @app.on_event("shutdown")
 async def shutdown_app():

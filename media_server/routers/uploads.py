@@ -7,6 +7,7 @@ import json
 
 uploads_router = APIRouter()
 
+
 @uploads_router.post("/uploads-from-pi")
 async def upload_videos_from_pi(
     file: UploadFile = File(...),
@@ -14,12 +15,20 @@ async def upload_videos_from_pi(
     stream_name: str = Form(...),
     timestamp: str = Form(...)
 ):
-    # if not file.filename.endswith('.ts'):
-    #     raise HTTPException(status_code=400, detail="File must be a .ts file")
+    filename = file.filename or ""
+    if not (filename.endswith('.ts') or filename.endswith('.mp4')):
+        raise HTTPException(
+            status_code=400,
+            detail="File must be a .ts or .mp4 file",
+        )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.ts') as temp_ts:
-        content = await file.read()
-        temp_ts.write(content)
+    suffix = '.mp4' if filename.endswith('.mp4') else '.ts'
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_ts:
+        while True:
+            chunk = await file.read(4 * 1024 * 1024)
+            if not chunk:
+                break
+            temp_ts.write(chunk)
         temp_ts_path = temp_ts.name
 
     timestamp_dt = (
@@ -39,7 +48,6 @@ async def upload_videos_from_pi(
     await redis_client.zadd(
         "media_srv:priority_queue",
         {json.dumps(payload): timestamp_dt.timestamp()})
-
 
     return {
         "success": True,
