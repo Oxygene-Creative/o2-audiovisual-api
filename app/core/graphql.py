@@ -1,17 +1,31 @@
-import requests
-from typing import List, Any
+import logging
 import os
+from typing import Any, List, Optional
+
+import requests
 from dotenv import load_dotenv
 
 from app.models.graphql import Config
 
 load_dotenv()
 
-GRAPHQL_URI = os.environ['GRAPHQL_URI']
-GRAPHQL_API_KEY = os.environ['GRAPHQL_API_KEY']
+logger = logging.getLogger(__name__)
+
+GRAPHQL_URI = os.environ["GRAPHQL_URI"]
+GRAPHQL_API_KEY = os.environ["GRAPHQL_API_KEY"]
 
 
-def fetch_data(query: str, variables: Any):
+def _summarize_query(query: str) -> str:
+    if not query:
+        return "<empty>"
+    for line in query.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("query") or stripped.startswith("mutation"):
+            return stripped
+    return query.strip().splitlines()[0]
+
+
+def fetch_data(query: str, variables: Optional[Any]):
     headers = {
         "Content-Type": "application/json",
         "x-api-key": f"{GRAPHQL_API_KEY}"
@@ -27,14 +41,29 @@ def fetch_data(query: str, variables: Any):
 
         # Check for errors in response
         if "errors" in response_json:
-            error_message = response_json["errors"]
-            raise Exception(f"GraphQL error: {error_message}")
+            logger.error(
+                "GraphQL errors for %s: %s",
+                _summarize_query(query),
+                response_json["errors"],
+            )
+            return None
 
         return response_json['data']
 
     except requests.exceptions.RequestException as e:
-        # Handle specific exceptions or log the error as needed
-        print(f"Request failed: {e}")
+        logger.error(
+            "GraphQL request failed for %s: %s",
+            _summarize_query(query),
+            e,
+        )
+        try:
+            logger.error(
+                "GraphQL response status=%s body=%s",
+                response.status_code,
+                response.text,
+            )
+        except Exception:
+            logger.debug("GraphQL response details unavailable", exc_info=True)
         return None
 
 
@@ -49,7 +78,7 @@ async def get_all_terms():
         response = fetch_data(query, variables)
         return response['findUniqueTerms']
     except Exception as e:
-        print(f"Error fetching terms: {e}")  # Optional: log the error
+        logger.error("Error fetching terms: %s", e, exc_info=True)
 
 
 async def get_tags(stream_type: str) -> List[str]:
@@ -69,7 +98,7 @@ async def get_tags(stream_type: str) -> List[str]:
             tags.extend(res['values'])
         return tags
     except Exception as e:
-        print(f"Error fetching terms: {e}")  # Optional: log the error
+        logger.error("Error fetching tags: %s", e, exc_info=True)
         return ["sports", "news", "lifestyle", "education", "energy"]
 
 
@@ -87,7 +116,7 @@ def get_configs() -> List[Config]:
         response = fetch_data(query, variables)
         return response['findConfigs']
     except Exception as e:
-        print(f"Error fetching terms: {e}")  # Optional: log the error
+        logger.error("Error fetching configs: %s", e, exc_info=True)
         return None
 
 
@@ -130,13 +159,11 @@ def add_tv_stream_upload(
     }
     try:
         response = fetch_data(query, variables)
-        if "errors" in response:
-            print(
-                f"GraphQL errors in adding TV stream upload: {response['errors']}")
+        if not response:
             return None
         return response["addTvStreamUpload"]
     except Exception as e:
-        print(f"Error adding TV stream upload: {e}")
+        logger.error("Error adding TV stream upload: %s", e, exc_info=True)
         return None
 
 
@@ -179,13 +206,11 @@ def add_radio_stream_upload(
     }
     try:
         response = fetch_data(query, variables)
-        if "errors" in response:
-            print(
-                f"GraphQL errors in adding radio stream upload: {response['errors']}")
+        if not response:
             return None
         return response["addRadioStreamUpload"]
     except Exception as e:
-        print(f"Error adding Radio stream upload: {e}")
+        logger.error("Error adding radio stream upload: %s", e, exc_info=True)
         return None
 
 
@@ -203,42 +228,48 @@ async def fetch_industries():
         response = fetch_data(query, variables)
         if not response:
             return []
-        if "errors" in response:
-            print(
-                f"GraphQL errors in fetching industries: {response['errors']}")
+        data = response.get("findIndustries")
+        if not data:
+            logger.warning("GraphQL findIndustries returned empty data")
             return []
-        data = response["findIndustries"]
 
         all_sub_sectors = []
         for item in data:
-            sub_sectors = [s.strip() for s in item["value"].split(",")]
+            value = item.get("value") if isinstance(item, dict) else None
+            if not value:
+                continue
+            sub_sectors = [s.strip() for s in value.split(",")]
             all_sub_sectors.extend(sub_sectors)
 
         return all_sub_sectors
     except Exception as e:
-        print(f"Error  in fetching industries: {e}")
+        logger.error("Error in fetching industries: %s", e, exc_info=True)
         return []
 
 
 async def update_last_seen(stream_type: str, stream_id: str, timestamp: str):
     mutation = """
     mutation ($id: String!, $stream: String!, $timestamp: String!){
-        updateLastSeen(id: $id, stream: $stream, timestamp: $timestamp){
-                id
-            }
-        }
+        updateLastSeen(id: $id, stream: $stream, timestamp: $timestamp)
+    }
     """
     variables = {"id": stream_id,
                  "stream": stream_type, "timestamp": timestamp}
     try:
+        logger.info(
+            "******************** updateLastSeen ********************\n"
+            "stream_type=%s stream_id=%s timestamp=%s\n"
+            "*******************************************************",
+            stream_type,
+            stream_id,
+            timestamp,
+        )
         response = fetch_data(mutation, variables)
-        if "errors" in response:
-            print(
-                f"GraphQL errors in fetching industries: {response['errors']}")
+        if not response:
             return None
         data = response["updateLastSeen"]
 
         return data
     except Exception as e:
-        print(f"Error  in fetching industries: {e}")
+        logger.error("Error updating last seen: %s", e, exc_info=True)
         return None
