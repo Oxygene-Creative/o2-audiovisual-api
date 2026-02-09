@@ -57,10 +57,18 @@ async def _process_llm(data: list[dict]):
             timestamp_dt = datetime.utcnow() + eat_offset
             timestamp = timestamp_dt.strftime("%Y-%m-%dT%H:%M")
 
-            if data[idx].get("_index", "").startswith("tv_"):
-                await update_last_seen(stream_type="tv", stream_id=data[idx].get("_id", None), timestamp=timestamp)
-            elif data[idx].get("_index", "").startswith("radio_"):
-                await update_last_seen(stream_type="radio", stream_id=data[idx].get("_id", None), timestamp=timestamp)
+            stream_index = data[idx].get("_index", "")
+            stream_id = data[idx].get("_source", {}).get("stream_id")
+            if not stream_id:
+                if stream_index.startswith("tv_"):
+                    stream_id = stream_index.replace("tv_", "", 1)
+                elif stream_index.startswith("radio_"):
+                    stream_id = stream_index.replace("radio_", "", 1)
+
+            if stream_index.startswith("tv_"):
+                await update_last_seen(stream_type="tv", stream_id=stream_id, timestamp=timestamp)
+            elif stream_index.startswith("radio_"):
+                await update_last_seen(stream_type="radio", stream_id=stream_id, timestamp=timestamp)
 
             # End timing
             end_time = time.time()

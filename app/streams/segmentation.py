@@ -53,6 +53,8 @@ async def ensure_audio_blob(bucket: str, video_blob: str) -> str:
 
 async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> list:
     processed_segments = []
+    segment_cleanup_paths = []
+    audio_cleanup_paths = []
 
     stream_type = data.pop("stream_type", None)
     if stream_type.lower() == "audio":
@@ -73,6 +75,10 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
         local_file_path = segment["file_path"]
         file_name = extract_file_name(local_file_path)
         file_size = calc_file_size(local_file_path)
+        if not os.path.exists(local_file_path):
+            logger.warning(
+                "Segment file missing before upload: %s", local_file_path)
+            continue
 
         # Destination file path construction
         recording_date = datetime.fromisoformat(
@@ -92,10 +98,9 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
             soundtrack_file_name = extract_file_name(soundtrack_file_path)
             soundtrack_dest_file_path = f"tv/{data.get('source').get('name')}/{recording_date}/{soundtrack_file_name}"
             await asyncio.to_thread(upload, data.get("gcp_bucket"), soundtrack_file_path, soundtrack_dest_file_path)
-            await asyncio.to_thread(delete_file, soundtrack_file_path)
+            audio_cleanup_paths.append(soundtrack_file_path)
 
-        # Delete sliced file
-        await asyncio.to_thread(delete_file, local_file_path)
+        segment_cleanup_paths.append(local_file_path)
 
         # Create elastic search data
         segment_data["duration"] = segment["duration"]
@@ -104,6 +109,12 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
 
         processed_segments.append(
             {"_index": segment_data.get('_index'), "data": segment_data})
+
+    for audio_path in audio_cleanup_paths:
+        await asyncio.to_thread(delete_file, audio_path)
+
+    for segment_path in segment_cleanup_paths:
+        await asyncio.to_thread(delete_file, segment_path)
 
     # Delete local master file
     await asyncio.to_thread(delete_file, asset_file_path)
