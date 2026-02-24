@@ -75,6 +75,7 @@ async def _process_audience(data: list[dict]):
 
 
 async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    success = False
     try:
         audience_results = await _process_audience(data)
 
@@ -92,9 +93,14 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
             )
         await pipe.execute()
 
-        await msg.ack(redis)
-    except Exception as e:
-        await msg.nack()
+        success = True
+    except Exception:
+        logger.exception("Audience worker failed; message will be nacked")
+    finally:
+        if success:
+            await msg.ack(redis)
+        else:
+            await msg.nack()
 
 
 @audience_broker.subscriber(stream=StreamSub(

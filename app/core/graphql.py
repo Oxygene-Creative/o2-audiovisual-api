@@ -256,14 +256,6 @@ async def update_last_seen(stream_type: str, stream_id: str, timestamp: str):
     variables = {"id": stream_id,
                  "stream": stream_type, "timestamp": timestamp}
     try:
-        logger.info(
-            "******************** updateLastSeen ********************\n"
-            "stream_type=%s stream_id=%s timestamp=%s\n"
-            "*******************************************************",
-            stream_type,
-            stream_id,
-            timestamp,
-        )
         response = fetch_data(mutation, variables)
         if not response:
             return None

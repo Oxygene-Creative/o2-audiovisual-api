@@ -85,14 +85,13 @@ async def _process_asr(data: list[dict]):
 
 
 async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
+    success = False
     try:
         asr_results = await _process_asr(data)
         # update stream data in database
         results = await update_stream_data(
             data=asr_results,
             status={"complete": False, "step": "NLP"})
-
-        await msg.ack(redis)
 
         # batch publish to next stage
         for result in results:
@@ -103,8 +102,14 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
             )
 
         await pipe.execute()
-    except Exception as e:
-        await msg.nack()
+        success = True
+    except Exception:
+        logger.exception("ASR worker failed; message will be nacked")
+    finally:
+        if success:
+            await msg.ack(redis)
+        else:
+            await msg.nack()
 
 
 @asr_broker.subscriber(stream=StreamSub(
