@@ -11,6 +11,7 @@ from app.core.redis import redis_broker as nlp_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
+from app.core.redis_keys import LLM_STREAM, NLP_GROUP, NLP_STREAM
 
 import logging
 
@@ -111,7 +112,7 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
         for result in results:
             await nlp_broker.publish(
                 { "_index": result.get("_index"), "_id": result.get("_id") },
-                stream="audiovisual:llm_stream",
+                stream=LLM_STREAM,
                 pipeline=pipe,
             )
 
@@ -123,8 +124,8 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
 
 
 @nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
+    NLP_STREAM,
+    group=NLP_GROUP,
         consumer="nlp_worker_1",
         batch=True,
         max_records=10,
@@ -135,8 +136,8 @@ async def process_nlp_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
     
 @nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
+    NLP_STREAM,
+    group=NLP_GROUP,
         consumer="nlp_worker_2",
         batch=True,
         max_records=10,
@@ -147,8 +148,8 @@ async def process_nlp_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
+    NLP_STREAM,
+    group=NLP_GROUP,
         consumer="nlp_worker_3",
         batch=True,
         max_records=10,
@@ -159,8 +160,8 @@ async def process_nlp_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
+    NLP_STREAM,
+    group=NLP_GROUP,
         consumer="nlp_worker_4",
         batch=True,
         max_records=10,
@@ -171,8 +172,8 @@ async def process_nlp_worker_4(data: list[dict], msg: RedisMessage, redis: Redis
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
+    NLP_STREAM,
+    group=NLP_GROUP,
         consumer="nlp_worker_5",
         batch=True,
         max_records=10,
@@ -183,8 +184,8 @@ async def process_nlp_worker_5(data: list[dict], msg: RedisMessage, redis: Redis
     await _worker_handler(data=data, msg=msg, redis=redis, pipe=pipe)
 
 @nlp_broker.subscriber(stream=StreamSub(
-        "audiovisual:nlp_stream",
-        group="audiovisual:nlp_group",
+    NLP_STREAM,
+    group=NLP_GROUP,
         consumer="nlp_worker_6",
         batch=True,
         max_records=10,

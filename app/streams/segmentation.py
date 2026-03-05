@@ -12,6 +12,11 @@ import httpx
 import os
 from datetime import datetime
 import time
+from app.core.redis_keys import (
+    AUDIENCE_STREAM,
+    SEGMENTATION_GROUP,
+    SEGMENTATION_STREAM,
+)
 
 # Configure the logger
 logging.basicConfig(
@@ -55,18 +60,23 @@ async def _process_segmet(data: dict, segments: list, asset_file_path: str) -> l
     processed_segments = []
     segment_cleanup_paths = []
     audio_cleanup_paths = []
+    speech_segment_files = []
 
     stream_type = data.pop("stream_type", None)
-    if stream_type.lower() == "audio":
+    if stream_type and stream_type.lower() == "audio":
         # Slice audio file based on speech segments
         speech_segment_files = await slice_audio(segments, asset_file_path)
 
-    elif stream_type.lower() == "video":
+    elif stream_type and stream_type.lower() == "video":
         # Slice video file based on speech segments
         video_tasks = [
             slice_video(asset_file_path, segment['start'], segment['stop']) for segment in segments
         ]
         speech_segment_files = await asyncio.gather(*video_tasks)
+    else:
+        logger.warning("Skipping segment processing due to unsupported stream_type=%s", stream_type)
+        await asyncio.to_thread(delete_file, asset_file_path)
+        return []
 
     # Upload segment files to gcp and create data dict
     for ix, segment in enumerate(speech_segment_files):
@@ -126,6 +136,11 @@ async def _segment_media(data: list[dict]):
     try:
         # Start timing
         start_time = time.time()
+        logger.info(
+            "Segmentation batch received: size=%s ids=%s",
+            len(data),
+            [item.get("doc_id") for item in data],
+        )
         # extract gcp_blob paths from data
         payload = []
         for item in data:
@@ -140,6 +155,12 @@ async def _segment_media(data: list[dict]):
                     {"bucket": item.get("gcp_bucket"), "blob": audio_blob})
 
         logger.info(
+            "Segmentation payload prepared: size=%s payload=%s",
+            len(payload),
+            payload,
+        )
+
+        logger.info(
             f"Sending batch request to {SEGMENTATION_GPU_URL}/vad/batch for speech and music segmentation")
 
         # Make async POST request using httpx
@@ -149,18 +170,82 @@ async def _segment_media(data: list[dict]):
                 json=payload
             )
         response.raise_for_status()
+        vad_results = response.json()
+        if not isinstance(vad_results, list):
+            logger.error(
+                "Unexpected VAD response shape. Expected list, got %s payload=%s",
+                type(vad_results).__name__,
+                vad_results,
+            )
+            raise ValueError("Invalid VAD batch response shape")
+        logger.info(
+            "VAD response received: items=%s status_code=%s",
+            len(vad_results) if isinstance(vad_results, list) else 0,
+            response.status_code,
+        )
         subfolder_check(f"{os.getcwd()}/o2-files")
         results = []
 
-        for idx, result in enumerate(response.json()):
+        for idx, result in enumerate(vad_results):
+            if idx >= len(data):
+                logger.warning(
+                    "VAD result/data size mismatch at idx=%s: data_size=%s",
+                    idx,
+                    len(data),
+                )
+                break
+
+            if not isinstance(result, dict):
+                logger.warning(
+                    "Skipping item idx=%s doc_id=%s: invalid result type=%s",
+                    idx,
+                    data[idx].get("doc_id"),
+                    type(result).__name__,
+                )
+                continue
+
             if not result.get("success", False):
+                logger.warning(
+                    "Skipping item idx=%s doc_id=%s: success flag false. "
+                    "bucket=%s blob=%s error=%s result_keys=%s",
+                    idx,
+                    data[idx].get("doc_id"),
+                    payload[idx].get("bucket") if idx < len(payload) else None,
+                    payload[idx].get("blob") if idx < len(payload) else None,
+                    result.get("error"),
+                    list(result.keys()) if isinstance(result, dict) else type(result),
+                )
                 continue
 
             # only speech stuff
+            activity_list = result.get("activity") or []
+            speech_segments = result.get("speech") or []
             activity = {item["labels"]: item["duration"]
-                        for item in result.get("activity")}
-            if activity.get("male") in [0, None] and activity.get("female") == [0, None]:
-                print("skipping segment")
+                        for item in activity_list if isinstance(item, dict)}
+
+            logger.info(
+                "VAD item summary idx=%s doc_id=%s success=%s speech_segments=%s activity=%s",
+                idx,
+                data[idx].get("doc_id"),
+                result.get("success", False),
+                len(speech_segments),
+                activity,
+            )
+
+            if activity.get("male") in [0, None] and activity.get("female") in [0, None]:
+                logger.warning(
+                    "Skipping item idx=%s doc_id=%s: male and female durations are empty/zero",
+                    idx,
+                    data[idx].get("doc_id"),
+                )
+                continue
+
+            if not speech_segments:
+                logger.warning(
+                    "Skipping item idx=%s doc_id=%s: no speech segments returned by VAD",
+                    idx,
+                    data[idx].get("doc_id"),
+                )
                 continue
 
             # download master file
@@ -170,15 +255,24 @@ async def _segment_media(data: list[dict]):
 
             processed_segments = await _process_segmet(
                 data=data[idx],
-                segments=result.get("speech"),
+                segments=speech_segments,
                 asset_file_path=asset_file_path
             )
+
+            if not processed_segments:
+                logger.warning(
+                    "No processed segments created for idx=%s doc_id=%s",
+                    idx,
+                    data[idx].get("doc_id"),
+                )
 
             end_time = time.time()
             time_taken = end_time - start_time
             results.extend(processed_segments)
             logger.info(
                 f'segment analysis for {data[idx]["source"]["name"]} done in {time_taken}s')
+
+        logger.info("Segmentation batch complete: total_segment_docs=%s", len(results))
 
         return results
 
@@ -204,7 +298,12 @@ async def _save_segments(segments: list[dict]):
         action.update({"status": {"step": "AUDIENCE", "complete": False}})
         actions.append(action)
 
+    if not actions:
+        logger.warning("No segment actions to write to Elasticsearch")
+        return actions
+
     save_bulk(actions)
+    logger.info("Elasticsearch bulk index complete: actions=%s", len(actions))
 
     # Create Recording in Graphql
 
@@ -213,28 +312,40 @@ async def _save_segments(segments: list[dict]):
 
 async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pipe: Pipeline):
     try:
+        logger.info(
+            "Segmentation worker handling batch: size=%s ids=%s",
+            len(data),
+            [item.get("doc_id") for item in data],
+        )
         segments = await _segment_media(data=data)
         results = await _save_segments(segments=segments)
+        logger.info(
+            "Segmentation worker stage output: segments=%s es_actions=%s",
+            len(segments),
+            len(results),
+        )
 
         # batch publish to next stage
         for result in results:
             await segmentation_broker.publish(
                 {"_index": result.get("_index"), "_id": result.get("_id")},
-                stream="audiovisual:audience_stream",
+                stream=AUDIENCE_STREAM,
                 pipeline=pipe,
             )
 
         await pipe.execute()
+        logger.info("Published to audience stream: count=%s", len(results))
         # acknowledge message
         await msg.ack(redis)
+        logger.info("Segmentation batch acked successfully")
     except Exception as e:
         logger.error(f"nack called, error: {e}")
         await msg.nack()
 
 
 @segmentation_broker.subscriber(stream=StreamSub(
-    "audiovisual:segmentation_stream",
-    group="audiovisual:segmentation_group",
+    SEGMENTATION_STREAM,
+    group=SEGMENTATION_GROUP,
     consumer="segmentation_worker_1",
     batch=True,
     max_records=10,
@@ -247,8 +358,8 @@ async def process_segmentation_worker_1(data: list[dict], msg: RedisMessage, red
 
 
 @segmentation_broker.subscriber(stream=StreamSub(
-    "audiovisual:segmentation_stream",
-    group="audiovisual:segmentation_group",
+    SEGMENTATION_STREAM,
+    group=SEGMENTATION_GROUP,
     consumer="segmentation_worker_2",
     batch=True,
     max_records=10,
@@ -261,8 +372,8 @@ async def process_segmentation_worker_2(data: list[dict], msg: RedisMessage, red
 
 
 @segmentation_broker.subscriber(stream=StreamSub(
-    "audiovisual:segmentation_stream",
-    group="audiovisual:segmentation_group",
+    SEGMENTATION_STREAM,
+    group=SEGMENTATION_GROUP,
     consumer="segmentation_worker_3",
     batch=True,
     max_records=10,

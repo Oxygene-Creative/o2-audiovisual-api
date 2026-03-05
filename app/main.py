@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from app.core.config import setup_env
 from fastapi import FastAPI
 from app.routers.ads import ads_router
@@ -22,6 +23,8 @@ urllib3.disable_warnings()
 load_dotenv()
 os.environ["GRPC_FORK_SUPPORT_ENABLED"] = "0"
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +41,17 @@ app.include_router(ingestion_router, tags=["ingestion"])
 
 @app.on_event("startup")
 async def start_app():
-    await redis_broker.start()
+    while True:
+        try:
+            await redis_broker.start()
+            break
+        except Exception as exc:
+            logger.error(
+                "Redis broker startup failed, retrying in 3s: %s",
+                exc,
+            )
+            await asyncio.sleep(3)
+
     setup_env()
     # Start the background worker task
     asyncio.create_task(queue_processor())

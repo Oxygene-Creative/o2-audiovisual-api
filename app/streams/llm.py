@@ -8,6 +8,7 @@ from app.core.redis import redis_broker as llm_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
+from app.core.redis_keys import LLM_GROUP, LLM_STREAM
 from datetime import datetime, timedelta
 
 # Define the EAT timezone (UTC+3)
@@ -99,8 +100,8 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
 
 
 @llm_broker.subscriber(stream=StreamSub(
-    "audiovisual:llm_stream",
-    group="audiovisual:llm_group",
+    LLM_STREAM,
+    group=LLM_GROUP,
     consumer="llm_worker_1",
     batch=True,
     max_records=10,
@@ -112,8 +113,8 @@ async def process_llm_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @llm_broker.subscriber(stream=StreamSub(
-    "audiovisual:llm_stream",
-    group="audiovisual:llm_group",
+    LLM_STREAM,
+    group=LLM_GROUP,
     consumer="llm_worker_2",
     batch=True,
     max_records=10,
@@ -125,8 +126,8 @@ async def process_llm_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @llm_broker.subscriber(stream=StreamSub(
-    "audiovisual:llm_stream",
-    group="audiovisual:llm_group",
+    LLM_STREAM,
+    group=LLM_GROUP,
     consumer="llm_worker_3",
     batch=True,
     max_records=10,
@@ -138,8 +139,8 @@ async def process_llm_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @llm_broker.subscriber(stream=StreamSub(
-    "audiovisual:llm_stream",
-    group="audiovisual:llm_group",
+    LLM_STREAM,
+    group=LLM_GROUP,
     consumer="llm_worker_4",
     batch=True,
     max_records=10,
@@ -151,8 +152,8 @@ async def process_llm_worker_4(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @llm_broker.subscriber(stream=StreamSub(
-    "audiovisual:llm_stream",
-    group="audiovisual:llm_group",
+    LLM_STREAM,
+    group=LLM_GROUP,
     consumer="llm_worker_5",
     batch=True,
     max_records=10,
@@ -164,8 +165,8 @@ async def process_llm_worker_5(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @llm_broker.subscriber(stream=StreamSub(
-    "audiovisual:llm_stream",
-    group="audiovisual:llm_group",
+    LLM_STREAM,
+    group=LLM_GROUP,
     consumer="llm_worker_6",
     batch=True,
     max_records=10,

@@ -2,11 +2,27 @@ import hashlib
 from pydantic import BaseModel
 import json
 from typing import Optional
-from app.core.es import delete_by_query, search
+import logging
+from app.core.es import search
 from app.core.redis import redis_client
+from app.core.redis_keys import (
+    ASR_STREAM,
+    AUDIENCE_STREAM,
+    LLM_STREAM,
+    NLP_STREAM,
+    PRIORITY_QUEUE,
+    SEGMENTATION_STREAM,
+)
 from datetime import datetime
 from fastapi import APIRouter
 from app.core.redis import redis_broker as _broker
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 ingestion_router = APIRouter()
 
@@ -39,6 +55,13 @@ async def ingestion_handler(upload: Upload):
         index = None
 
     doc_id = hashlib.sha256(upload.blob.encode("utf-8")).hexdigest()
+    logger.info(
+        "Ingestion request received: doc_id=%s stream_id=%s type=%s blob=%s",
+        doc_id,
+        upload.stream_id,
+        upload.media_type,
+        upload.blob,
+    )
 
     data = {
         "doc_id": doc_id,
@@ -60,8 +83,16 @@ async def ingestion_handler(upload: Upload):
 
     # Add to redis sorted list
     await redis_client.zadd(
-        "audiovisual:priority_queue",
+        PRIORITY_QUEUE,
         {json.dumps(data): timestamp.timestamp()})
+
+    logger.info(
+        "Ingestion enqueued: doc_id=%s "
+        "queue=%s score=%s",
+        doc_id,
+        PRIORITY_QUEUE,
+        timestamp.timestamp(),
+    )
 
     return data
 
@@ -81,37 +112,81 @@ async def reingestion_handler():
 
     # post to the appropriate stream
     hits = response["hits"]["hits"]
+    logger.info("Reingestion fetched incomplete docs: count=%s", len(hits))
     for hit in hits:
         step = hit.get("_source", {}).get("status", {}).get("step", "")
 
         if step == "INGESTION":
             await _broker.publish(
                 {"_index": hit["_index"], "_id": hit["_id"]},
-                stream="audiovisual:segmentation_stream"
+                stream=SEGMENTATION_STREAM,
+            )
+            logger.info(
+                "Reingestion publish: index=%s id=%s step=%s stream=%s",
+                hit["_index"],
+                hit["_id"],
+                step,
+                SEGMENTATION_STREAM,
             )
 
         elif step == "AUDIENCE":
             await _broker.publish(
                 {"_index": hit["_index"], "_id": hit["_id"]},
-                stream="audiovisual:audience_stream"
+                stream=AUDIENCE_STREAM,
+            )
+            logger.info(
+                "Reingestion publish: index=%s id=%s step=%s stream=%s",
+                hit["_index"],
+                hit["_id"],
+                step,
+                AUDIENCE_STREAM,
             )
 
         elif step == "ASR":
             await _broker.publish(
                 {"_index": hit["_index"], "_id": hit["_id"]},
-                stream="audiovisual:asr_stream"
+                stream=ASR_STREAM,
+            )
+            logger.info(
+                "Reingestion publish: index=%s id=%s step=%s stream=%s",
+                hit["_index"],
+                hit["_id"],
+                step,
+                ASR_STREAM,
             )
 
         elif step == "NLP":
             await _broker.publish(
                 {"_index": hit["_index"], "_id": hit["_id"]},
-                stream="audiovisual:nlp_stream"
+                stream=NLP_STREAM,
+            )
+            logger.info(
+                "Reingestion publish: index=%s id=%s step=%s stream=%s",
+                hit["_index"],
+                hit["_id"],
+                step,
+                NLP_STREAM,
             )
 
         elif step == "LLM":
             await _broker.publish(
                 {"_index": hit["_index"], "_id": hit["_id"]},
-                stream="audiovisual:llm_stream"
+                stream=LLM_STREAM,
+            )
+            logger.info(
+                "Reingestion publish: index=%s id=%s step=%s stream=%s",
+                hit["_index"],
+                hit["_id"],
+                step,
+                LLM_STREAM,
+            )
+
+        else:
+            logger.warning(
+                "Reingestion skipped unknown step: index=%s id=%s step=%s",
+                hit.get("_index"),
+                hit.get("_id"),
+                step,
             )
 
     # return list of items posted to stream

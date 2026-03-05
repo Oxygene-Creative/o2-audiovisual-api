@@ -8,6 +8,7 @@ import os
 import logging
 import httpx
 from app.core.es import fetch_stream_data, update_stream_data
+from app.core.redis_keys import ASR_STREAM, AUDIENCE_GROUP, AUDIENCE_STREAM
 
 
 # Configure the logger
@@ -88,7 +89,7 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
         for result in results:
             await audience_broker.publish(
                 {"_index": result.get("_index"), "_id": result.get("_id")},
-                stream="audiovisual:asr_stream",
+                stream=ASR_STREAM,
                 pipeline=pipe,
             )
         await pipe.execute()
@@ -104,8 +105,8 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
 
 
 @audience_broker.subscriber(stream=StreamSub(
-    "audiovisual:audience_stream",
-    group="audiovisual:audience_group",
+    AUDIENCE_STREAM,
+    group=AUDIENCE_GROUP,
     consumer="audience_worker_1",
     batch=True,
     max_records=10,
@@ -117,8 +118,8 @@ async def process_audience_worker_1(data: list[dict], msg: RedisMessage, redis: 
 
 
 @audience_broker.subscriber(stream=StreamSub(
-    "audiovisual:audience_stream",
-    group="audiovisual:audience_group",
+    AUDIENCE_STREAM,
+    group=AUDIENCE_GROUP,
     consumer="audience_worker_2",
     batch=True,
     max_records=10,
@@ -130,8 +131,8 @@ async def process_audience_worker_2(data: list[dict], msg: RedisMessage, redis: 
 
 
 @audience_broker.subscriber(stream=StreamSub(
-    "audiovisual:audience_stream",
-    group="audiovisual:audience_group",
+    AUDIENCE_STREAM,
+    group=AUDIENCE_GROUP,
     consumer="audience_worker_3",
     batch=True,
     max_records=10,
@@ -143,8 +144,8 @@ async def process_audience_worker_3(data: list[dict], msg: RedisMessage, redis: 
 
 
 @audience_broker.subscriber(stream=StreamSub(
-    "audiovisual:audience_stream",
-    group="audiovisual:audience_group",
+    AUDIENCE_STREAM,
+    group=AUDIENCE_GROUP,
     consumer="audience_worker_4",
     batch=True,
     max_records=10,
@@ -156,8 +157,8 @@ async def process_audience_worker_4(data: list[dict], msg: RedisMessage, redis: 
 
 
 @audience_broker.subscriber(stream=StreamSub(
-    "audiovisual:audience_stream",
-    group="audiovisual:audience_group",
+    AUDIENCE_STREAM,
+    group=AUDIENCE_GROUP,
     consumer="audience_worker_5",
     batch=True,
     max_records=10,
@@ -169,8 +170,8 @@ async def process_audience_worker_5(data: list[dict], msg: RedisMessage, redis: 
 
 
 @audience_broker.subscriber(stream=StreamSub(
-    "audiovisual:audience_stream",
-    group="audiovisual:audience_group",
+    AUDIENCE_STREAM,
+    group=AUDIENCE_GROUP,
     consumer="audience_worker_6",
     batch=True,
     max_records=10,

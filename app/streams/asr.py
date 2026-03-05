@@ -8,6 +8,7 @@ from app.core.redis import redis_broker as asr_broker
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
 from app.core.es import fetch_stream_data, update_stream_data
+from app.core.redis_keys import ASR_GROUP, ASR_STREAM, NLP_STREAM
 import logging
 
 # Configure the logger
@@ -41,25 +42,62 @@ async def _process_asr(data: list[dict]):
                 })
         response = await transcribe(data=batch_payloads)
 
+        if isinstance(response, dict):
+            logger.error("ASR batch returned error payload: %s", response)
+            response = [response for _ in data]
+        elif not isinstance(response, list):
+            logger.error(
+                "ASR batch returned unexpected response type: %s",
+                type(response).__name__,
+            )
+            response = []
+
+        if len(response) < len(data):
+            logger.warning(
+                "ASR response/data size mismatch: response=%s data=%s",
+                len(response),
+                len(data),
+            )
+            response = response + [{} for _ in range(len(data) - len(response))]
+
         # populate updates
-        for idx, result in enumerate(response):
+        for idx, _ in enumerate(data):
+            result = response[idx] if idx < len(response) else {}
+            if not isinstance(result, dict):
+                logger.warning(
+                    "ASR item response type invalid at idx=%s type=%s",
+                    idx,
+                    type(result).__name__,
+                )
+                result = {}
+
             if not result.get("success"):
                 data[idx]["_updates"]["raw_text"] = ""
                 data[idx]["_updates"]["language"] = ""
                 data[idx]["_updates"]["language_score"] = 0.0
                 continue
 
-            raw_text = result.get("transcription").get("raw_text", "")
+            transcription = result.get("transcription")
+            if not isinstance(transcription, dict):
+                logger.warning(
+                    "ASR transcription payload invalid at idx=%s type=%s",
+                    idx,
+                    type(transcription).__name__,
+                )
+                transcription = {}
+
+            raw_text = transcription.get("raw_text", "")
             if len(raw_text.split()) > 10:
                 processed_transcript = await post_process_transcription(raw_text)
             else:
                 processed_transcript = raw_text
 
             data[idx]["_updates"]["raw_text"] = processed_transcript
-            data[idx]["_updates"]["language"] = result.get(
-                "transcription").get("language", "")
-            data[idx]["_updates"]["language_score"] = result.get(
-                "transcription").get("language_score", 0.0)
+            data[idx]["_updates"]["language"] = transcription.get("language", "")
+            data[idx]["_updates"]["language_score"] = transcription.get(
+                "language_score",
+                0.0,
+            )
 
             end_time = time.time()
             time_taken = end_time - start_time
@@ -97,7 +135,7 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
         for result in results:
             await asr_broker.publish(
                 {"_index": result.get("_index"), "_id": result.get("_id")},
-                stream="audiovisual:nlp_stream",
+                stream=NLP_STREAM,
                 pipeline=pipe,
             )
 
@@ -113,8 +151,8 @@ async def _worker_handler(data: list[dict], msg: RedisMessage, redis: Redis, pip
 
 
 @asr_broker.subscriber(stream=StreamSub(
-    "audiovisual:asr_stream",
-    group="audiovisual:asr_group",
+    ASR_STREAM,
+    group=ASR_GROUP,
     consumer="asr_worker_1",
     batch=True,
     max_records=10,
@@ -126,8 +164,8 @@ async def process_asr_worker_1(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @asr_broker.subscriber(stream=StreamSub(
-    "audiovisual:asr_stream",
-    group="audiovisual:asr_group",
+    ASR_STREAM,
+    group=ASR_GROUP,
     consumer="asr_worker_2",
     batch=True,
     max_records=10,
@@ -139,8 +177,8 @@ async def process_asr_worker_2(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @asr_broker.subscriber(stream=StreamSub(
-    "audiovisual:asr_stream",
-    group="audiovisual:asr_group",
+    ASR_STREAM,
+    group=ASR_GROUP,
     consumer="asr_worker_3",
     batch=True,
     max_records=10,
@@ -152,8 +190,8 @@ async def process_asr_worker_3(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @asr_broker.subscriber(stream=StreamSub(
-    "audiovisual:asr_stream",
-    group="audiovisual:asr_group",
+    ASR_STREAM,
+    group=ASR_GROUP,
     consumer="asr_worker_4",
     batch=True,
     max_records=10,
@@ -165,8 +203,8 @@ async def process_asr_worker_4(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @asr_broker.subscriber(stream=StreamSub(
-    "audiovisual:asr_stream",
-    group="audiovisual:asr_group",
+    ASR_STREAM,
+    group=ASR_GROUP,
     consumer="asr_worker_5",
     batch=True,
     max_records=10,
@@ -178,8 +216,8 @@ async def process_asr_worker_5(data: list[dict], msg: RedisMessage, redis: Redis
 
 
 @asr_broker.subscriber(stream=StreamSub(
-    "audiovisual:asr_stream",
-    group="audiovisual:asr_group",
+    ASR_STREAM,
+    group=ASR_GROUP,
     consumer="asr_worker_6",
     batch=True,
     max_records=10,
