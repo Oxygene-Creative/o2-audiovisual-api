@@ -28,6 +28,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 SEGMENTATION_GPU_URL = os.getenv("SEGMENTATION_GPU_URL", "").strip()
+SEGMENTATION_PREP_TIMEOUT_SECONDS = int(os.getenv("SEGMENTATION_PREP_TIMEOUT_SECONDS", "300"))
+SEGMENTATION_ITEM_TIMEOUT_SECONDS = int(os.getenv("SEGMENTATION_ITEM_TIMEOUT_SECONDS", "900"))
 
 
 def replace_mp4_with_mp3(blob_path: str) -> str:
@@ -141,18 +143,52 @@ async def _segment_media(data: list[dict]):
             len(data),
             [item.get("doc_id") for item in data],
         )
-        # extract gcp_blob paths from data
-        payload = []
+        # Build payload and keep item mapping aligned with VAD response.
+        prepared_items = []
         for item in data:
             if item.get("stream_type", "").lower() == "audio":
-                payload.append({"bucket": item.get("gcp_bucket"),
-                               "blob": item.get("gcp_blob")})
+                prepared_items.append(
+                    {
+                        "item": item,
+                        "payload": {
+                            "bucket": item.get("gcp_bucket"),
+                            "blob": item.get("gcp_blob"),
+                        },
+                    }
+                )
                 continue
 
             if item.get("stream_type", "").lower() == "video":
-                audio_blob = await ensure_audio_blob(item.get("gcp_bucket"), item.get("gcp_blob"))
-                payload.append(
-                    {"bucket": item.get("gcp_bucket"), "blob": audio_blob})
+                try:
+                    audio_blob = await asyncio.wait_for(
+                        ensure_audio_blob(item.get("gcp_bucket"), item.get("gcp_blob")),
+                        timeout=SEGMENTATION_PREP_TIMEOUT_SECONDS,
+                    )
+                except Exception as prep_error:
+                    logger.exception(
+                        "Skipping doc_id=%s during payload prep. bucket=%s blob=%s error=%s",
+                        item.get("doc_id"),
+                        item.get("gcp_bucket"),
+                        item.get("gcp_blob"),
+                        prep_error,
+                    )
+                    continue
+
+                prepared_items.append(
+                    {
+                        "item": item,
+                        "payload": {
+                            "bucket": item.get("gcp_bucket"),
+                            "blob": audio_blob,
+                        },
+                    }
+                )
+
+        payload = [entry["payload"] for entry in prepared_items]
+
+        if not payload:
+            logger.warning("Segmentation batch skipped: no valid payload items after preparation")
+            return []
 
         logger.info(
             "Segmentation payload prepared: size=%s payload=%s",
@@ -187,19 +223,22 @@ async def _segment_media(data: list[dict]):
         results = []
 
         for idx, result in enumerate(vad_results):
-            if idx >= len(data):
+            if idx >= len(prepared_items):
                 logger.warning(
-                    "VAD result/data size mismatch at idx=%s: data_size=%s",
+                    "VAD result/prepared_items size mismatch at idx=%s: prepared_size=%s",
                     idx,
-                    len(data),
+                    len(prepared_items),
                 )
                 break
+
+            current_item = prepared_items[idx]["item"]
+            current_payload = prepared_items[idx]["payload"]
 
             if not isinstance(result, dict):
                 logger.warning(
                     "Skipping item idx=%s doc_id=%s: invalid result type=%s",
                     idx,
-                    data[idx].get("doc_id"),
+                    current_item.get("doc_id"),
                     type(result).__name__,
                 )
                 continue
@@ -209,9 +248,9 @@ async def _segment_media(data: list[dict]):
                     "Skipping item idx=%s doc_id=%s: success flag false. "
                     "bucket=%s blob=%s error=%s result_keys=%s",
                     idx,
-                    data[idx].get("doc_id"),
-                    payload[idx].get("bucket") if idx < len(payload) else None,
-                    payload[idx].get("blob") if idx < len(payload) else None,
+                    current_item.get("doc_id"),
+                    current_payload.get("bucket"),
+                    current_payload.get("blob"),
                     result.get("error"),
                     list(result.keys()) if isinstance(result, dict) else type(result),
                 )
@@ -226,7 +265,7 @@ async def _segment_media(data: list[dict]):
             logger.info(
                 "VAD item summary idx=%s doc_id=%s success=%s speech_segments=%s activity=%s",
                 idx,
-                data[idx].get("doc_id"),
+                current_item.get("doc_id"),
                 result.get("success", False),
                 len(speech_segments),
                 activity,
@@ -236,7 +275,7 @@ async def _segment_media(data: list[dict]):
                 logger.warning(
                     "Skipping item idx=%s doc_id=%s: male and female durations are empty/zero",
                     idx,
-                    data[idx].get("doc_id"),
+                    current_item.get("doc_id"),
                 )
                 continue
 
@@ -244,33 +283,51 @@ async def _segment_media(data: list[dict]):
                 logger.warning(
                     "Skipping item idx=%s doc_id=%s: no speech segments returned by VAD",
                     idx,
-                    data[idx].get("doc_id"),
+                    current_item.get("doc_id"),
                 )
                 continue
 
             # download master file
-            file_name = extract_file_name(data[idx].get("gcp_blob"))
+            file_name = extract_file_name(current_item.get("gcp_blob"))
             asset_file_path = f"{os.getcwd()}/o2-files/{file_name}"
-            await asyncio.to_thread(download_file, data[idx].get("gcp_bucket"), data[idx].get("gcp_blob"), asset_file_path)
-
-            processed_segments = await _process_segmet(
-                data=data[idx],
-                segments=speech_segments,
-                asset_file_path=asset_file_path
+            await asyncio.to_thread(
+                download_file,
+                current_item.get("gcp_bucket"),
+                current_item.get("gcp_blob"),
+                asset_file_path,
             )
+
+            try:
+                processed_segments = await asyncio.wait_for(
+                    _process_segmet(
+                        data=current_item,
+                        segments=speech_segments,
+                        asset_file_path=asset_file_path,
+                    ),
+                    timeout=SEGMENTATION_ITEM_TIMEOUT_SECONDS,
+                )
+            except Exception as process_error:
+                logger.exception(
+                    "Skipping failed segmentation item idx=%s doc_id=%s error=%s",
+                    idx,
+                    current_item.get("doc_id"),
+                    process_error,
+                )
+                await asyncio.to_thread(delete_file, asset_file_path)
+                continue
 
             if not processed_segments:
                 logger.warning(
                     "No processed segments created for idx=%s doc_id=%s",
                     idx,
-                    data[idx].get("doc_id"),
+                    current_item.get("doc_id"),
                 )
 
             end_time = time.time()
             time_taken = end_time - start_time
             results.extend(processed_segments)
             logger.info(
-                f'segment analysis for {data[idx]["source"]["name"]} done in {time_taken}s')
+                f'segment analysis for {current_item["source"]["name"]} done in {time_taken}s')
 
         logger.info("Segmentation batch complete: total_segment_docs=%s", len(results))
 
