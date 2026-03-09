@@ -4,26 +4,79 @@ from pydub import AudioSegment
 from pathlib import Path
 from app.core.files import subfolder_check
 import ffmpeg
+import asyncio
+import logging
+import time
+import subprocess
+
+
+logger = logging.getLogger(__name__)
+
+
+def _extract_audio_sync(video_path: str, audio_path: str, timeout_seconds: int) -> None:
+    # Use ffmpeg CLI directly so timeout handling is consistent across ffmpeg-python versions.
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        video_path,
+        "-vn",
+        "-acodec",
+        "libmp3lame",
+        audio_path,
+    ]
+    subprocess.run(
+        cmd,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=timeout_seconds,
+    )
 
 
 async def extract_audio_from_video(video_path):
     # extract the file name
     audio_file_name = Path(video_path).stem
 
-    # Load the video file
-    video_clip = VideoFileClip(video_path)
-
-    # Extract the audio
-    audio = video_clip.audio
-
-    # Write the audio to the output path
     subfolder_check(f"{os.getcwd()}/o2-files")
     audio_path = f"{os.getcwd()}/o2-files/{audio_file_name}.mp3"
-    audio.write_audiofile(audio_path)
+    timeout_seconds = int(os.getenv("AUDIO_EXTRACT_TIMEOUT_SECONDS", "180"))
+    started_at = time.time()
+    logger.info(
+        "Audio extraction started: video=%s output=%s timeout=%ss",
+        video_path,
+        audio_path,
+        timeout_seconds,
+    )
 
-    # Close the clips
-    audio.close()
-    video_clip.close()
+    try:
+        await asyncio.to_thread(
+            _extract_audio_sync,
+            video_path,
+            audio_path,
+            timeout_seconds,
+        )
+    except subprocess.CalledProcessError as err:
+        stderr = err.stderr.decode("utf-8", errors="ignore") if err.stderr else ""
+        raise RuntimeError(
+            f"Failed to extract audio from {video_path}. ffmpeg error: {stderr}"
+        ) from err
+    except subprocess.TimeoutExpired as err:
+        raise TimeoutError(
+            f"Timed out extracting audio from {video_path} after {timeout_seconds}s"
+        ) from err
+
+    if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+        raise RuntimeError(
+            f"Audio extraction produced no output for {video_path} (expected {audio_path})"
+        )
+
+    logger.info(
+        "Audio extraction complete: video=%s output=%s duration=%.2fs",
+        video_path,
+        audio_path,
+        time.time() - started_at,
+    )
 
     return audio_path
 
