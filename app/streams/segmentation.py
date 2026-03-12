@@ -4,6 +4,7 @@ from app.core.es import save_bulk
 from app.core.files import calc_file_size, delete_file, extract_file_name, subfolder_check
 from app.core.gcp import blob_exists, download_file, upload
 from app.core.media_processing import extract_audio_from_video, slice_audio, slice_video
+from app.core.replay_log import write_replay_candidate
 from app.core.redis import redis_broker as segmentation_broker, worker_1_busy_lock, worker_2_busy_lock, worker_3_busy_lock
 from faststream.redis import StreamSub, Pipeline
 from faststream.redis.annotations import RedisMessage, Redis
@@ -12,6 +13,7 @@ import httpx
 import os
 from datetime import datetime
 import time
+from google.api_core.exceptions import NotFound, PreconditionFailed
 from app.core.redis_keys import (
     AUDIENCE_STREAM,
     SEGMENTATION_GROUP,
@@ -40,14 +42,24 @@ def replace_mp4_with_mp3(blob_path: str) -> str:
         raise ValueError("The given blob path does not have an .mp4 extension")
 
 
-async def ensure_audio_blob(bucket: str, video_blob: str) -> str:
+async def ensure_audio_blob(
+    bucket: str,
+    video_blob: str,
+    source_generation: str | None = None,
+) -> str:
     audio_blob = replace_mp4_with_mp3(video_blob)
     if blob_exists(bucket, audio_blob):
         return audio_blob
 
     file_name = extract_file_name(video_blob)
     local_video_path = f"{os.getcwd()}/o2-files/{file_name}"
-    await asyncio.to_thread(download_file, bucket, video_blob, local_video_path)
+    await asyncio.to_thread(
+        download_file,
+        bucket,
+        video_blob,
+        local_video_path,
+        source_generation,
+    )
 
     audio_path = await extract_audio_from_video(local_video_path)
     await asyncio.to_thread(upload, bucket, audio_path, audio_blob)
@@ -147,6 +159,24 @@ async def _segment_media(data: list[dict]):
         prepared_items = []
         for item in data:
             if item.get("stream_type", "").lower() == "audio":
+                if not blob_exists(item.get("gcp_bucket"), item.get("gcp_blob")):
+                    replay_log_path = write_replay_candidate(
+                        {
+                            "reason": "missing_source_audio_blob",
+                            "doc_id": item.get("doc_id"),
+                            "bucket": item.get("gcp_bucket"),
+                            "blob": item.get("gcp_blob"),
+                            "stream_type": item.get("stream_type"),
+                        }
+                    )
+                    logger.warning(
+                        "Skipping doc_id=%s: source audio blob missing bucket=%s blob=%s replay_log=%s",
+                        item.get("doc_id"),
+                        item.get("gcp_bucket"),
+                        item.get("gcp_blob"),
+                        replay_log_path,
+                    )
+                    continue
                 prepared_items.append(
                     {
                         "item": item,
@@ -161,9 +191,56 @@ async def _segment_media(data: list[dict]):
             if item.get("stream_type", "").lower() == "video":
                 try:
                     audio_blob = await asyncio.wait_for(
-                        ensure_audio_blob(item.get("gcp_bucket"), item.get("gcp_blob")),
+                        ensure_audio_blob(
+                            item.get("gcp_bucket"),
+                            item.get("gcp_blob"),
+                            item.get("source_blob_generation"),
+                        ),
                         timeout=SEGMENTATION_PREP_TIMEOUT_SECONDS,
                     )
+                except NotFound as not_found_error:
+                    replay_log_path = write_replay_candidate(
+                        {
+                            "reason": "missing_source_video_blob",
+                            "doc_id": item.get("doc_id"),
+                            "bucket": item.get("gcp_bucket"),
+                            "blob": item.get("gcp_blob"),
+                            "stream_type": item.get("stream_type"),
+                            "error": str(not_found_error),
+                            "source_blob_generation": item.get("source_blob_generation"),
+                        }
+                    )
+                    logger.warning(
+                        "Skipping doc_id=%s: source video blob missing during prep. bucket=%s blob=%s error=%s replay_log=%s",
+                        item.get("doc_id"),
+                        item.get("gcp_bucket"),
+                        item.get("gcp_blob"),
+                        not_found_error,
+                        replay_log_path,
+                    )
+                    continue
+                except PreconditionFailed as precondition_error:
+                    replay_log_path = write_replay_candidate(
+                        {
+                            "reason": "source_blob_generation_mismatch",
+                            "doc_id": item.get("doc_id"),
+                            "bucket": item.get("gcp_bucket"),
+                            "blob": item.get("gcp_blob"),
+                            "stream_type": item.get("stream_type"),
+                            "error": str(precondition_error),
+                            "source_blob_generation": item.get("source_blob_generation"),
+                        }
+                    )
+                    logger.warning(
+                        "Skipping doc_id=%s: source generation mismatch during prep. bucket=%s blob=%s generation=%s error=%s replay_log=%s",
+                        item.get("doc_id"),
+                        item.get("gcp_bucket"),
+                        item.get("gcp_blob"),
+                        item.get("source_blob_generation"),
+                        precondition_error,
+                        replay_log_path,
+                    )
+                    continue
                 except Exception as prep_error:
                     logger.exception(
                         "Skipping doc_id=%s during payload prep. bucket=%s blob=%s error=%s",
@@ -290,14 +367,15 @@ async def _segment_media(data: list[dict]):
             # download master file
             file_name = extract_file_name(current_item.get("gcp_blob"))
             asset_file_path = f"{os.getcwd()}/o2-files/{file_name}"
-            await asyncio.to_thread(
-                download_file,
-                current_item.get("gcp_bucket"),
-                current_item.get("gcp_blob"),
-                asset_file_path,
-            )
-
             try:
+                await asyncio.to_thread(
+                    download_file,
+                    current_item.get("gcp_bucket"),
+                    current_item.get("gcp_blob"),
+                    asset_file_path,
+                    current_item.get("source_blob_generation"),
+                )
+
                 processed_segments = await asyncio.wait_for(
                     _process_segmet(
                         data=current_item,
@@ -306,12 +384,45 @@ async def _segment_media(data: list[dict]):
                     ),
                     timeout=SEGMENTATION_ITEM_TIMEOUT_SECONDS,
                 )
+            except (NotFound, PreconditionFailed) as download_error:
+                replay_log_path = write_replay_candidate(
+                    {
+                        "reason": "source_master_download_failed",
+                        "doc_id": current_item.get("doc_id"),
+                        "bucket": current_item.get("gcp_bucket"),
+                        "blob": current_item.get("gcp_blob"),
+                        "stream_type": current_item.get("stream_type"),
+                        "error": str(download_error),
+                        "source_blob_generation": current_item.get("source_blob_generation"),
+                    }
+                )
+                logger.warning(
+                    "Skipping doc_id=%s: source download failed bucket=%s blob=%s generation=%s error=%s replay_log=%s",
+                    current_item.get("doc_id"),
+                    current_item.get("gcp_bucket"),
+                    current_item.get("gcp_blob"),
+                    current_item.get("source_blob_generation"),
+                    download_error,
+                    replay_log_path,
+                )
+                continue
             except Exception as process_error:
+                replay_log_path = write_replay_candidate(
+                    {
+                        "reason": "segmentation_item_processing_failed",
+                        "doc_id": current_item.get("doc_id"),
+                        "bucket": current_item.get("gcp_bucket"),
+                        "blob": current_item.get("gcp_blob"),
+                        "stream_type": current_item.get("stream_type"),
+                        "error": str(process_error),
+                    }
+                )
                 logger.exception(
-                    "Skipping failed segmentation item idx=%s doc_id=%s error=%s",
+                    "Skipping failed segmentation item idx=%s doc_id=%s error=%s replay_log=%s",
                     idx,
                     current_item.get("doc_id"),
                     process_error,
+                    replay_log_path,
                 )
                 await asyncio.to_thread(delete_file, asset_file_path)
                 continue

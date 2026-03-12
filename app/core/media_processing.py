@@ -34,6 +34,25 @@ def _extract_audio_sync(video_path: str, audio_path: str, timeout_seconds: int) 
     )
 
 
+def _slice_video_sync(
+    video_path: str,
+    start: float,
+    stop: float,
+    output_file_path: str,
+    codec: str,
+) -> None:
+    video_clip = None
+    sliced_clip = None
+    try:
+        video_clip = VideoFileClip(video_path)
+        sliced_clip = video_clip.subclipped(start, stop)
+        sliced_clip.write_videofile(output_file_path, codec=codec)
+    finally:
+        if sliced_clip is not None:
+            sliced_clip.close()
+        if video_clip is not None:
+            video_clip.close()
+
 async def extract_audio_from_video(video_path):
     # extract the file name
     audio_file_name = Path(video_path).stem
@@ -117,20 +136,71 @@ async def slice_audio(speech_segments, audio_path):
 
 async def slice_video(video_path, start, stop):
     output_file_name = f"{Path(video_path).stem}_{start}_{stop}.mp4"
-    # Load the video file
-    video_clip = VideoFileClip(video_path)
-
-    # Trim the video between start and stop times
-    sliced_clip = video_clip.subclipped(start, stop)
-
-    # Write the sliced video to the output file
     subfolder_check(f"{os.getcwd()}/o2-files")
     output_file_path = f"{os.getcwd()}/o2-files/{output_file_name}"
-    sliced_clip.write_videofile(output_file_path, codec="libx264")
+    timeout_seconds = int(os.getenv("VIDEO_SLICE_TIMEOUT_SECONDS", "900"))
+    codec = os.getenv("VIDEO_SLICE_CODEC", "libx264")
+    started_at = time.time()
 
-    # Close the video resources
-    video_clip.close()
-    sliced_clip.close()
+    logger.info(
+        "Video slicing started: input=%s start=%s stop=%s output=%s timeout=%ss codec=%s",
+        video_path,
+        start,
+        stop,
+        output_file_path,
+        timeout_seconds,
+        codec,
+    )
+
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(
+                _slice_video_sync,
+                video_path,
+                start,
+                stop,
+                output_file_path,
+                codec,
+            ),
+            timeout=timeout_seconds,
+        )
+    except asyncio.TimeoutError as err:
+        logger.error(
+            "Video slicing timeout: input=%s start=%s stop=%s output=%s timeout=%ss elapsed=%.2fs",
+            video_path,
+            start,
+            stop,
+            output_file_path,
+            timeout_seconds,
+            time.time() - started_at,
+        )
+        raise TimeoutError(
+            f"Timed out slicing video {video_path} ({start}-{stop}) after {timeout_seconds}s"
+        ) from err
+    except Exception:
+        logger.exception(
+            "Video slicing failed: input=%s start=%s stop=%s output=%s",
+            video_path,
+            start,
+            stop,
+            output_file_path,
+        )
+        raise
+
+    if not os.path.exists(output_file_path) or os.path.getsize(output_file_path) == 0:
+        raise RuntimeError(
+            f"Video slicing produced no output for {video_path} ({start}-{stop})"
+        )
+
+    logger.info(
+        "Video slicing complete: input=%s start=%s stop=%s output=%s size_bytes=%s duration=%.2fs",
+        video_path,
+        start,
+        stop,
+        output_file_path,
+        os.path.getsize(output_file_path),
+        time.time() - started_at,
+    )
 
     return {
         "start": start,

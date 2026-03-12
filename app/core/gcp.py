@@ -29,7 +29,26 @@ def upload(bucket_name, source, destination_blob_name):
     return blob.public_url
 
 
-def download_file(bucket_name, source_blob_name, destination_file_name):
+def get_blob_metadata(bucket_name, blob_name):
+    storage_client = storage.Client(
+        credentials=credentials, project=os.environ['GCP_PROJECT_ID'])
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.reload()
+    return {
+        "generation": str(blob.generation) if blob.generation is not None else None,
+        "size": blob.size,
+        "updated": blob.updated.isoformat() if blob.updated else None,
+        "etag": blob.etag,
+    }
+
+
+def download_file(
+    bucket_name,
+    source_blob_name,
+    destination_file_name,
+    expected_generation=None,
+):
     storage_client = storage.Client(
         credentials=credentials, project=os.environ['GCP_PROJECT_ID'])
     bucket = storage_client.bucket(bucket_name)
@@ -43,7 +62,13 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
     # Create the subfolder if it doesn't exist
     subfolder_check(subfolder_path)
 
-    blob.download_to_filename(destination_file_name)
+    if expected_generation is not None:
+        blob.download_to_filename(
+            destination_file_name,
+            if_generation_match=int(expected_generation),
+        )
+    else:
+        blob.download_to_filename(destination_file_name)
     print(f"Blob {source_blob_name} downloaded to {destination_file_name}.")
 
 

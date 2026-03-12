@@ -1,10 +1,13 @@
 import hashlib
+import asyncio
 from pydantic import BaseModel
 import json
 from typing import Optional
 import logging
+import os
 from app.core.es import search
 from app.core.redis import redis_client
+from app.core.gcp import get_blob_metadata
 from app.core.redis_keys import (
     ASR_STREAM,
     AUDIENCE_STREAM,
@@ -14,7 +17,8 @@ from app.core.redis_keys import (
     SEGMENTATION_STREAM,
 )
 from datetime import datetime
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from google.api_core.exceptions import NotFound
 from app.core.redis import redis_broker as _broker
 
 
@@ -23,6 +27,10 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+INGESTION_VALIDATE_GCS_BLOB = os.getenv("INGESTION_VALIDATE_GCS_BLOB", "1") == "1"
+INGESTION_VALIDATE_GCS_BLOB_STRICT = (
+    os.getenv("INGESTION_VALIDATE_GCS_BLOB_STRICT", "0") == "1"
+)
 
 ingestion_router = APIRouter()
 
@@ -81,6 +89,60 @@ async def ingestion_handler(upload: Upload):
         }
     }
 
+    if INGESTION_VALIDATE_GCS_BLOB:
+        try:
+            source_blob_metadata = await _blob_metadata_async(
+                upload.bucket,
+                upload.blob,
+            )
+            if not source_blob_metadata:
+                logger.warning(
+                    "Ingestion rejected missing blob: doc_id=%s bucket=%s blob=%s",
+                    doc_id,
+                    upload.bucket,
+                    upload.blob,
+                )
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "error": "blob_not_found",
+                        "doc_id": doc_id,
+                        "bucket": upload.bucket,
+                        "blob": upload.blob,
+                    },
+                )
+            data["source_blob_generation"] = source_blob_metadata.get("generation")
+            data["source_blob_etag"] = source_blob_metadata.get("etag")
+            data["source_blob_size"] = source_blob_metadata.get("size")
+            data["source_blob_updated"] = source_blob_metadata.get("updated")
+        except HTTPException:
+            raise
+        except Exception as check_error:
+            if INGESTION_VALIDATE_GCS_BLOB_STRICT:
+                logger.error(
+                    "Ingestion blob validation strict reject: doc_id=%s bucket=%s blob=%s error=%s",
+                    doc_id,
+                    upload.bucket,
+                    upload.blob,
+                    check_error,
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": "blob_validation_failed",
+                        "doc_id": doc_id,
+                        "bucket": upload.bucket,
+                        "blob": upload.blob,
+                    },
+                )
+            logger.warning(
+                "Ingestion blob validation failed-open: doc_id=%s bucket=%s blob=%s error=%s",
+                doc_id,
+                upload.bucket,
+                upload.blob,
+                check_error,
+            )
+
     # Add to redis sorted list
     await redis_client.zadd(
         PRIORITY_QUEUE,
@@ -95,6 +157,13 @@ async def ingestion_handler(upload: Upload):
     )
 
     return data
+
+
+async def _blob_metadata_async(bucket: str, blob: str):
+    try:
+        return await asyncio.to_thread(get_blob_metadata, bucket, blob)
+    except NotFound:
+        return None
 
 
 @ingestion_router.post("/reingestion")
