@@ -1,20 +1,37 @@
-# Audio-Visual API
-API for that has data streams for processing audio, video and image data from various sources
+# O2 Audiovisual API
 
-## Install Dependencies
+Media ingestion and analysis pipeline API for o2 monitor workloads.
+This service accepts TV/radio media inputs, orchestrates staged processing via Redis streams, and enriches content with segmentation, ASR, NLP, and LLM outputs before persisting analytics to Elasticsearch.
+
+## Stack
+
+- FastAPI + Uvicorn
+- Redis (queueing and stream workers)
+- Elasticsearch (analysis document storage)
+- Google Cloud Storage (media assets)
+- External AI services for segmentation, ASR, and NLP/LLM enrichment
+
+## Quick Start
+
 ```bash
 pipenv install
-```
-
-## Run locally
-```bash
 pipenv run uvicorn app.main:app --host=0.0.0.0 --port=8000 --reload
 ```
+
+Service URL: `http://localhost:8000`
+
+## Documentation
+
+- Architecture and processing flow: `how-it-works.md`
+- Deployment guide: `docs/DEPLOYMENT.md`
+- Environment variables: `docs/ENVIRONMENT.md`
+- API reference: `docs/API_REFERENCE.md`
+- Pipeline deep-dive: `docs/processing pipeline.md`
 
 ## Run locally with docker
 ```bash
 docker build -t av-api .
-docker run --name av-api -p 8210:8210 -v ${PWD}:/code av_api
+docker run --name av-api -p 8210:8210 -v ${PWD}:/code av-api
 ```
 
 ## Build container and publish to gcloud artifact
